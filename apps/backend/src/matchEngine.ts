@@ -4,7 +4,6 @@ export interface EngineEvent {
   minute: number;
   type: EngineEventType;
   team: 'HOME' | 'AWAY';
-  description: string;
 }
 
 interface PlayerInput {
@@ -90,7 +89,7 @@ export function simulateMatchEngine(home: TeamInput, away: TeamInput) {
     const possessionTeam: 'HOME' | 'AWAY' = homePossessionBias >= 0 ? 'HOME' : 'AWAY';
 
     if (Math.random() < 0.62) {
-      events.push({ minute, type: 'PASS', team: possessionTeam, description: `${possessionTeam} circulates possession.` });
+      events.push({ minute, type: 'PASS', team: possessionTeam });
     }
 
     const attacker = possessionTeam === 'HOME' ? homeStrength : awayStrength;
@@ -102,7 +101,7 @@ export function simulateMatchEngine(home: TeamInput, away: TeamInput) {
     const shotChance = clamp((attacker.attack - defender.defense * 0.42) / 210, 0.07, 0.45);
     if (Math.random() > shotChance) continue;
 
-    events.push({ minute, type: 'SHOT', team: possessionTeam, description: `${possessionTeam} creates a shooting chance.` });
+    events.push({ minute, type: 'SHOT', team: possessionTeam });
 
     const goalChance = clamp((attacker.attack * 0.56 - defender.defense * 0.5 + (Math.random() - 0.5) * 24) / 180, 0.03, 0.38);
     if (Math.random() > goalChance) continue;
@@ -110,7 +109,7 @@ export function simulateMatchEngine(home: TeamInput, away: TeamInput) {
     if (possessionTeam === 'HOME') scoreHome += 1;
     else scoreAway += 1;
 
-    events.push({ minute, type: 'GOAL', team: possessionTeam, description: `${possessionTeam} scores!` });
+    events.push({ minute, type: 'GOAL', team: possessionTeam });
   }
 
   return {
