@@ -66,7 +66,7 @@ A fullstack monorepo starter for a **football manager webapp** inspired by old-s
     "dev:backend": "npm run dev --workspace @tmt/backend",
     "dev:frontend": "npm run dev --workspace @tmt/frontend",
     "build": "npm run build --workspaces",
-    "lint": "npm run lint --workspaces",
+    "lint": "ESLINT_USE_FLAT_CONFIG=false npm run lint --workspaces",
     "format": "prettier --write ."
   },
   "devDependencies": {
