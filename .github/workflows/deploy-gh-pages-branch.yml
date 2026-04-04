@@ -1,0 +1,13 @@
+name: Legacy gh-pages Branch Deploy (Disabled)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  disabled:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Legacy workflow disabled
+        run: |
+          echo "This legacy gh-pages branch deployment workflow is intentionally disabled."
+          echo "Use .github/workflows/deploy-frontend-pages.yml for GitHub Pages deployments."
