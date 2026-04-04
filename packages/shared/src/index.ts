@@ -24,3 +24,14 @@ export interface MatchEvent {
   type: 'goal' | 'card' | 'substitution';
   description: string;
 }
+
+export interface ManagerSummary {
+  status: 'INEXPERIENCED' | 'PRO' | 'ELITE';
+  level: number;
+  successes: number;
+  successiveWins: number;
+  successiveLosses: number;
+  totalWins: number;
+  totalLosses: number;
+  totalDraws: number;
+}

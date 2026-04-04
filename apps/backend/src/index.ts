@@ -4,7 +4,7 @@ import express from 'express';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import { PrismaClient } from '@prisma/client';
-import type { MatchEvent } from '@tmt/shared';
+import type { ManagerSummary, MatchEvent } from '@tmt/shared';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -28,6 +28,22 @@ app.get('/clubs', async (_req, res) => {
   res.json(clubs);
 });
 
+app.get('/manager/summary', async (_req, res) => {
+  const clubs = await prisma.club.findMany();
+  const summary: ManagerSummary = {
+    status: 'INEXPERIENCED',
+    level: 3,
+    successes: Math.max(0, Math.floor(clubs.length / 2)),
+    successiveWins: 0,
+    successiveLosses: 0,
+    totalWins: clubs.length,
+    totalLosses: 0,
+    totalDraws: Math.max(0, clubs.length - 1)
+  };
+
+  res.json(summary);
+});
+
 app.post('/matches/simulate', async (req, res) => {
   const homeClubId = String(req.body.homeClubId);
   const awayClubId = String(req.body.awayClubId);
@@ -44,7 +60,8 @@ app.post('/matches/simulate', async (req, res) => {
 
   const events: MatchEvent[] = [
     { minute: 12, type: 'goal', description: `${home.name} scored from a counterattack.` },
-    { minute: 61, type: 'card', description: `${away.name} received a yellow card.` }
+    { minute: 61, type: 'card', description: `${away.name} received a yellow card.` },
+    { minute: 82, type: 'substitution', description: `${home.name} changed formation to protect the lead.` }
   ];
 
   io.emit('match:update', { homeClubId, awayClubId, events });
