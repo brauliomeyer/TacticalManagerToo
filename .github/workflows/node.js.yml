@@ -25,6 +25,13 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Guard against legacy gh-pages source reconfiguration
+        run: |
+          if rg -n "actions/github-script@v7|peaceiris/actions-gh-pages|PUT /repos/\{owner\}/\{repo\}/pages|build_type:\s*legacy" .github/workflows --glob "!node.js.yml"; then
+            echo "Legacy GitHub Pages branch-source reconfiguration detected. Use deploy-frontend-pages.yml artifact flow only."
+            exit 1
+          fi
+
       - name: Build shared
         run: npm run build --workspace @tmt/shared
 
