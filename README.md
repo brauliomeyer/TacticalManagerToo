@@ -850,3 +850,13 @@ Dan pak ik het stap voor stap met je door alsof ik naast je zit.
 
 [1]: https://www.plsevery.com/blog/react-app-blank-on-github?utm_source=chatgpt.com "React App Blank On GitHub Pages? Quick Fix!"
 [2]: https://iifx.dev/en/articles/422462421?utm_source=chatgpt.com "reactjs - React Router Not Working on GitHub Pages? Here's Why & How to Fix It - react router dom"
+
+
+## GitHub Pages immediate 404 fix
+
+If `https://brauliomeyer.github.io/TacticalManagerToo/` shows a 404 page, run the new workflow **Deploy Frontend to gh-pages branch** and set:
+
+- Settings → Pages → Source: **Deploy from a branch**
+- Branch: **gh-pages** / **root**
+
+The workflow builds `apps/frontend/dist` and publishes it to `gh-pages` automatically.
