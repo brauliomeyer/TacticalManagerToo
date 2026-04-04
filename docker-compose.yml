@@ -1,0 +1,43 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tmt-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tactical_manager
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: tmt-backend
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/tactical_manager
+      PORT: 4000
+      CLIENT_ORIGIN: http://localhost:5173
+    ports:
+      - '4000:4000'
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    container_name: tmt-frontend
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:4000
+    ports:
+      - '5173:5173'
+
+volumes:
+  postgres_data:
