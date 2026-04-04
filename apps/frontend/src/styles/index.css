@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Trebuchet MS', Tahoma, sans-serif;
+}
+
+.retro-pitch {
+  background:
+    radial-gradient(circle at 20% 20%, #36bf3d 2px, transparent 2px),
+    radial-gradient(circle at 70% 45%, #36bf3d 2px, transparent 2px),
+    radial-gradient(circle at 40% 80%, #36bf3d 2px, transparent 2px),
+    repeating-linear-gradient(0deg, #1ea125 0, #1ea125 22px, #239e2a 22px, #239e2a 44px);
+  background-size:
+    120px 120px,
+    140px 140px,
+    130px 130px,
+    100% 100%;
+}
