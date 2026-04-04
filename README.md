@@ -1,60 +1,66 @@
 # Tactical Manager Too
 
-Monorepo for a retro-inspired football manager web app based on the old Tactical Manager vibe.
+A fullstack monorepo starter for a **football manager webapp** inspired by old-school Tactical Manager style.
 
-## Folder structure
+## 1) Full folder structure
 
 ```text
 .
+├── .eslintrc.cjs
+├── .gitignore
+├── .prettierignore
+├── .prettierrc
+├── LICENSE
+├── README.md
 ├── apps
 │   ├── backend
+│   │   ├── .env.example
+│   │   ├── Dockerfile
+│   │   ├── package.json
 │   │   ├── prisma
 │   │   │   ├── schema.prisma
 │   │   │   └── seed.ts
 │   │   ├── src
 │   │   │   └── index.ts
-│   │   ├── .env.example
-│   │   ├── Dockerfile
-│   │   ├── package.json
 │   │   └── tsconfig.json
 │   └── frontend
-│       ├── src
-│       │   ├── styles
-│       │   │   └── index.css
-│       │   ├── App.tsx
-│       │   └── main.tsx
 │       ├── Dockerfile
 │       ├── index.html
 │       ├── package.json
 │       ├── postcss.config.cjs
+│       ├── src
+│       │   ├── App.tsx
+│       │   ├── main.tsx
+│       │   └── styles
+│       │       └── index.css
 │       ├── tailwind.config.ts
 │       ├── tsconfig.json
 │       ├── tsconfig.node.json
 │       └── vite.config.ts
-├── packages
-│   └── shared
-│       ├── src
-│       │   └── index.ts
-│       ├── package.json
-│       └── tsconfig.json
-├── .eslintrc.cjs
-├── .prettierignore
-├── .prettierrc
 ├── docker-compose.yml
 ├── package.json
+├── packages
+│   └── shared
+│       ├── package.json
+│       ├── src
+│       │   └── index.ts
+│       └── tsconfig.json
 └── tsconfig.base.json
 ```
 
-## package.json files
+## 2) All package.json files
 
-### Root (`package.json`)
+### Root `package.json`
 
 ```json
 {
   "name": "tactical-manager-too",
   "private": true,
   "version": "0.1.0",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "concurrently \"npm:dev:backend\" \"npm:dev:frontend\"",
     "dev:backend": "npm run dev --workspace @tmt/backend",
@@ -62,11 +68,21 @@ Monorepo for a retro-inspired football manager web app based on the old Tactical
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces",
     "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.30.0",
+    "@typescript-eslint/parser": "^8.30.0",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.24.0",
+    "eslint-config-prettier": "^10.1.2",
+    "eslint-plugin-import": "^2.31.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3"
   }
 }
 ```
 
-### Frontend (`apps/frontend/package.json`)
+### `apps/frontend/package.json`
 
 ```json
 {
@@ -79,11 +95,27 @@ Monorepo for a retro-inspired football manager web app based on the old Tactical
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "@tmt/shared": "0.1.0",
+    "axios": "^1.8.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "vite": "^6.2.2"
   }
 }
 ```
 
-### Backend (`apps/backend/package.json`)
+### `apps/backend/package.json`
 
 ```json
 {
@@ -99,11 +131,27 @@ Monorepo for a retro-inspired football manager web app based on the old Tactical
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.5.0",
+    "@tmt/shared": "0.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.13.14",
+    "prisma": "^6.5.0",
+    "tsx": "^4.19.3"
   }
 }
 ```
 
-### Shared (`packages/shared/package.json`)
+### `packages/shared/package.json`
 
 ```json
 {
@@ -120,7 +168,7 @@ Monorepo for a retro-inspired football manager web app based on the old Tactical
 }
 ```
 
-## docker-compose.yml
+## 3) docker-compose.yml
 
 ```yaml
 version: '3.9'
@@ -168,7 +216,7 @@ volumes:
   postgres_data:
 ```
 
-## Run instructions
+## 4) Run instructions
 
 ### Local development
 
@@ -176,27 +224,36 @@ volumes:
    ```bash
    npm install
    ```
-2. Start PostgreSQL (Docker):
+2. Start PostgreSQL with Docker:
    ```bash
    docker compose up -d postgres
    ```
-3. Copy backend env and run migrations + seed:
+3. Configure backend env:
    ```bash
    cp apps/backend/.env.example apps/backend/.env
+   ```
+4. Run Prisma migrations + seed:
+   ```bash
    npm run prisma:migrate --workspace @tmt/backend
    npm run prisma:seed --workspace @tmt/backend
    ```
-4. Start frontend + backend:
+5. Start frontend + backend in dev mode:
    ```bash
    npm run dev
    ```
+6. Open app:
+   - Frontend: http://localhost:5173
+   - Backend health: http://localhost:4000/health
 
-### Full dockerized run
+### Fully dockerized
 
 ```bash
 docker compose up --build
 ```
 
-Then open:
-- Frontend: http://localhost:5173
-- Backend health: http://localhost:4000/health
+If needed, run Prisma commands from the backend container:
+
+```bash
+docker compose exec backend npm run prisma:migrate
+docker compose exec backend npm run prisma:seed
+```

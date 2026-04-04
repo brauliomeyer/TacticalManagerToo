@@ -3,7 +3,7 @@ import axios from 'axios';
 import { io } from 'socket.io-client';
 import type { MatchEvent } from '@tmt/shared';
 
-const API_BASE = 'http://localhost:4000';
+const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
 interface Club {
   id: string;
@@ -18,9 +18,13 @@ const socket = io(API_BASE, { autoConnect: false });
 export default function App() {
   const [clubs, setClubs] = useState<Club[]>([]);
   const [events, setEvents] = useState<MatchEvent[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    axios.get<Club[]>(`${API_BASE}/clubs`).then((res) => setClubs(res.data));
+    axios
+      .get<Club[]>(`${API_BASE}/clubs`)
+      .then((res) => setClubs(res.data))
+      .catch(() => setError('Could not load clubs from backend.'));
 
     socket.connect();
     socket.on('match:update', (payload: { events: MatchEvent[] }) => {
@@ -39,7 +43,13 @@ export default function App() {
 
   const simulate = async () => {
     if (!fixture) return;
-    await axios.post(`${API_BASE}/matches/simulate`, fixture);
+
+    try {
+      await axios.post(`${API_BASE}/matches/simulate`, fixture);
+      setError(null);
+    } catch {
+      setError('Could not simulate match.');
+    }
   };
 
   return (
@@ -52,6 +62,7 @@ export default function App() {
           <p className="mb-4 text-sm text-zinc-300">
             Retro-inspired football manager dashboard with live match events.
           </p>
+          {error ? <p className="mb-3 text-sm text-red-400">{error}</p> : null}
           <button
             className="rounded bg-lime-500 px-4 py-2 font-semibold text-zinc-950 hover:bg-lime-400"
             onClick={simulate}
