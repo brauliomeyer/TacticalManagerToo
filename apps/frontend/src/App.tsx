@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import type { ManagerSummary, MatchEvent } from '@tmt/shared';
+import MatchScreen from './components/MatchScreen';
+import TacticsBoard from './components/TacticsBoard';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
@@ -13,15 +15,64 @@ interface Club {
   reputation: number;
 }
 
+type PageKey = 'mail' | 'board' | 'squad' | 'cup' | 'human' | 'manager' | 'manage' | 'transfers' | 'training' | 'tactics' | 'match';
+
 const socket = io(API_BASE, { autoConnect: false });
 
-const menu = ['Human', 'Computer Manager', 'Manage', 'Transfers', 'Training', 'Tactics'];
+const sideMenu: { key: PageKey; label: string }[] = [
+  { key: 'human', label: 'Human' },
+  { key: 'manager', label: 'Computer Manager' },
+  { key: 'manage', label: 'Manage' },
+  { key: 'transfers', label: 'Transfers' },
+  { key: 'training', label: 'Training' },
+  { key: 'tactics', label: 'Tactics' }
+];
+
+const topTabs: { key: PageKey; label: string }[] = [
+  { key: 'mail', label: 'Mail' },
+  { key: 'board', label: 'Board' },
+  { key: 'squad', label: 'Squad' },
+  { key: 'cup', label: 'Cup' }
+];
+
+const pageDescriptions: Record<PageKey, { title: string; text: string }> = {
+  mail: { title: 'Mailbox', text: 'Je ontvangt hier berichten van bestuur, spelers en pers.' },
+  board: { title: 'Board Room', text: 'Bestuursdoelen, budget en verwachtingen voor het seizoen.' },
+  squad: { title: 'Squad Hub', text: 'Overzicht van selectie, vorm, conditie en rollen.' },
+  cup: { title: 'Cup Overview', text: 'Bekerloting, uitslagen en route naar de finale.' },
+  human: { title: 'Human Manager', text: 'Profiel van de menselijke manager en persoonlijke statistieken.' },
+  manager: { title: 'AI Manager', text: 'Overzicht van de computer manager keuzes en tegenstandersanalyse.' },
+  manage: { title: 'Club Management', text: 'Staf, faciliteiten en langetermijnplanning voor de club.' },
+  transfers: { title: 'Transfer Market', text: 'Scoutrapporten, biedingen en contractonderhandelingen.' },
+  training: { title: 'Training Ground', text: 'Trainingsschema, focusgebieden en spelersontwikkeling.' },
+  tactics: { title: 'Tactical Desk', text: 'Plaats je spelers op het veld en verfijn je formatie.' },
+  match: { title: 'Live Match', text: 'Live simulatie met eventlog en mini-pitch.' }
+};
+
+function PagePanel({ page, clubs }: { page: PageKey; clubs: Club[] }) {
+  if (page === 'tactics') return <TacticsBoard />;
+  if (page === 'match') return <MatchScreen />;
+
+  return (
+    <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
+      <h2 className="mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-xs font-bold uppercase text-[#2e1f4a]">
+        {pageDescriptions[page].title}
+      </h2>
+      <div className="retro-pitch mb-3 h-52 border-2 border-[#8ee486]" />
+      <p className="border border-[#98ca7a] bg-[#256d22] px-2 py-1 text-xs text-[#d5f8b6]">{pageDescriptions[page].text}</p>
+      <p className="mt-3 border border-[#98ca7a] bg-[#1f641d] px-2 py-1 text-xs text-[#d5f8b6]">
+        Active club: <strong>{clubs[0]?.name ?? 'Notts Forest'}</strong>
+      </p>
+    </section>
+  );
+}
 
 export default function App() {
   const [clubs, setClubs] = useState<Club[]>([]);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [summary, setSummary] = useState<ManagerSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activePage, setActivePage] = useState<PageKey>('mail');
 
   useEffect(() => {
     axios
@@ -54,6 +105,7 @@ export default function App() {
 
     try {
       await axios.post(`${API_BASE}/matches/simulate`, fixture);
+      setActivePage('match');
       setError(null);
     } catch {
       setError('Could not simulate match.');
@@ -82,9 +134,19 @@ export default function App() {
             </div>
             <p className="mb-3 bg-[#2a8a2b] px-2 py-1 font-bold uppercase text-[#0e1d0f]">1st Division</p>
             <ul className="space-y-1">
-              {menu.map((item) => (
-                <li className="border border-[#b78bda] bg-[#caa6e6] px-2 py-1 font-bold text-[#2e1f4a]" key={item}>
-                  {item}
+              {sideMenu.map((item) => (
+                <li key={item.key}>
+                  <button
+                    className={`w-full border px-2 py-1 text-left font-bold ${
+                      activePage === item.key
+                        ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]'
+                        : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'
+                    }`}
+                    onClick={() => setActivePage(item.key)}
+                    type="button"
+                  >
+                    {item.label}
+                  </button>
                 </li>
               ))}
             </ul>
@@ -94,18 +156,29 @@ export default function App() {
             </div>
           </aside>
 
-          <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
+          <section>
             <div className="mb-3 grid grid-cols-4 gap-2 text-center text-[10px] uppercase text-[#2e1f4a]">
-              {['Mail', 'Board', 'Squad', 'Cup'].map((item) => (
-                <div className="border border-[#ceb8e1] bg-[#d5b5ec] p-2 font-bold" key={item}>
-                  {item}
-                </div>
+              {topTabs.map((item) => (
+                <button
+                  className={`border p-2 font-bold ${
+                    activePage === item.key
+                      ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]'
+                      : 'border-[#ceb8e1] bg-[#d5b5ec] text-[#2e1f4a]'
+                  }`}
+                  key={item.key}
+                  onClick={() => setActivePage(item.key)}
+                  type="button"
+                >
+                  {item.label}
+                </button>
               ))}
             </div>
-            <div className="retro-pitch mb-3 h-52 border-2 border-[#8ee486]" />
-            <p className="border border-[#98ca7a] bg-[#256d22] px-2 py-1 text-xs text-[#d5f8b6]">
-              {error ?? 'Reinforcing... Board wants a solid promotion challenge.'}
-            </p>
+
+            <PagePanel clubs={clubs} page={activePage} />
+
+            {error ? (
+              <p className="mt-3 border border-[#98ca7a] bg-[#256d22] px-2 py-1 text-xs text-[#d5f8b6]">{error}</p>
+            ) : null}
           </section>
 
           <aside className="border-4 border-[#6f4ca1] bg-[#0d5e13] p-3 text-xs text-[#d5f8b6]">
@@ -124,7 +197,7 @@ export default function App() {
               <p>Loading manager stats...</p>
             )}
 
-            <h3 className="mt-4 mb-2 font-black uppercase text-[#efe56b]">Match Feed</h3>
+            <h3 className="mb-2 mt-4 font-black uppercase text-[#efe56b]">Match Feed</h3>
             <ul className="space-y-1">
               {events.length === 0 ? (
                 <li>No match events yet.</li>
