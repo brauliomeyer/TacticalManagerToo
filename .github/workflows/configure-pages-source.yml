@@ -2,7 +2,7 @@ name: Configure GitHub Pages source
 
 on:
   push:
-    branches: ["main", "master"]
+    branches: ["**"]
   workflow_dispatch:
 
 permissions:
