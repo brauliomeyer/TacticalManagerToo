@@ -4,7 +4,8 @@ import express from 'express';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import { PrismaClient } from '@prisma/client';
-import type { ManagerSummary, MatchEvent } from '@tmt/shared';
+import type { ManagerSummary } from '@tmt/shared';
+import { simulateMatchEngine } from './matchEngine';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -48,24 +49,27 @@ app.post('/matches/simulate', async (req, res) => {
   const homeClubId = String(req.body.homeClubId);
   const awayClubId = String(req.body.awayClubId);
 
-  const [home, away] = await Promise.all([
+  const [homeClub, awayClub, homePlayers, awayPlayers, homeTactics, awayTactics] = await Promise.all([
     prisma.club.findUnique({ where: { id: homeClubId } }),
-    prisma.club.findUnique({ where: { id: awayClubId } })
+    prisma.club.findUnique({ where: { id: awayClubId } }),
+    prisma.player.findMany({ where: { clubId: homeClubId } }),
+    prisma.player.findMany({ where: { clubId: awayClubId } }),
+    prisma.tactics.findFirst({ where: { clubId: homeClubId }, orderBy: { updatedAt: 'desc' } }),
+    prisma.tactics.findFirst({ where: { clubId: awayClubId }, orderBy: { updatedAt: 'desc' } })
   ]);
 
-  if (!home || !away) {
+  if (!homeClub || !awayClub) {
     res.status(404).json({ error: 'Club not found' });
     return;
   }
 
-  const events: MatchEvent[] = [
-    { minute: 12, type: 'goal', description: `${home.name} scored from a counterattack.` },
-    { minute: 61, type: 'card', description: `${away.name} received a yellow card.` },
-    { minute: 82, type: 'substitution', description: `${home.name} changed formation to protect the lead.` }
-  ];
+  const result = simulateMatchEngine(
+    { players: homePlayers, tactics: homeTactics },
+    { players: awayPlayers, tactics: awayTactics }
+  );
 
-  io.emit('match:update', { homeClubId, awayClubId, events });
-  res.json({ homeClubId, awayClubId, events });
+  io.emit('match:update', result);
+  res.json(result);
 });
 
 io.on('connection', (socket) => {
