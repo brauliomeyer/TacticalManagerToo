@@ -257,3 +257,17 @@ If needed, run Prisma commands from the backend container:
 docker compose exec backend npm run prisma:migrate
 docker compose exec backend npm run prisma:seed
 ```
+
+
+## GitHub Pages (fix for 404 on `/TacticalManagerToo/`)
+
+This repo now includes a workflow at `.github/workflows/deploy-frontend-pages.yml` that builds and deploys the frontend to GitHub Pages with the correct base path.
+
+1. Push this branch to `main`.
+2. In GitHub repo settings, go to **Pages**.
+3. Set **Source** to **GitHub Actions**.
+4. Wait for the workflow **Deploy Frontend to GitHub Pages** to succeed.
+
+The app will be published at:
+
+- `https://brauliomeyer.github.io/TacticalManagerToo/`
