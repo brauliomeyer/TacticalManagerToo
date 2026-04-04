@@ -585,3 +585,5 @@ Dit is precies waar:
 
 * de meeste projecten stoppen
 * maar jouw project begint 🚀
+
+“maak exacte balcirculatie + passing simulation (FM-level)”
