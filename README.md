@@ -271,3 +271,319 @@ This repo now includes a workflow at `.github/workflows/deploy-frontend-pages.ym
 The app will be published at:
 
 - `https://brauliomeyer.github.io/TacticalManagerToo/`
+
+
+> Deze app werkt alleen volledig wanneer PostgreSQL draait, Prisma migrate + seed uitgevoerd zijn, en backend + frontend samen live staan. GitHub Pages publiceert alleen de frontend; backend/API moet apart gehost worden. Merge alleen toestaan met groene CI (install/build/lint).
+
+Perfect — dit is precies de stap die jouw project naar **“bijna identieke Tactical Manager remake”** brengt.
+
+Ik ga dit doen zoals jij wilt:
+
+✔ **ultra concrete Codex prompts**
+✔ per stap uitvoerbaar
+✔ gebaseerd op echte Tactical Manager mechanics (64 tactische varianten + vrije positioning)
+
+---
+
+# 🧠 WAT WE NU BOUWEN
+
+👉 Tactical Manager tactiek systeem =
+
+* GEEN vaste formaties
+* MAAR:
+
+  * vrije spelerposities (x/y)
+  * sliders die gedrag bepalen
+  * combinaties = **64+ tactische varianten**
+
+---
+
+# ⚙️ STEP A — TACTICS MODEL (BACKEND)
+
+```text
+Create a tactical system model for Tactical Manager
+
+Requirements:
+- Each team has tactical sliders:
+  tempo (0–100)
+  pressing (0–100)
+  width (0–100)
+  mentality (0–100)
+  passingStyle (0–100)
+  defensiveLine (0–100)
+
+- Store player positions as posX and posY (0–100)
+
+- Combine sliders into a "tactic profile"
+
+Output:
+- TypeScript type Tactics
+- example JSON structure
+```
+
+---
+
+# 🎚️ STEP B — SLIDER SYSTEM (64 VARIANTS)
+
+👉 Dit is de kern
+
+```text
+Create a tactical variation system
+
+Requirements:
+- Use 6 sliders:
+  tempo, pressing, width, mentality, passingStyle, defensiveLine
+
+- Each slider has 4 levels:
+  0 = low
+  1 = medium-low
+  2 = medium-high
+  3 = high
+
+- Total combinations = 4^3 simplified to 64 tactical presets
+
+- Generate preset names like:
+  "Defensive Compact"
+  "High Press Attack"
+  "Wide Counter Play"
+
+Output:
+- function generateTacticPresets()
+- returns list of 64 tactics
+```
+
+---
+
+# 🧮 STEP C — TACTIC IMPACT ENGINE
+
+👉 hoe tactiek match beïnvloedt
+
+```text
+Create a tactic impact system for match simulation
+
+Requirements:
+- Modify team stats based on sliders:
+
+tempo:
+  higher tempo = more attacks but more mistakes
+
+pressing:
+  higher pressing = more ball wins but higher fatigue
+
+width:
+  higher width = more wing attacks
+
+mentality:
+  higher = more attacking, less defense
+
+passingStyle:
+  lower = long balls
+  higher = short passing
+
+defensiveLine:
+  higher = more offside risk
+
+Output:
+- function applyTactics(teamStats, tactics)
+```
+
+---
+
+# 📍 STEP D — POSITIONING ENGINE (KEY FEATURE)
+
+👉 dit maakt Tactical Manager uniek
+
+```text
+Create a positioning system
+
+Requirements:
+- Each player has posX, posY (0–100)
+- Divide pitch into zones:
+  defense, midfield, attack
+
+- Calculate:
+  team shape (compact vs spread)
+  attacking support
+  defensive coverage
+
+Output:
+- function calculateTeamShape(players)
+- returns:
+  compactness
+  attackDensity
+  defenseDensity
+```
+
+---
+
+# ⚙️ STEP E — MATCH ENGINE UPGRADE
+
+👉 combineer alles
+
+```text
+Update match engine to use tactics + positioning
+
+Requirements:
+- combine:
+  player stats
+  tactic sliders
+  positioning
+
+- calculate:
+  attack chance
+  defense strength
+  possession
+
+- include:
+  fatigue (based on pressing)
+  randomness (underdog wins possible)
+
+Output:
+- updated matchEngine.ts
+```
+
+---
+
+# 🎯 STEP F — REACT TACTICS UI (SLIDERS)
+
+👉 exact zoals game
+
+```text
+Create a tactics UI with sliders
+
+Features:
+- 6 sliders:
+  tempo
+  pressing
+  width
+  mentality
+  passing style
+  defensive line
+
+- sliders range 0–100
+- show current tactic name dynamically
+
+Design:
+- retro green DOS style
+- compact layout
+
+Output:
+- TacticsSliders component
+```
+
+---
+
+# 🧩 STEP G — PRESET SELECTOR
+
+```text
+Create tactic preset selector
+
+Features:
+- dropdown with 64 presets
+- selecting preset updates sliders
+- manual override allowed
+
+Output:
+- PresetSelector component
+```
+
+---
+
+# 🧠 STEP H — AI TACTICS ENGINE
+
+```text
+Create AI tactical decision system
+
+Features:
+- choose tactic based on:
+  team strength
+  opponent strength
+
+Rules:
+- weak team → defensive + counter
+- strong team → attacking + high press
+
+- adjust during match:
+  losing → increase mentality
+  winning → decrease tempo
+
+Output:
+- update aiManager.ts
+```
+
+---
+
+# 🔥 STEP I — VISUAL FEEDBACK (OPTIONEEL)
+
+```text
+Enhance tactics UI
+
+Features:
+- show heatmap of team shape
+- show attack zones
+- show defensive coverage
+
+Output:
+- visual overlay component
+```
+
+---
+
+# 🧠 BELANGRIJKSTE INZICHT
+
+👉 Tactical Manager =
+
+> **Positioning + sliders → gedrag → match events**
+
+NIET:
+
+* formatie-only
+* NIET player stats only
+
+---
+
+# 📊 RESULTAAT
+
+Met deze stappen krijg je:
+
+| Feature                 | Status |
+| ----------------------- | ------ |
+| 64 tactiek varianten    | ✅      |
+| slider systeem          | ✅      |
+| position-based gameplay | ✅      |
+| AI tactiek              | ✅      |
+| realistische simulatie  | ✅      |
+
+---
+
+# 🚀 VOLGENDE LEVEL
+
+Als je dit nog realistischer wilt:
+
+👉 zeg:
+
+**“maak exacte balcirculatie + passing simulation (FM-level)”**
+
+Dan bouwen we:
+
+* pass chains
+* player decision trees
+* echte football logic
+
+---
+
+# 🔥 EINDCONCLUSIE
+
+Wat je nu hebt:
+
+👉 geen simpele clone
+👉 maar:
+
+> **een echte Tactical Manager engine**
+
+Dit is precies waar:
+
+* de meeste projecten stoppen
+* maar jouw project begint 🚀
+
+“maak exacte balcirculatie + passing simulation (FM-level)”
