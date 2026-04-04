@@ -19,10 +19,13 @@ export interface Player {
   wage: number;
 }
 
+export type MatchEventType = 'goal' | 'card' | 'substitution' | 'GOAL' | 'SHOT' | 'PASS' | 'FOUL';
+
 export interface MatchEvent {
   minute: number;
-  type: 'goal' | 'card' | 'substitution';
-  description: string;
+  type: MatchEventType;
+  team?: 'HOME' | 'AWAY' | string;
+  description?: string;
 }
 
 export interface ManagerSummary {

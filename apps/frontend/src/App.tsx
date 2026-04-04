@@ -131,7 +131,7 @@ export default function App() {
               ) : (
                 events.map((event) => (
                   <li className="border border-[#98ca7a] bg-[#256d22] px-2 py-1" key={`${event.minute}-${event.type}`}>
-                    {event.minute}' {event.description}
+                    {event.minute}' {event.description ?? `${event.team ?? 'MATCH'} ${event.type}`}
                   </li>
                 ))
               )}
