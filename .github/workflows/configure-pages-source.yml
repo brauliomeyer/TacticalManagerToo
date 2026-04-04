@@ -1,0 +1,30 @@
+name: Configure GitHub Pages source
+
+on:
+  push:
+    branches: ["main", "master"]
+  workflow_dispatch:
+
+permissions:
+  pages: write
+  contents: read
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Pages source to gh-pages/root
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            await github.request('PUT /repos/{owner}/{repo}/pages', {
+              owner,
+              repo,
+              build_type: 'legacy',
+              source: {
+                branch: 'gh-pages',
+                path: '/'
+              }
+            });

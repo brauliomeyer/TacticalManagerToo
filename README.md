@@ -860,3 +860,6 @@ If `https://brauliomeyer.github.io/TacticalManagerToo/` shows a 404 page, run th
 - Branch: **gh-pages** / **root**
 
 The workflow builds `apps/frontend/dist` and publishes it to `gh-pages` automatically.
+
+
+Pages source is now also auto-configured by workflow `.github/workflows/configure-pages-source.yml` to use `gh-pages` / root.
