@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Club {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  country    String
+  budget     Int
+  reputation Int
+  players    Player[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Player {
+  id        String   @id @default(uuid())
+  name      String
+  position  String
+  age       Int
+  overall   Int
+  potential Int
+  wage      Int
+  clubId    String
+  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
