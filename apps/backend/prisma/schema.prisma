@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlayerRole {
+  DEFENDER
+  MIDFIELDER
+  ATTACKER
+}
+
+model League {
+  id          String          @id @default(uuid())
+  name        String
+  country     String?
+  season      Int             @default(1)
+  clubs       Club[]
+  matches     Match[]
+  standings   TableStanding[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([name, season])
+  @@index([season])
+}
+
+model Club {
+  id          String          @id @default(uuid())
+  name        String
+  budget      Int             @default(0)
+  reputation  Int             @default(50)
+  leagueId    String?
+  league      League?         @relation(fields: [leagueId], references: [id], onDelete: SetNull)
+  players     Player[]
+  tactics     Tactics[]
+  homeMatches Match[]         @relation("HomeTeam")
+  awayMatches Match[]         @relation("AwayTeam")
+  standings   TableStanding[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([name, leagueId])
+  @@index([leagueId])
+}
+
+model Player {
+  id          String      @id @default(uuid())
+  clubId       String
+  club         Club        @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  name         String
+  age          Int
+
+  pac          Int         @default(50)
+  sho          Int         @default(50)
+  pas          Int         @default(50)
+  dri          Int         @default(50)
+  def          Int         @default(50)
+  phy          Int         @default(50)
+
+  morale       Int         @default(50)
+  stamina      Int         @default(50)
+  form         Int         @default(50)
+  potential    Int         @default(50)
+
+  // Free positioning system on a 0-100 pitch grid.
+  posX         Int         @default(50)
+  posY         Int         @default(50)
+
+  role         PlayerRole
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([clubId])
+  @@index([role])
+  @@index([clubId, posX, posY])
+}
+
+model Tactics {
+  id            String      @id @default(uuid())
+  clubId         String
+  club           Club        @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  formationName  String
+  tempo          Int         @default(50)
+  pressing       Int         @default(50)
+  width          Int         @default(50)
+  mentality      String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([clubId])
+  @@unique([clubId, formationName])
+}
+
+model Match {
+  id          String      @id @default(uuid())
+  leagueId     String?
+  league       League?     @relation(fields: [leagueId], references: [id], onDelete: SetNull)
+  homeTeamId   String
+  homeTeam     Club        @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
+  awayTeamId   String
+  awayTeam     Club        @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
+  scoreHome    Int         @default(0)
+  scoreAway    Int         @default(0)
+  events       Json
+  matchDate    DateTime    @default(now())
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([leagueId, matchDate])
+  @@index([homeTeamId])
+  @@index([awayTeamId])
+}
+
+model TableStanding {
+  id            String      @id @default(uuid())
+  leagueId       String
+  league         League      @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  clubId         String
+  club           Club        @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  played         Int         @default(0)
+  won            Int         @default(0)
+  drawn          Int         @default(0)
+  lost           Int         @default(0)
+  goalsFor       Int         @default(0)
+  goalsAgainst   Int         @default(0)
+  goalDiff       Int         @default(0)
+  points         Int         @default(0)
+  position       Int         @default(0)
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([leagueId, clubId])
+  @@index([leagueId, position])
+  @@index([clubId])
+}
