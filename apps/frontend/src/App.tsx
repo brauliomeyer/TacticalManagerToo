@@ -18,6 +18,13 @@ interface Club {
   leagueName?: string | null;
 }
 
+interface DivisionGroup {
+  id: string;
+  name: string;
+  country: string;
+  clubs: Club[];
+}
+
 type PageKey = 'mail' | 'board' | 'squad' | 'cup' | 'human' | 'manager' | 'manage' | 'transfers' | 'training' | 'tactics' | 'match';
 
 const socket = io(API_BASE, { autoConnect: false });
@@ -64,6 +71,9 @@ function PagePanel({ page, activeClub }: { page: PageKey; activeClub: Club }) {
       <div className="retro-pitch mb-3 h-52 border-2 border-[#8ee486]" />
       <p className="border border-[#98ca7a] bg-[#256d22] px-2 py-1 text-xs text-[#d5f8b6]">{pageDescriptions[page].text}</p>
       <p className="mt-3 border border-[#98ca7a] bg-[#1f641d] px-2 py-1 text-xs text-[#d5f8b6]">
+        Division: <strong>{activeClub.leagueName ?? activeClub.country ?? '1st Division'}</strong>
+      </p>
+      <p className="mt-3 border border-[#98ca7a] bg-[#1f641d] px-2 py-1 text-xs text-[#d5f8b6]">
         Active club: <strong>{activeClub.name}</strong>
       </p>
     </section>
@@ -84,6 +94,17 @@ function normalizeClubs(payload: unknown): Club[] {
 
 function getDefaultClubId(clubs: Club[]) {
   return clubs.find((club) => club.name === 'Nottingham Forest FC')?.id ?? clubs[0]?.id ?? null;
+}
+
+function getDivisionSortRank(name: string) {
+  const order: Record<string, number> = {
+    'Premier League': 0,
+    Championship: 1,
+    'League One': 2,
+    'League Two': 3
+  };
+
+  return order[name] ?? 99;
 }
 
 export default function App() {
@@ -143,20 +164,59 @@ export default function App() {
 
   const activeClub = clubs.find((club: Club) => club.id === activeClubId) ?? fallbackClub;
 
+  const englishDivisions = useMemo<DivisionGroup[]>(() => {
+    const groups = new Map<string, DivisionGroup>();
+
+    clubs
+      .filter((club: Club) => (club.country ?? 'England') === 'England')
+      .forEach((club: Club) => {
+        const id = club.leagueId ?? club.leagueName ?? 'unknown-division';
+        const existing = groups.get(id);
+
+        if (existing) {
+          existing.clubs.push(club);
+          return;
+        }
+
+        groups.set(id, {
+          id,
+          name: club.leagueName ?? '1st Division',
+          country: club.country ?? 'England',
+          clubs: [club]
+        });
+      });
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        clubs: [...group.clubs].sort((left, right) => left.name.localeCompare(right.name))
+      }))
+      .sort((left, right) => {
+        const rankDiff = getDivisionSortRank(left.name) - getDivisionSortRank(right.name);
+        return rankDiff !== 0 ? rankDiff : left.name.localeCompare(right.name);
+      });
+  }, [clubs]);
+
+  const activeDivisionIndex = Math.max(
+    0,
+    englishDivisions.findIndex((division) => division.id === (activeClub.leagueId ?? activeClub.leagueName ?? 'unknown-division'))
+  );
+
+  const activeDivision = englishDivisions[activeDivisionIndex] ?? null;
+
   const competitionClubs = useMemo(() => {
-    if (clubs.length === 0) return [];
-    if (activeClub.leagueId) {
-      const sameLeague = clubs.filter((club: Club) => club.leagueId === activeClub.leagueId);
-      if (sameLeague.length > 0) return sameLeague;
+    if (activeDivision) {
+      return activeDivision.clubs;
     }
 
+    if (clubs.length === 0) return [];
     if (activeClub.country) {
       const sameCountry = clubs.filter((club: Club) => club.country === activeClub.country);
       if (sameCountry.length > 0) return sameCountry;
     }
 
     return clubs;
-  }, [clubs, activeClub.leagueId, activeClub.country]);
+  }, [activeDivision, clubs, activeClub.country]);
 
   const activeCompetitionIndex = Math.max(
     0,
@@ -179,6 +239,22 @@ export default function App() {
     if (competitionClubs.length === 0) return;
     const nextIndex = (activeCompetitionIndex + 1) % competitionClubs.length;
     setActiveClubId(competitionClubs[nextIndex].id);
+  };
+
+  const previousDivision = () => {
+    if (englishDivisions.length === 0) return;
+    const nextIndex = (activeDivisionIndex - 1 + englishDivisions.length) % englishDivisions.length;
+    const targetDivision = englishDivisions[nextIndex];
+    const targetClub = targetDivision.clubs[activeCompetitionIndex % targetDivision.clubs.length] ?? targetDivision.clubs[0];
+    setActiveClubId(targetClub.id);
+  };
+
+  const nextDivision = () => {
+    if (englishDivisions.length === 0) return;
+    const nextIndex = (activeDivisionIndex + 1) % englishDivisions.length;
+    const targetDivision = englishDivisions[nextIndex];
+    const targetClub = targetDivision.clubs[activeCompetitionIndex % targetDivision.clubs.length] ?? targetDivision.clubs[0];
+    setActiveClubId(targetClub.id);
   };
 
   const simulate = async () => {
@@ -218,6 +294,27 @@ export default function App() {
             <p className="mb-2 bg-[#2a8a2b] px-2 py-1 font-bold uppercase text-[#0e1d0f]">
               {(activeClub.leagueName || activeClub.country || '1st Division').toUpperCase()}
             </p>
+            <div className="mb-2 flex items-center justify-between gap-2 rounded border border-[#6f4ca1] bg-[#1f641d] px-2 py-2 text-[10px] font-bold text-[#efe56b]">
+              <button
+                type="button"
+                onClick={previousDivision}
+                className="rounded border border-[#efe56b] bg-[#f0d9cf] px-2 py-1 text-xs font-bold text-[#2e1f4a]"
+                disabled={englishDivisions.length <= 1}
+              >
+                ‹
+              </button>
+              <span className="text-center uppercase">
+                Division {activeDivisionIndex + 1} / {englishDivisions.length}
+              </span>
+              <button
+                type="button"
+                onClick={nextDivision}
+                className="rounded border border-[#efe56b] bg-[#f0d9cf] px-2 py-1 text-xs font-bold text-[#2e1f4a]"
+                disabled={englishDivisions.length <= 1}
+              >
+                ›
+              </button>
+            </div>
             <div className="mb-3 flex items-center justify-between gap-2 rounded border border-[#d0121b] bg-[#2a8a2b] px-2 py-2 text-xs font-bold text-[#d0121b]">
               <button
                 type="button"
@@ -237,6 +334,9 @@ export default function App() {
                 ›
               </button>
             </div>
+            <p className="mb-3 border border-[#98ca7a] bg-[#1f641d] px-2 py-1 text-[10px] uppercase text-[#d5f8b6]">
+              {activeClub.leagueName ?? '1st Division'} • Club {activeCompetitionIndex + 1} / {competitionClubs.length || 1}
+            </p>
             <ul className="space-y-1">
               {sideMenu.map((item) => (
                 <li key={item.key}>
