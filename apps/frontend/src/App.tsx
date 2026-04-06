@@ -60,6 +60,40 @@ interface SquadPlayer {
 type SquadSortKey = 'overall' | 'name' | 'age' | 'morale' | 'potential';
 type SquadStatus = 'STARTER' | 'ROTATION' | 'DEVELOPMENT';
 
+const fallbackSquadRoles = [
+  'GOALKEEPER',
+  'LEFT_BACK',
+  'CENTER_BACK',
+  'CENTER_BACK',
+  'RIGHT_BACK',
+  'DEFENSIVE_MIDFIELDER',
+  'CENTRAL_MIDFIELDER',
+  'CENTRAL_MIDFIELDER',
+  'LEFT_WINGER',
+  'STRIKER',
+  'RIGHT_WINGER',
+  'GOALKEEPER',
+  'LEFT_BACK',
+  'CENTER_BACK',
+  'RIGHT_BACK',
+  'DEFENSIVE_MIDFIELDER',
+  'CENTRAL_MIDFIELDER',
+  'ATTACKING_MIDFIELDER',
+  'LEFT_WINGER',
+  'STRIKER',
+  'RIGHT_WINGER',
+  'STRIKER',
+  'PLAYMAKER'
+] as const;
+
+const fallbackFirstNames = [
+  'James', 'Oliver', 'Ethan', 'Noah', 'Liam', 'Jacob', 'Samuel', 'Leo', 'Mason', 'Ryan'
+];
+
+const fallbackLastNames = [
+  'Walker', 'Brown', 'Taylor', 'Wilson', 'Evans', 'King', 'Parker', 'Scott', 'Davies', 'Roberts'
+];
+
 type PageKey = 'mail' | 'board' | 'squad' | 'cup' | 'human' | 'manager' | 'manage' | 'transfers' | 'training' | 'tactics' | 'match';
 
 const socket = io(API_BASE, { autoConnect: false });
@@ -96,6 +130,41 @@ const pageDescriptions: Record<PageKey, { title: string; text: string }> = {
 
 function getOverall(player: SquadPlayer) {
   return Math.round((player.pac + player.sho + player.pas + player.dri + player.def + player.phy) / 6);
+}
+
+function hashText(value: string) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+function buildFallbackSquad(club: Club): SquadPlayer[] {
+  const seed = hashText(club.id || club.name || 'fallback-club');
+
+  return fallbackSquadRoles.map((role, index) => {
+    const firstName = fallbackFirstNames[(seed + index * 7) % fallbackFirstNames.length];
+    const lastName = fallbackLastNames[(seed + index * 11) % fallbackLastNames.length];
+    const base = 48 + ((seed + index * 13) % 28);
+
+    return {
+      id: `${club.id || club.name}-fallback-${index + 1}`,
+      name: `${firstName} ${lastName}`,
+      age: 18 + ((seed + index * 5) % 17),
+      role,
+      pac: Math.min(99, base + ((seed + index * 2) % 10)),
+      sho: Math.min(99, base + ((seed + index * 3) % 10)),
+      pas: Math.min(99, base + ((seed + index * 4) % 10)),
+      dri: Math.min(99, base + ((seed + index * 5) % 10)),
+      def: Math.min(99, base + ((seed + index * 6) % 10)),
+      phy: Math.min(99, base + ((seed + index * 7) % 10)),
+      morale: 45 + ((seed + index * 3) % 55),
+      stamina: 45 + ((seed + index * 4) % 55),
+      form: 45 + ((seed + index * 5) % 55),
+      potential: 55 + ((seed + index * 6) % 40)
+    };
+  });
 }
 
 function SquadPanel({
@@ -409,29 +478,48 @@ export default function App() {
       return;
     }
 
+    const selectedClub = clubs.find((club: Club) => club.id === activeClubId) ?? {
+      id: activeClubId,
+      name: 'Selected Club',
+      country: 'England',
+      budget: 0,
+      reputation: 0,
+      leagueId: null,
+      leagueName: null
+    };
+
     setSquadLoading(true);
     setSquadError(null);
 
     axios
       .get<{ club: { id: string; name: string }; players: SquadPlayer[] }>(`${API_BASE}/clubs/${activeClubId}/players`)
       .then((res) => {
-        setSquadPlayers(res.data.players);
+        const loadedPlayers = res.data.players.length > 0 ? res.data.players : buildFallbackSquad(selectedClub);
+        setSquadPlayers(loadedPlayers);
         setSquadStatuses((prev) => {
           const next: Record<string, SquadStatus> = {};
-          res.data.players.forEach((player: SquadPlayer) => {
+          loadedPlayers.forEach((player: SquadPlayer) => {
             next[player.id] = prev[player.id] ?? 'ROTATION';
           });
           return next;
         });
       })
       .catch(() => {
-        setSquadPlayers([]);
-        setSquadError('Kon de huidige selectie niet laden.');
+        const fallbackPlayers = buildFallbackSquad(selectedClub);
+        setSquadPlayers(fallbackPlayers);
+        setSquadStatuses((prev) => {
+          const next: Record<string, SquadStatus> = {};
+          fallbackPlayers.forEach((player: SquadPlayer) => {
+            next[player.id] = prev[player.id] ?? 'ROTATION';
+          });
+          return next;
+        });
+        setSquadError('Live selectie kon niet geladen worden, fallback selectie is getoond.');
       })
       .finally(() => {
         setSquadLoading(false);
       });
-  }, [activeClubId]);
+  }, [activeClubId, clubs]);
 
   const fallbackClub: Club = {
     id: '',
