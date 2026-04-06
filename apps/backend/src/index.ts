@@ -46,6 +46,26 @@ app.get('/clubs', async (_req, res) => {
   );
 });
 
+app.get('/clubs/:clubId/players', async (req, res) => {
+  const clubId = String(req.params.clubId);
+
+  const club = await prisma.club.findUnique({ where: { id: clubId } });
+  if (!club) {
+    res.status(404).json({ error: 'Club not found' });
+    return;
+  }
+
+  const players = await prisma.player.findMany({
+    where: { clubId },
+    orderBy: [{ role: 'asc' }, { name: 'asc' }]
+  });
+
+  res.json({
+    club: { id: club.id, name: club.name },
+    players
+  });
+});
+
 app.get('/leagues/:leagueId/standings', async (req, res) => {
   const leagueId = String(req.params.leagueId);
 

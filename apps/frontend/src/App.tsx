@@ -40,6 +40,26 @@ interface StandingRow {
   updatedAt: string | null;
 }
 
+interface SquadPlayer {
+  id: string;
+  name: string;
+  age: number;
+  role: string;
+  pac: number;
+  sho: number;
+  pas: number;
+  dri: number;
+  def: number;
+  phy: number;
+  morale: number;
+  stamina: number;
+  form: number;
+  potential: number;
+}
+
+type SquadSortKey = 'overall' | 'name' | 'age' | 'morale' | 'potential';
+type SquadStatus = 'STARTER' | 'ROTATION' | 'DEVELOPMENT';
+
 type PageKey = 'mail' | 'board' | 'squad' | 'cup' | 'human' | 'manager' | 'manage' | 'transfers' | 'training' | 'tactics' | 'match';
 
 const socket = io(API_BASE, { autoConnect: false });
@@ -74,9 +94,211 @@ const pageDescriptions: Record<PageKey, { title: string; text: string }> = {
   match: { title: 'Live Match', text: 'Live simulatie met eventlog en mini-pitch.' }
 };
 
-function PagePanel({ page, activeClub }: { page: PageKey; activeClub: Club }) {
+function getOverall(player: SquadPlayer) {
+  return Math.round((player.pac + player.sho + player.pas + player.dri + player.def + player.phy) / 6);
+}
+
+function SquadPanel({
+  activeClub,
+  players,
+  loading,
+  error,
+  search,
+  roleFilter,
+  sortBy,
+  statuses,
+  onSearchChange,
+  onRoleFilterChange,
+  onSortChange,
+  onStatusChange
+}: {
+  activeClub: Club;
+  players: SquadPlayer[];
+  loading: boolean;
+  error: string | null;
+  search: string;
+  roleFilter: string;
+  sortBy: SquadSortKey;
+  statuses: Record<string, SquadStatus>;
+  onSearchChange: (value: string) => void;
+  onRoleFilterChange: (value: string) => void;
+  onSortChange: (value: SquadSortKey) => void;
+  onStatusChange: (playerId: string, status: SquadStatus) => void;
+}) {
+  const roleOptions = ['ALL', ...Array.from(new Set(players.map((player: SquadPlayer) => player.role))).sort((a, b) => a.localeCompare(b))];
+
+  const visiblePlayers = [...players]
+    .filter((player: SquadPlayer) => {
+      const matchesSearch = player.name.toLowerCase().includes(search.trim().toLowerCase());
+      const matchesRole = roleFilter === 'ALL' || player.role === roleFilter;
+      return matchesSearch && matchesRole;
+    })
+    .sort((left: SquadPlayer, right: SquadPlayer) => {
+      if (sortBy === 'name') return left.name.localeCompare(right.name);
+      if (sortBy === 'age') return left.age - right.age;
+      if (sortBy === 'morale') return right.morale - left.morale;
+      if (sortBy === 'potential') return right.potential - left.potential;
+      return getOverall(right) - getOverall(left);
+    });
+
+  const starters = players.filter((player: SquadPlayer) => (statuses[player.id] ?? 'ROTATION') === 'STARTER').length;
+  const rotation = players.filter((player: SquadPlayer) => (statuses[player.id] ?? 'ROTATION') === 'ROTATION').length;
+  const development = players.filter((player: SquadPlayer) => (statuses[player.id] ?? 'ROTATION') === 'DEVELOPMENT').length;
+
+  return (
+    <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
+      <h2 className="mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-xs font-bold uppercase text-[#2e1f4a]">
+        Squad - {activeClub.name}
+      </h2>
+
+      <div className="mb-3 grid gap-2 md:grid-cols-3">
+        <div className="border border-[#98ca7a] bg-[#1f641d] p-2 text-xs text-[#d5f8b6]">Starters: <strong>{starters}</strong></div>
+        <div className="border border-[#98ca7a] bg-[#1f641d] p-2 text-xs text-[#d5f8b6]">Rotation: <strong>{rotation}</strong></div>
+        <div className="border border-[#98ca7a] bg-[#1f641d] p-2 text-xs text-[#d5f8b6]">Development: <strong>{development}</strong></div>
+      </div>
+
+      <div className="mb-3 grid gap-2 md:grid-cols-3">
+        <input
+          value={search}
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder="Zoek speler..."
+          className="border border-[#b78bda] bg-[#d5b5ec] px-2 py-1 text-xs text-[#2e1f4a]"
+        />
+        <select
+          value={roleFilter}
+          onChange={(event) => onRoleFilterChange(event.target.value)}
+          className="border border-[#b78bda] bg-[#d5b5ec] px-2 py-1 text-xs text-[#2e1f4a]"
+        >
+          {roleOptions.map((role: string) => (
+            <option key={role} value={role}>{role}</option>
+          ))}
+        </select>
+        <select
+          value={sortBy}
+          onChange={(event) => onSortChange(event.target.value as SquadSortKey)}
+          className="border border-[#b78bda] bg-[#d5b5ec] px-2 py-1 text-xs text-[#2e1f4a]"
+        >
+          <option value="overall">Sort: Overall</option>
+          <option value="potential">Sort: Potential</option>
+          <option value="morale">Sort: Morale</option>
+          <option value="age">Sort: Age</option>
+          <option value="name">Sort: Name</option>
+        </select>
+      </div>
+
+      {loading ? <p className="text-xs">Spelers laden...</p> : null}
+      {error ? <p className="mb-2 text-xs text-[#ffcf9f]">{error}</p> : null}
+
+      {!loading ? (
+        <div className="max-h-[55vh] overflow-auto border border-[#98ca7a]">
+          <table className="w-full border-collapse text-[11px]">
+            <thead className="bg-[#1f641d] text-[#efe56b]">
+              <tr>
+                <th className="px-2 py-1 text-left">Name</th>
+                <th className="px-2 py-1 text-left">Role</th>
+                <th className="px-2 py-1">Age</th>
+                <th className="px-2 py-1">OVR</th>
+                <th className="px-2 py-1">Morale</th>
+                <th className="px-2 py-1">Potential</th>
+                <th className="px-2 py-1 text-left">Management</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visiblePlayers.map((player: SquadPlayer) => {
+                const status = statuses[player.id] ?? 'ROTATION';
+                return (
+                  <tr key={player.id} className="border-t border-[#2a8a2b] odd:bg-[#115d16] even:bg-[#0f5714]">
+                    <td className="px-2 py-1">{player.name}</td>
+                    <td className="px-2 py-1">{player.role}</td>
+                    <td className="px-2 py-1 text-center">{player.age}</td>
+                    <td className="px-2 py-1 text-center">{getOverall(player)}</td>
+                    <td className="px-2 py-1 text-center">{player.morale}</td>
+                    <td className="px-2 py-1 text-center">{player.potential}</td>
+                    <td className="px-2 py-1">
+                      <div className="flex flex-wrap gap-1">
+                        <button
+                          type="button"
+                          onClick={() => onStatusChange(player.id, 'STARTER')}
+                          className={`border px-2 py-0.5 ${status === 'STARTER' ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
+                        >
+                          Starter
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onStatusChange(player.id, 'ROTATION')}
+                          className={`border px-2 py-0.5 ${status === 'ROTATION' ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
+                        >
+                          Rotation
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onStatusChange(player.id, 'DEVELOPMENT')}
+                          className={`border px-2 py-0.5 ${status === 'DEVELOPMENT' ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
+                        >
+                          Development
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function PagePanel({
+  page,
+  activeClub,
+  squadPlayers,
+  squadLoading,
+  squadError,
+  squadSearch,
+  squadRoleFilter,
+  squadSortBy,
+  squadStatuses,
+  onSquadSearchChange,
+  onSquadRoleFilterChange,
+  onSquadSortChange,
+  onSquadStatusChange
+}: {
+  page: PageKey;
+  activeClub: Club;
+  squadPlayers: SquadPlayer[];
+  squadLoading: boolean;
+  squadError: string | null;
+  squadSearch: string;
+  squadRoleFilter: string;
+  squadSortBy: SquadSortKey;
+  squadStatuses: Record<string, SquadStatus>;
+  onSquadSearchChange: (value: string) => void;
+  onSquadRoleFilterChange: (value: string) => void;
+  onSquadSortChange: (value: SquadSortKey) => void;
+  onSquadStatusChange: (playerId: string, status: SquadStatus) => void;
+}) {
   if (page === 'tactics') return <TacticsBoard />;
   if (page === 'match') return <MatchScreen />;
+  if (page === 'squad') {
+    return (
+      <SquadPanel
+        activeClub={activeClub}
+        players={squadPlayers}
+        loading={squadLoading}
+        error={squadError}
+        search={squadSearch}
+        roleFilter={squadRoleFilter}
+        sortBy={squadSortBy}
+        statuses={squadStatuses}
+        onSearchChange={onSquadSearchChange}
+        onRoleFilterChange={onSquadRoleFilterChange}
+        onSortChange={onSquadSortChange}
+        onStatusChange={onSquadStatusChange}
+      />
+    );
+  }
 
   return (
     <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
@@ -134,6 +356,13 @@ export default function App() {
   const [standingsError, setStandingsError] = useState<string | null>(null);
   const [standingsRows, setStandingsRows] = useState<StandingRow[]>([]);
   const [standingsDivisionName, setStandingsDivisionName] = useState<string>('');
+  const [squadPlayers, setSquadPlayers] = useState<SquadPlayer[]>([]);
+  const [squadLoading, setSquadLoading] = useState(false);
+  const [squadError, setSquadError] = useState<string | null>(null);
+  const [squadSearch, setSquadSearch] = useState('');
+  const [squadRoleFilter, setSquadRoleFilter] = useState('ALL');
+  const [squadSortBy, setSquadSortBy] = useState<SquadSortKey>('overall');
+  const [squadStatuses, setSquadStatuses] = useState<Record<string, SquadStatus>>({});
 
   useEffect(() => {
     axios
@@ -171,6 +400,38 @@ export default function App() {
       setActiveClubId(getDefaultClubId(clubs));
     }
   }, [clubs, activeClubId]);
+
+  useEffect(() => {
+    if (!activeClubId) {
+      setSquadPlayers([]);
+      setSquadError(null);
+      setSquadLoading(false);
+      return;
+    }
+
+    setSquadLoading(true);
+    setSquadError(null);
+
+    axios
+      .get<{ club: { id: string; name: string }; players: SquadPlayer[] }>(`${API_BASE}/clubs/${activeClubId}/players`)
+      .then((res) => {
+        setSquadPlayers(res.data.players);
+        setSquadStatuses((prev) => {
+          const next: Record<string, SquadStatus> = {};
+          res.data.players.forEach((player: SquadPlayer) => {
+            next[player.id] = prev[player.id] ?? 'ROTATION';
+          });
+          return next;
+        });
+      })
+      .catch(() => {
+        setSquadPlayers([]);
+        setSquadError('Kon de huidige selectie niet laden.');
+      })
+      .finally(() => {
+        setSquadLoading(false);
+      });
+  }, [activeClubId]);
 
   const fallbackClub: Club = {
     id: '',
@@ -335,6 +596,10 @@ export default function App() {
     }
   };
 
+  const setPlayerStatus = (playerId: string, status: SquadStatus) => {
+    setSquadStatuses((prev) => ({ ...prev, [playerId]: status }));
+  };
+
   return (
     <main className="min-h-screen bg-[#1a1e2b] p-4 text-[#d4f6a7] md:p-8">
       <section className="mx-auto max-w-6xl border-4 border-[#6f4ca1] bg-[#2a8a2b] shadow-[0_0_0_4px_#120d1f]">
@@ -449,7 +714,21 @@ export default function App() {
               ))}
             </div>
 
-            <PagePanel activeClub={activeClub} page={activePage} />
+            <PagePanel
+              activeClub={activeClub}
+              page={activePage}
+              squadPlayers={squadPlayers}
+              squadLoading={squadLoading}
+              squadError={squadError}
+              squadSearch={squadSearch}
+              squadRoleFilter={squadRoleFilter}
+              squadSortBy={squadSortBy}
+              squadStatuses={squadStatuses}
+              onSquadSearchChange={setSquadSearch}
+              onSquadRoleFilterChange={setSquadRoleFilter}
+              onSquadSortChange={setSquadSortBy}
+              onSquadStatusChange={setPlayerStatus}
+            />
 
             {error ? (
               <p className="mt-3 border border-[#98ca7a] bg-[#256d22] px-2 py-1 text-xs text-[#d5f8b6]">{error}</p>
