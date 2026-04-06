@@ -15,6 +15,13 @@ type RunLine = {
   toY: number;
 };
 
+type RunStart = {
+  type: 'player' | 'position';
+  id?: string;
+  x?: number;
+  y?: number;
+};
+
 const initialPlayers: TacticalPlayer[] = [
   { id: 'gk', name: 'GK', posX: 14, posY: 50 },
   { id: 'lb', name: 'LB', posX: 24, posY: 30 },
@@ -86,6 +93,7 @@ export default function TacticsBoard() {
   const [players, setPlayers] = useState<TacticalPlayer[]>(initialPlayers);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [runStartId, setRunStartId] = useState<string | null>(null);
+  const [runChainStart, setRunChainStart] = useState<RunStart | null>(null);
   const [runs, setRuns] = useState<RunLine[]>([]);
 
   const undoLastRun = () => {
@@ -128,21 +136,46 @@ export default function TacticsBoard() {
   };
 
   const handleBoardClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!runStartId || !boardRef.current) return;
+    if (!runStartId && !runChainStart && !boardRef.current) return;
+    if (!runStartId && !runChainStart) return;
 
     const rect = boardRef.current.getBoundingClientRect();
     const target = boardToPitchCoords(event.clientX, event.clientY, rect);
 
+    // Determine the source - either from player or from last run endpoint
+    const sourceId = runStartId || `chain-${Date.now()}`;
+    const fromId = runChainStart ? runChainStart.id! : runStartId!;
+
     setRuns((prev) => [
       ...prev,
       {
-        id: `run-${prev.length + 1}`,
-        fromId: runStartId,
+        id: sourceId,
+        fromId: fromId,
         toX: target.x,
         toY: target.y
       }
     ]);
+
+    // After placing run, enable chaining from the endpoint
     setRunStartId(null);
+    setRunChainStart({
+      type: 'position',
+      id: sourceId,
+      x: target.x,
+      y: target.y
+    });
+  };
+
+  const startNewChain = () => {
+    if (runs.length > 0) {
+      const lastRun = runs[runs.length - 1];
+      setRunChainStart({
+        type: 'position',
+        id: `chain-from-${lastRun.id}`,
+        x: lastRun.toX,
+        y: lastRun.toY
+      });
+    }
   };
 
   const getPlayerById = (id: string) => players.find((player) => player.id === id) || opponentPlayers.find((player) => player.id === id);
@@ -193,6 +226,24 @@ export default function TacticsBoard() {
                 Cancel start
               </button>
             ) : null}
+            {runChainStart ? (
+              <button
+                type="button"
+                onClick={() => setRunChainStart(null)}
+                className="rounded border border-[#ffe26d] bg-[#3d5e1e] px-2 py-1 text-[11px] font-bold text-[#ffe26d]"
+              >
+                Cancel chain
+              </button>
+            ) : null}
+            {!runChainStart && runs.length > 0 ? (
+              <button
+                type="button"
+                onClick={startNewChain}
+                className="rounded border border-[#68e154] bg-[#1e6d1f] px-2 py-1 text-[11px] font-bold text-[#68e154]"
+              >
+                Chain from last
+              </button>
+            ) : null}
           </div>
 
           <p className="mt-2 text-[11px] text-[#d7ff9f]">Runs: {runs.length}</p>
@@ -214,6 +265,9 @@ export default function TacticsBoard() {
             </ul>
           ) : (
             <p className="mt-1 text-[11px] text-[#9fd28d]">No runs yet.</p>
+          )}
+          {runChainStart && (
+            <p className="mt-2 text-[10px] text-[#ffe26d]">📍 Chaining from run endpoint • click pitch to continue</p>
           )}
         </div>
       </div>
@@ -292,7 +346,7 @@ export default function TacticsBoard() {
             key={player.id}
             onPointerDown={(event) => {
               event.preventDefault();
-              if (player.color !== 'red' && event.shiftKey) {
+              if (event.shiftKey) {
                 setDraggingId(player.id);
                 dragStartRef.current = { x: event.clientX, y: event.clientY };
                 didDragRef.current = false;
@@ -304,6 +358,7 @@ export default function TacticsBoard() {
                 didDragRef.current = false;
                 return;
               }
+              setRunChainStart(null);
               setRunStartId(player.id);
             }}
             style={{ left: `${mapped.x}%`, top: `${mapped.y}%` }}
@@ -315,7 +370,7 @@ export default function TacticsBoard() {
         })}
       </div>
 
-      <p className="mt-3 text-xs text-[#efe56b]">Shift+click a player, then click the pitch to place a run arrow. Remove runs with Undo last, Clear all, or the X button in Run controls.</p>
+      <p className="mt-3 text-xs text-[#efe56b]">Shift+click any player (blue or red), then click pitch to place arrow. Use "Chain from last" to extend runs. Remove with Undo/Clear/X buttons.</p>
       <pre className="hidden mt-2 max-h-40 overflow-auto border border-[#68e154] bg-[#0b5f15] p-2 text-[11px] leading-4">{asJson}</pre>
     </section>
   );
