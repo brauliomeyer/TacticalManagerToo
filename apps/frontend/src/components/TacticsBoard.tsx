@@ -117,16 +117,16 @@ export default function TacticsBoard() {
       </div>
 
       <div
-        className="relative h-[420px] w-full overflow-hidden rounded border-2 border-[#74be5f] bg-[#1f5b1a] shadow-[inset_0_0_35px_rgba(0,0,0,0.55)]"
+        className="relative h-[420px] w-full overflow-hidden rounded border-2 border-[#74be5f] bg-[#1f5b1a] shadow-[inset_0_0_35px_rgba(0,0,0,0.45)]"
         onPointerMove={(event) => updateByPointer(event.clientX, event.clientY)}
         onPointerUp={() => setDraggingId(null)}
         onPointerLeave={() => setDraggingId(null)}
         onClick={handleBoardClick}
         ref={boardRef}
       >
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(26,93,27,0.9)_0,rgba(26,93,27,0.9)_20%,rgba(28,101,28,0.9)_20%,rgba(28,101,28,0.9)_40%,rgba(26,93,27,0.9)_40%,rgba(26,93,27,0.9)_60%,rgba(28,101,28,0.9)_60%,rgba(28,101,28,0.9)_80%,rgba(26,93,27,0.9)_80%,rgba(26,93,27,0.9)_100%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(90deg,rgba(93,201,38,0.8)_0,rgba(93,201,38,0.8)_5%,rgba(78,178,31,0.82)_5%,rgba(78,178,31,0.82)_10%)]" />
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-2 rounded-[1.1rem] border border-white/80" />
+          <div className="absolute inset-2 border border-white/80" />
         </div>
 
         <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none">
@@ -135,30 +135,24 @@ export default function TacticsBoard() {
               <path d="M 0 0 L 10 5 L 0 10 Z" fill="#ffe26d" />
             </marker>
           </defs>
-          <rect x="3" y="3" width="94" height="94" rx="4" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="0.8" />
-          <line x1="50" y1="3" x2="50" y2="97" stroke="rgba(255,255,255,0.78)" strokeWidth="0.5" />
-          <circle cx="50" cy="50" r="14" fill="none" stroke="rgba(255,255,255,0.78)" strokeWidth="0.5" />
+          <rect x="3" y="3" width="94" height="94" fill="none" stroke="rgba(255,255,255,0.88)" strokeWidth="0.8" />
+          <line x1="50" y1="3" x2="50" y2="97" stroke="rgba(255,255,255,0.84)" strokeWidth="0.45" />
+          <circle cx="50" cy="50" r="7" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.45" />
           <circle cx="50" cy="50" r="0.9" fill="rgba(255,255,255,0.95)" />
-          <rect x="5" y="28" width="22" height="44" rx="1" fill="none" stroke="rgba(255,255,255,0.78)" strokeWidth="0.55" />
-          <rect x="73" y="28" width="22" height="44" rx="1" fill="none" stroke="rgba(255,255,255,0.78)" strokeWidth="0.55" />
-          <rect x="10" y="36" width="12" height="28" rx="1" fill="none" stroke="rgba(255,255,255,0.78)" strokeWidth="0.45" />
-          <rect x="78" y="36" width="12" height="28" rx="1" fill="none" stroke="rgba(255,255,255,0.78)" strokeWidth="0.45" />
-          <line x1="12" y1="50" x2="12" y2="50" stroke="rgba(255,255,255,0.85)" strokeWidth="2" />
-          <line x1="88" y1="50" x2="88" y2="50" stroke="rgba(255,255,255,0.85)" strokeWidth="2" />
-          <path d="M23,40 A10,10 0 0 1 23,60" fill="none" stroke="rgba(255,255,255,0.78)" strokeWidth="0.45" />
-          <path d="M77,40 A10,10 0 0 0 77,60" fill="none" stroke="rgba(255,255,255,0.78)" strokeWidth="0.45" />
-          <path d="M10,10 h6" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.55" />
-          <path d="M10,90 h6" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.55" />
-          <path d="M90,10 h6" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.55" />
-          <path d="M90,90 h6" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.55" />
-          <line x1="9" y1="7" x2="9" y2="20" stroke="rgba(255,255,255,0.85)" strokeWidth="0.6" />
-          <polygon points="9,7 13,10 9,13" fill="#ff4a4a" />
-          <line x1="91" y1="7" x2="91" y2="20" stroke="rgba(255,255,255,0.85)" strokeWidth="0.6" />
-          <polygon points="91,7 87,10 91,13" fill="#ff4a4a" />
-          <line x1="9" y1="93" x2="9" y2="80" stroke="rgba(255,255,255,0.85)" strokeWidth="0.6" />
-          <polygon points="9,93 13,90 9,87" fill="#ff4a4a" />
-          <line x1="91" y1="93" x2="91" y2="80" stroke="rgba(255,255,255,0.85)" strokeWidth="0.6" />
-          <polygon points="91,93 87,90 91,87" fill="#ff4a4a" />
+          <rect x="3" y="20" width="16" height="60" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.45" />
+          <rect x="81" y="20" width="16" height="60" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.45" />
+          <rect x="3" y="35" width="6" height="30" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.42" />
+          <rect x="91" y="35" width="6" height="30" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.42" />
+          <circle cx="14" cy="50" r="0.65" fill="rgba(255,255,255,0.95)" />
+          <circle cx="86" cy="50" r="0.65" fill="rgba(255,255,255,0.95)" />
+          <path d="M19,42 A8,8 0 0 1 19,58" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.42" />
+          <path d="M81,42 A8,8 0 0 0 81,58" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.42" />
+          <path d="M3,3 q3,0 3,3" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.38" />
+          <path d="M3,97 q3,0 3,-3" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.38" />
+          <path d="M97,3 q-3,0 -3,3" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.38" />
+          <path d="M97,97 q-3,0 -3,-3" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.38" />
+          <rect x="1.2" y="43" width="1.8" height="14" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.35" />
+          <rect x="97" y="43" width="1.8" height="14" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.35" />
           {runs.map((run) => {
             const from = getPlayerById(run.fromId);
             if (!from) return null;
