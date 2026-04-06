@@ -2,6 +2,8 @@
 
 A fullstack monorepo starter for a **football manager webapp** inspired by old-school Tactical Manager style.
 
+**Features:** Undo/redo history, opponent tactics, run chaining
+
 ## 1) Full folder structure
 
 ```text

@@ -173,17 +173,17 @@ export default function TacticsBoard() {
       }
     }
 
-    const rect = boardRef.current.getBoundingClientRect();
+    const rect = boardRef.current!.getBoundingClientRect();
     const nextPos = boardToPitchCoords(clientX, clientY, rect);
 
     setPlayers((prev) => prev.map((p) => (p.id === draggingId ? { ...p, posX: nextPos.x, posY: nextPos.y } : p)));
   };
 
   const handleBoardClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!runStartId && !runChainStart && !boardRef.current) return;
     if (!runStartId && !runChainStart) return;
+    if (!boardRef.current) return;
 
-    const rect = boardRef.current.getBoundingClientRect();
+    const rect = boardRef.current!.getBoundingClientRect();
     const target = boardToPitchCoords(event.clientX, event.clientY, rect);
 
     // Determine the source - either from player or from last run endpoint
