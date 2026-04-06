@@ -4,6 +4,7 @@ import { io } from 'socket.io-client';
 import type { ManagerSummary, MatchEvent } from '@tmt/shared';
 import MatchScreen from './components/MatchScreen';
 import TacticsBoard from './components/TacticsBoard';
+import { fallbackClubs } from './fallbackClubs';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
@@ -81,6 +82,10 @@ function normalizeClubs(payload: unknown): Club[] {
   return [];
 }
 
+function getDefaultClubId(clubs: Club[]) {
+  return clubs.find((club) => club.name === 'Nottingham Forest FC')?.id ?? clubs[0]?.id ?? null;
+}
+
 export default function App() {
   const [clubs, setClubs] = useState<Club[]>([]);
   const [activeClubId, setActiveClubId] = useState<string | null>(null);
@@ -94,9 +99,11 @@ export default function App() {
       .get<Club[]>(`${API_BASE}/clubs`)
       .then((res) => {
         const nextClubs = normalizeClubs(res.data);
-        setClubs(nextClubs);
+        setClubs(nextClubs.length > 0 ? nextClubs : [...fallbackClubs]);
       })
-      .catch(() => setError('Could not load clubs from backend.'));
+      .catch(() => {
+        setClubs([...fallbackClubs]);
+      });
 
     axios
       .get<ManagerSummary>(`${API_BASE}/manager/summary`)
@@ -120,7 +127,7 @@ export default function App() {
     }
 
     if (!activeClubId || !clubs.some((club: Club) => club.id === activeClubId)) {
-      setActiveClubId(clubs[0].id);
+      setActiveClubId(getDefaultClubId(clubs));
     }
   }, [clubs, activeClubId]);
 
