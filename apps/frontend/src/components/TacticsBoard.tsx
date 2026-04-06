@@ -1,4 +1,5 @@
-import { MouseEvent, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import type { MouseEvent } from 'react';
 
 type TacticalPlayer = {
   id: string;
