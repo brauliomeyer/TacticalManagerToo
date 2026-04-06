@@ -5,57 +5,138 @@ import { Readable } from 'stream';
 
 const prisma = new PrismaClient();
 
-async function fetchClubsFromOpenFootball(league: string, season: string): Promise<string[]> {
-  const url = `https://raw.githubusercontent.com/openfootball/england/master/${season}/${league}.csv`;
-  try {
-    const response = await axios.get(url);
-    const clubs = new Set<string>();
-    const stream = Readable.from(response.data);
-    return new Promise((resolve, reject) => {
-      stream
-        .pipe(csv())
-        .on('data', (row: any) => {
-          if (row.HomeTeam) clubs.add(row.HomeTeam);
-          if (row.AwayTeam) clubs.add(row.AwayTeam);
-        })
-        .on('end', () => {
-          console.log(`Fetched ${clubs.size} clubs for ${league}`);
-          resolve(Array.from(clubs));
-        })
-        .on('error', reject);
-    });
-  } catch (error) {
-    console.error(`Failed to fetch ${league}:`, error);
-    return [];
+const DATASET_BASE = 'https://raw.githubusercontent.com/footballcsv/england/master';
+const TARGET_SEASON = '2020-21';
+
+const divisions = [
+  { name: 'Premier League', season: 2020, file: 'eng.1.csv' },
+  { name: 'Championship', season: 2020, file: 'eng.2.csv' },
+  { name: 'League One', season: 2020, file: 'eng.3.csv' },
+  { name: 'League Two', season: 2020, file: 'eng.4.csv' }
+] as const;
+
+const squadRoles: PlayerRole[] = [
+  'GOALKEEPER', 'GOALKEEPER',
+  'CENTER_BACK', 'CENTER_BACK', 'CENTER_BACK',
+  'LEFT_BACK', 'RIGHT_BACK',
+  'DEFENSIVE_MIDFIELDER', 'DEFENSIVE_MIDFIELDER',
+  'CENTRAL_MIDFIELDER', 'CENTRAL_MIDFIELDER', 'BOX_TO_BOX_MIDFIELDER',
+  'ATTACKING_MIDFIELDER', 'PLAYMAKER',
+  'LEFT_WINGER', 'RIGHT_WINGER',
+  'STRIKER', 'STRIKER', 'SECOND_STRIKER', 'TARGET_MAN',
+  'FALSE_NINE', 'LEFT_MIDFIELDER', 'RIGHT_MIDFIELDER'
+];
+
+const firstNames = [
+  'James', 'Jack', 'Harry', 'Thomas', 'Oliver', 'George', 'Charlie', 'Ethan', 'Leo', 'Mason',
+  'Noah', 'Lucas', 'Adam', 'Liam', 'Isaac', 'Samuel', 'Jacob', 'Finley', 'Ryan', 'Daniel'
+];
+
+const lastNames = [
+  'Walker', 'Johnson', 'Brown', 'Davies', 'Taylor', 'Wilson', 'Evans', 'Roberts', 'Lewis', 'Cooper',
+  'Hall', 'Baker', 'Morris', 'Murphy', 'King', 'Turner', 'Price', 'Parker', 'Collins', 'Scott'
+];
+
+function statRange(role: PlayerRole) {
+  if (role === 'GOALKEEPER') {
+    return { pac: [38, 68], sho: [20, 45], pas: [45, 75], dri: [25, 55], def: [55, 85], phy: [50, 82] };
   }
+  if (role === 'CENTER_BACK' || role === 'LEFT_BACK' || role === 'RIGHT_BACK') {
+    return { pac: [45, 80], sho: [30, 60], pas: [45, 75], dri: [38, 70], def: [55, 88], phy: [55, 88] };
+  }
+  if (role === 'STRIKER' || role === 'TARGET_MAN' || role === 'FALSE_NINE' || role === 'SECOND_STRIKER') {
+    return { pac: [50, 90], sho: [58, 92], pas: [42, 78], dri: [45, 88], def: [20, 55], phy: [48, 88] };
+  }
+  if (role === 'LEFT_WINGER' || role === 'RIGHT_WINGER') {
+    return { pac: [62, 92], sho: [50, 86], pas: [50, 82], dri: [62, 92], def: [28, 62], phy: [45, 78] };
+  }
+
+  return { pac: [48, 84], sho: [40, 78], pas: [52, 86], dri: [48, 84], def: [40, 78], phy: [45, 82] };
+}
+
+function randBetween(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomName() {
+  return `${firstNames[randBetween(0, firstNames.length - 1)]} ${lastNames[randBetween(0, lastNames.length - 1)]}`;
+}
+
+function extractTeamsFromCsv(csvText: string): Promise<string[]> {
+  const teams = new Set<string>();
+
+  return new Promise((resolve, reject) => {
+    Readable.from(csvText)
+      .pipe(csv())
+      .on('data', (row: Record<string, string>) => {
+        const home = row['Team 1']?.trim();
+        const away = row['Team 2']?.trim();
+        if (home) teams.add(home);
+        if (away) teams.add(away);
+      })
+      .on('end', () => resolve(Array.from(teams).sort((a, b) => a.localeCompare(b))))
+      .on('error', reject);
+  });
+}
+
+async function fetchDivisionClubs(fileName: string): Promise<string[]> {
+  const url = `${DATASET_BASE}/2020s/${TARGET_SEASON}/${fileName}`;
+  const response = await axios.get<string>(url);
+  return extractTeamsFromCsv(response.data);
+}
+
+async function resetExistingData() {
+  await prisma.match.deleteMany();
+  await prisma.tableStanding.deleteMany();
+  await prisma.tactics.deleteMany();
+  await prisma.player.deleteMany();
+  await prisma.club.deleteMany();
+  await prisma.league.deleteMany();
+}
+
+async function createSquad(clubId: string, clubName: string) {
+  const usedNames = new Set<string>();
+  for (const role of squadRoles) {
+    let name = randomName();
+    while (usedNames.has(name)) {
+      name = randomName();
+    }
+    usedNames.add(name);
+
+    const range = statRange(role);
+    await prisma.player.create({
+      data: {
+        clubId,
+        name,
+        age: randBetween(18, 36),
+        pac: randBetween(range.pac[0], range.pac[1]),
+        sho: randBetween(range.sho[0], range.sho[1]),
+        pas: randBetween(range.pas[0], range.pas[1]),
+        dri: randBetween(range.dri[0], range.dri[1]),
+        def: randBetween(range.def[0], range.def[1]),
+        phy: randBetween(range.phy[0], range.phy[1]),
+        morale: randBetween(45, 85),
+        stamina: randBetween(48, 92),
+        form: randBetween(40, 90),
+        potential: randBetween(52, 92),
+        role,
+        posX: randBetween(6, 94),
+        posY: randBetween(6, 94)
+      }
+    });
+  }
+
+  console.log(`Created ${squadRoles.length} players for ${clubName}`);
 }
 
 async function seed() {
-  // Hardcoded clubs for now (from OpenFootball data)
-  const premierLeagueClubs = [
-    'Arsenal', 'Aston Villa', 'Brentford', 'Brighton', 'Burnley', 'Chelsea', 'Crystal Palace', 'Everton', 'Fulham', 'Liverpool', 'Manchester City', 'Manchester United', 'Newcastle United', 'Norwich City', 'Southampton', 'Tottenham Hotspur', 'Watford', 'West Ham United', 'Wolverhampton Wanderers'
-  ];
-  const championshipClubs = [
-    'Birmingham City', 'Blackburn Rovers', 'Blackpool', 'Bournemouth', 'Bristol City', 'Cardiff City', 'Coventry City', 'Derby County', 'Huddersfield Town', 'Hull City', 'Luton Town', 'Middlesbrough', 'Millwall', 'Nottingham Forest', 'Peterborough United', 'Preston North End', 'Queens Park Rangers', 'Reading', 'Sheffield United', 'Stoke City', 'Swansea City', 'West Bromwich Albion'
-  ];
-  const leagueOneClubs = [
-    'Accrington Stanley', 'AFC Wimbledon', 'Bolton Wanderers', 'Burton Albion', 'Cambridge United', 'Charlton Athletic', 'Cheltenham Town', 'Crewe Alexandra', 'Doncaster Rovers', 'Fleetwood Town', 'Gillingham', 'Ipswich Town', 'Lincoln City', 'MK Dons', 'Morecambe', 'Oxford United', 'Plymouth Argyle', 'Portsmouth', 'Rotherham United', 'Salford City', 'Sheffield Wednesday', 'Shrewsbury Town', 'Sunderland', 'Wigan Athletic'
-  ];
-  const leagueTwoClubs = [
-    'AFC Wimbledon', 'Barrow', 'Bradford City', 'Bristol Rovers', 'Carlisle United', 'Colchester United', 'Crawley Town', 'Exeter City', 'Forest Green Rovers', 'Harrogate Town', 'Hartlepool United', 'Leyton Orient', 'Mansfield Town', 'Newport County', 'Northampton Town', 'Oldham Athletic', 'Port Vale', 'Rochdale', 'Salford City', 'Scunthorpe United', 'Stevenage', 'Sutton United', 'Swindon Town', 'Tranmere Rovers', 'Walsall'
-  ];
-
-  console.log('PL clubs:', premierLeagueClubs.length);
-  console.log('CH clubs:', championshipClubs.length);
-
-  const divisions = [
-    { name: 'Premier League', season: 2022, clubs: premierLeagueClubs },
-    { name: 'Championship', season: 2022, clubs: championshipClubs },
-    { name: 'League One', season: 2022, clubs: leagueOneClubs },
-    { name: 'League Two', season: 2022, clubs: leagueTwoClubs },
-  ];
+  await resetExistingData();
+  console.log('Cleared existing leagues, clubs, players, tactics and matches.');
 
   for (const division of divisions) {
+    const clubsFromDataset = await fetchDivisionClubs(division.file);
+    console.log(`Loaded ${clubsFromDataset.length} clubs from ${division.file}`);
+
     const league = await prisma.league.upsert({
       where: { name_season: { name: division.name, season: division.season } },
       update: {},
@@ -66,47 +147,29 @@ async function seed() {
       },
     });
 
-    for (const clubName of division.clubs) {
+    for (const clubName of clubsFromDataset) {
       const club = await prisma.club.upsert({
         where: { name_leagueId: { name: clubName, leagueId: league.id } },
         update: {},
         create: {
           name: clubName,
           leagueId: league.id,
-          budget: Math.floor(Math.random() * 100000000) + 10000000,
-          reputation: Math.floor(Math.random() * 100) + 1,
+          budget: randBetween(8_000_000, 220_000_000),
+          reputation: randBetween(35, 95),
         },
       });
 
-      // Generate fictional players for each club
-      const roles: PlayerRole[] = [
-        'GOALKEEPER', 'CENTER_BACK', 'LEFT_BACK', 'RIGHT_BACK', 'SWEEPER',
-        'CENTRAL_MIDFIELDER', 'ATTACKING_MIDFIELDER', 'LEFT_WINGER', 'RIGHT_WINGER', 'STRIKER'
-      ];
-
-      for (let i = 0; i < 11; i++) {
-        const role = roles[i % roles.length];
-        await prisma.player.create({
-          data: {
-            clubId: club.id,
-            name: `Player ${i + 1} of ${clubName}`,
-            age: Math.floor(Math.random() * 20) + 18,
-            pac: Math.floor(Math.random() * 50) + 50,
-            sho: Math.floor(Math.random() * 50) + 50,
-            pas: Math.floor(Math.random() * 50) + 50,
-            dri: Math.floor(Math.random() * 50) + 50,
-            def: Math.floor(Math.random() * 50) + 50,
-            phy: Math.floor(Math.random() * 50) + 50,
-            role,
-            posX: Math.floor(Math.random() * 100),
-            posY: Math.floor(Math.random() * 100),
-          },
-        });
-      }
+      await createSquad(club.id, clubName);
     }
   }
 
-  console.log('Seeding completed');
+  const [leagueCount, clubCount, playerCount] = await Promise.all([
+    prisma.league.count(),
+    prisma.club.count(),
+    prisma.player.count()
+  ]);
+
+  console.log(`Seeding completed: ${leagueCount} leagues, ${clubCount} clubs, ${playerCount} players.`);
 }
 
 seed()
