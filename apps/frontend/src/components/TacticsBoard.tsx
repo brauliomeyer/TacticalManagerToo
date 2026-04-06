@@ -110,21 +110,30 @@ export default function TacticsBoard() {
         </div>
         <div className="rounded border border-[#68e154] bg-[#122b13] p-3 text-xs text-[#d7ff9f]">
           <p className="font-semibold text-[#efe56b]">Legend</p>
-          <div className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-full bg-[#2e1f4a] border border-[#cdb0ea]" /> Your players</div>
+          <div className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-full bg-blue-600 border border-blue-300" /> Your players</div>
           <div className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-full bg-red-600 border border-red-300" /> Opponent</div>
           <div className="flex items-center gap-2"><span className="inline-block h-0.5 w-8 bg-yellow-300" style={{ borderStyle: 'dashed' }} /> Run line</div>
         </div>
       </div>
 
       <div
-        className="relative h-[420px] w-full overflow-hidden rounded bg-[#153d18]"
+        className="relative h-[420px] w-full overflow-hidden rounded border-2 border-[#74be5f] bg-[#1e5b1a] shadow-[inset_0_0_35px_rgba(0,0,0,0.55)]"
         onPointerMove={(event) => updateByPointer(event.clientX, event.clientY)}
         onPointerUp={() => setDraggingId(null)}
         onPointerLeave={() => setDraggingId(null)}
         onClick={handleBoardClick}
         ref={boardRef}
       >
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_left,_rgba(255,255,255,.08),_transparent_35%),radial-gradient(circle_at_right,_rgba(255,255,255,.05),_transparent_35%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(255,255,255,0.05),_transparent_20%),linear-gradient(180deg,_rgba(255,255,255,0.04)_0,_rgba(255,255,255,0.04)_1px,_transparent_1px),linear-gradient(90deg,_rgba(255,255,255,0.04)_0,_rgba(255,255,255,0.04)_1px,_transparent_1px)] bg-[length:100%_28px,100%_28px,28px_100%]" />
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute left-1/2 top-0 h-full w-px bg-white/30" />
+          <div className="absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30" />
+          <div className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/80" />
+          <div className="absolute left-0 top-12 h-40 w-28 border border-white/30" />
+          <div className="absolute right-0 top-12 h-40 w-28 border border-white/30" />
+          <div className="absolute left-0 top-1/2 h-12 w-14 border border-white/30 -translate-y-1/2" />
+          <div className="absolute right-0 top-1/2 h-12 w-14 border border-white/30 -translate-y-1/2" />
+        </div>
 
         <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none">
           <defs>
@@ -157,8 +166,8 @@ export default function TacticsBoard() {
               player.color === 'red'
                 ? 'border-red-400 bg-red-600 text-white'
                 : draggingId === player.id
-                ? 'border-[#efe56b] bg-[#201632] text-[#efe56b]'
-                : 'border-[#cdb0ea] bg-[#2e1f4a] text-[#e7d1ff]'
+                ? 'border-[#efe56b] bg-[#1f3c80] text-[#d2e1ff]'
+                : 'border-[#8fc6ff] bg-[#2d4f8f] text-white'
             }`}
             key={player.id}
             onPointerDown={(event) => {
