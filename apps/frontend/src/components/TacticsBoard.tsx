@@ -180,7 +180,7 @@ export default function TacticsBoard() {
       </div>
 
       <p className="mt-3 text-xs text-[#efe56b]">Drag your own players from left to right. Use Shift+click on a player, then click the pitch to place a dotted run arrow.</p>
-      <pre className="mt-2 max-h-40 overflow-auto border border-[#68e154] bg-[#0b5f15] p-2 text-[11px] leading-4">{asJson}</pre>
+      <pre className="hidden mt-2 max-h-40 overflow-auto border border-[#68e154] bg-[#0b5f15] p-2 text-[11px] leading-4">{asJson}</pre>
     </section>
   );
 }
