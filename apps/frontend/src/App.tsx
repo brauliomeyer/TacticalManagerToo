@@ -149,30 +149,31 @@ export default function App() {
         <div className="grid gap-4 p-4 md:grid-cols-[220px_1fr_300px]">
           <aside className="border-4 border-[#6f4ca1] bg-[#2e1f4a] p-3 text-xs">
             <div className="mb-3 border-2 border-white bg-[#fff7de] p-2 text-center text-[#d0121b]">
-              <div className="flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={previousClub}
-                  className="rounded border border-[#d0121b] bg-[#f0d9cf] px-2 py-1 text-xs font-bold text-[#2e1f4a]"
-                  disabled={clubs.length <= 1}
-                >
-                  ‹
-                </button>
-                <div className="flex-1 px-2">
-                  <p className="text-lg font-black">{activeClub.name}</p>
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#2e1f4a]">{activeClub.country || '1st Division'}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={nextClub}
-                  className="rounded border border-[#d0121b] bg-[#f0d9cf] px-2 py-1 text-xs font-bold text-[#2e1f4a]"
-                  disabled={clubs.length <= 1}
-                >
-                  ›
-                </button>
+              <div className="px-2">
+                <p className="text-lg font-black">{activeClub.name}</p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[#2e1f4a]">{activeClub.country || '1st Division'}</p>
               </div>
             </div>
-            <p className="mb-3 bg-[#2a8a2b] px-2 py-1 font-bold uppercase text-[#0e1d0f]">1st Division</p>
+            <p className="mb-2 bg-[#2a8a2b] px-2 py-1 font-bold uppercase text-[#0e1d0f]">1st Division</p>
+            <div className="mb-3 flex items-center justify-between gap-2 rounded border border-[#d0121b] bg-[#2a8a2b] px-2 py-2 text-xs font-bold text-[#d0121b]">
+              <button
+                type="button"
+                onClick={previousClub}
+                className="rounded border border-[#d0121b] bg-[#f0d9cf] px-3 py-1 text-xs font-bold text-[#2e1f4a]"
+                disabled={clubs.length <= 1}
+              >
+                ‹
+              </button>
+              <span className="uppercase">Switch club</span>
+              <button
+                type="button"
+                onClick={nextClub}
+                className="rounded border border-[#d0121b] bg-[#f0d9cf] px-3 py-1 text-xs font-bold text-[#2e1f4a]"
+                disabled={clubs.length <= 1}
+              >
+                ›
+              </button>
+            </div>
             <ul className="space-y-1">
               {sideMenu.map((item) => (
                 <li key={item.key}>
