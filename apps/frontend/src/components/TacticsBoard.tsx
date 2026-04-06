@@ -1,24 +1,46 @@
-import { useMemo, useRef, useState } from 'react';
+import { MouseEvent, useMemo, useRef, useState } from 'react';
 
 type TacticalPlayer = {
   id: string;
   name: string;
   posX: number;
   posY: number;
+  color?: string;
+};
+
+type RunLine = {
+  id: string;
+  fromId: string;
+  toX: number;
+  toY: number;
 };
 
 const initialPlayers: TacticalPlayer[] = [
-  { id: 'gk', name: 'GK', posX: 50, posY: 8 },
-  { id: 'lb', name: 'LB', posX: 18, posY: 24 },
-  { id: 'cb1', name: 'CB', posX: 40, posY: 24 },
-  { id: 'cb2', name: 'CB', posX: 60, posY: 24 },
-  { id: 'rb', name: 'RB', posX: 82, posY: 24 },
-  { id: 'cm1', name: 'CM', posX: 28, posY: 52 },
-  { id: 'cm2', name: 'CM', posX: 50, posY: 58 },
-  { id: 'cm3', name: 'CM', posX: 72, posY: 52 },
-  { id: 'lw', name: 'LW', posX: 28, posY: 80 },
-  { id: 'st', name: 'ST', posX: 50, posY: 86 },
-  { id: 'rw', name: 'RW', posX: 72, posY: 80 }
+  { id: 'gk', name: 'GK', posX: 8, posY: 50 },
+  { id: 'lb', name: 'LB', posX: 24, posY: 30 },
+  { id: 'cb1', name: 'CB', posX: 24, posY: 50 },
+  { id: 'cb2', name: 'CB', posX: 24, posY: 70 },
+  { id: 'rb', name: 'RB', posX: 24, posY: 90 },
+  { id: 'cm1', name: 'CM', posX: 45, posY: 30 },
+  { id: 'cm2', name: 'CM', posX: 45, posY: 50 },
+  { id: 'cm3', name: 'CM', posX: 45, posY: 70 },
+  { id: 'lw', name: 'LW', posX: 70, posY: 20 },
+  { id: 'st', name: 'ST', posX: 82, posY: 50 },
+  { id: 'rw', name: 'RW', posX: 70, posY: 80 }
+];
+
+const opponentPlayers: TacticalPlayer[] = [
+  { id: 'ogk', name: 'GK', posX: 92, posY: 50, color: 'red' },
+  { id: 'olb', name: 'LB', posX: 76, posY: 30, color: 'red' },
+  { id: 'ocb1', name: 'CB', posX: 76, posY: 45, color: 'red' },
+  { id: 'ocb2', name: 'CB', posX: 76, posY: 55, color: 'red' },
+  { id: 'orb', name: 'RB', posX: 76, posY: 70, color: 'red' },
+  { id: 'ocm1', name: 'CM', posX: 60, posY: 25, color: 'red' },
+  { id: 'ocm2', name: 'CM', posX: 60, posY: 50, color: 'red' },
+  { id: 'ocm3', name: 'CM', posX: 60, posY: 75, color: 'red' },
+  { id: 'olw', name: 'LW', posX: 48, posY: 20, color: 'red' },
+  { id: 'ost', name: 'ST', posX: 36, posY: 50, color: 'red' },
+  { id: 'orw', name: 'RW', posX: 48, posY: 80, color: 'red' }
 ];
 
 function clamp(value: number, min = 0, max = 100) {
@@ -29,6 +51,8 @@ export default function TacticsBoard() {
   const boardRef = useRef<HTMLDivElement | null>(null);
   const [players, setPlayers] = useState<TacticalPlayer[]>(initialPlayers);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [runStartId, setRunStartId] = useState<string | null>(null);
+  const [runs, setRuns] = useState<RunLine[]>([]);
 
   const asJson = useMemo(
     () =>
@@ -50,32 +74,102 @@ export default function TacticsBoard() {
     setPlayers((prev) => prev.map((p) => (p.id === draggingId ? { ...p, posX, posY } : p)));
   };
 
+  const handleBoardClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!runStartId || !boardRef.current) return;
+
+    const rect = boardRef.current.getBoundingClientRect();
+    const toX = clamp(((event.clientX - rect.left) / rect.width) * 100);
+    const toY = clamp(((event.clientY - rect.top) / rect.height) * 100);
+
+    setRuns((prev) => [
+      ...prev,
+      {
+        id: `run-${prev.length + 1}`,
+        fromId: runStartId,
+        toX,
+        toY
+      }
+    ]);
+    setRunStartId(null);
+  };
+
+  const getPlayerById = (id: string) => players.find((player) => player.id === id) || opponentPlayers.find((player) => player.id === id);
+
   return (
     <section className="border-4 border-[#6f4ca1] bg-[#0f8f1f] p-3 font-mono text-[#d7ff9f]">
       <h2 className="mb-3 bg-black px-2 py-1 text-sm font-bold uppercase tracking-wider text-[#efe56b]">Tactics Board</h2>
 
+      <div className="mb-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+        <div className="rounded border border-[#68e154] bg-[#122b13] p-3 text-xs text-[#d7ff9f]">
+          <p className="font-semibold text-[#efe56b]">Board mode</p>
+          <p>Left-to-right layout</p>
+          <p>Shift+drag your players</p>
+          <p>Click a player while holding <span className="font-bold">Shift</span> to start a run, then click the pitch to place the arrow.</p>
+          <p className="mt-2">Opponent is shown in <span className="text-red-300">red</span>.</p>
+          {runStartId ? <p className="mt-2 text-[#ffe26d]">Run from: {runStartId}</p> : null}
+        </div>
+        <div className="rounded border border-[#68e154] bg-[#122b13] p-3 text-xs text-[#d7ff9f]">
+          <p className="font-semibold text-[#efe56b]">Legend</p>
+          <div className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-full bg-[#2e1f4a] border border-[#cdb0ea]" /> Your players</div>
+          <div className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-full bg-red-600 border border-red-300" /> Opponent</div>
+          <div className="flex items-center gap-2"><span className="inline-block h-0.5 w-8 bg-yellow-300" style={{ borderStyle: 'dashed' }} /> Run line</div>
+        </div>
+      </div>
+
       <div
-        className="relative h-[420px] w-full border-2 border-[#97f77a] bg-[#16a51c]"
+        className="relative h-[420px] w-full overflow-hidden rounded border-2 border-[#97f77a] bg-[#153d18]"
         onPointerMove={(event) => updateByPointer(event.clientX, event.clientY)}
         onPointerUp={() => setDraggingId(null)}
         onPointerLeave={() => setDraggingId(null)}
+        onClick={handleBoardClick}
         ref={boardRef}
       >
-        <div className="pointer-events-none absolute inset-[8%] border border-[#68e154]" />
-        <div className="pointer-events-none absolute left-1/2 top-[8%] h-[84%] w-px -translate-x-1/2 bg-[#68e154]" />
-        <div className="pointer-events-none absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#68e154]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_left,_rgba(255,255,255,.08),_transparent_35%),radial-gradient(circle_at_right,_rgba(255,255,255,.05),_transparent_35%)]" />
 
-        {players.map((player) => (
+        <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 Z" fill="#ffe26d" />
+            </marker>
+          </defs>
+          {runs.map((run) => {
+            const from = getPlayerById(run.fromId);
+            if (!from) return null;
+            return (
+              <line
+                key={run.id}
+                x1={from.posX}
+                y1={from.posY}
+                x2={run.toX}
+                y2={run.toY}
+                stroke="#ffe26d"
+                strokeWidth={0.7}
+                strokeDasharray="2 2"
+                markerEnd="url(#arrow)"
+              />
+            );
+          })}
+        </svg>
+
+        {[...players, ...opponentPlayers].map((player) => (
           <button
-            className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 border text-[10px] font-bold ${
-              draggingId === player.id
+            className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border text-[10px] font-bold ${
+              player.color === 'red'
+                ? 'border-red-400 bg-red-600 text-white'
+                : draggingId === player.id
                 ? 'border-[#efe56b] bg-[#201632] text-[#efe56b]'
                 : 'border-[#cdb0ea] bg-[#2e1f4a] text-[#e7d1ff]'
             }`}
             key={player.id}
             onPointerDown={(event) => {
               event.preventDefault();
-              setDraggingId(player.id);
+              if (event.shiftKey) {
+                setRunStartId(player.id);
+                return;
+              }
+              if (player.color !== 'red') {
+                setDraggingId(player.id);
+              }
             }}
             style={{ left: `${player.posX}%`, top: `${player.posY}%` }}
             type="button"
@@ -85,7 +179,7 @@ export default function TacticsBoard() {
         ))}
       </div>
 
-      <p className="mt-3 text-xs text-[#efe56b]">Drag players freely. Positions are stored as posX/posY (0–100).</p>
+      <p className="mt-3 text-xs text-[#efe56b]">Drag your own players from left to right. Use Shift+click on a player, then click the pitch to place a dotted run arrow.</p>
       <pre className="mt-2 max-h-40 overflow-auto border border-[#68e154] bg-[#0b5f15] p-2 text-[11px] leading-4">{asJson}</pre>
     </section>
   );
