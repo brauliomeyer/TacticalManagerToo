@@ -91,12 +91,12 @@ export default function TacticsBoard() {
   const boardRef = useRef<HTMLDivElement | null>(null);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const didDragRef = useRef(false);
-  const [players, setPlayers] = useState<TacticalPlayer[]>(initialPlayers);
+  const [allPlayers, setAllPlayers] = useState<TacticalPlayer[]>([...initialPlayers, ...opponentPlayers]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [selectedRunSourceId, setSelectedRunSourceId] = useState<string | null>(null);
   const [runs, setRuns] = useState<RunLine[]>([]);
   const [history, setHistory] = useState<TacticsSnapshot[]>(
-    [{ players: initialPlayers, runs: [], timestamp: Date.now() }]
+    [{ players: [...initialPlayers, ...opponentPlayers], runs: [], timestamp: Date.now() }]
   );
   const [historyIndex, setHistoryIndex] = useState(0);
 
@@ -115,7 +115,7 @@ export default function TacticsBoard() {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
       setHistoryIndex(newIndex);
-      setPlayers(history[newIndex].players);
+      setAllPlayers(history[newIndex].players);
       setRuns(history[newIndex].runs);
     }
   };
@@ -124,45 +124,38 @@ export default function TacticsBoard() {
     if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1;
       setHistoryIndex(newIndex);
-      setPlayers(history[newIndex].players);
+      setAllPlayers(history[newIndex].players);
       setRuns(history[newIndex].runs);
     }
   };
 
   const undoLastRun = () => {
     const newRuns = runs.slice(0, -1);
-    saveSnapshot(players, newRuns);
+    saveSnapshot(allPlayers, newRuns);
     setRuns(newRuns);
     setSelectedRunSourceId(null);
   };
 
+  const getChainedRunIds = (runId: string, allRuns: RunLine[]): string[] => {
+    const children = allRuns.filter((r) => r.fromId === `run-end-${runId}`);
+    const childIds = children.map((c) => c.id);
+    return [...childIds, ...childIds.flatMap((id) => getChainedRunIds(id, allRuns))];
+  };
+
   const removeRun = (runId: string) => {
-    const newRuns = runs.filter((run) => run.id !== runId);
-    
-    // Reset player to original position if this run started from that player
-    const run = runs.find((r) => r.id === runId);
-    let updatedPlayers = players;
-    if (run && !run.fromId.startsWith('run-end-')) {
-      // This run started from a player, reset them to their original position
-      updatedPlayers = players.map((p) =>
-        p.id === run.fromId ? { ...p, posX: p.origX, posY: p.origY } : p
-      );
-    }
-    
-    saveSnapshot(updatedPlayers, newRuns);
+    const chainedIds = getChainedRunIds(runId, runs);
+    const allIdsToRemove = new Set([runId, ...chainedIds]);
+    const newRuns = runs.filter((run) => !allIdsToRemove.has(run.id));
+    saveSnapshot(allPlayers, newRuns);
     setRuns(newRuns);
+    setSelectedRunSourceId(null);
   };
 
   const clearRuns = () => {
-    // Reset all players to their original positions
-    const resetPlayers = players.map((p) => ({
-      ...p,
-      posX: p.origX,
-      posY: p.origY
-    }));
+    const resetPlayers = allPlayers.map((p) => ({ ...p, posX: p.origX, posY: p.origY }));
     saveSnapshot(resetPlayers, []);
+    setAllPlayers(resetPlayers);
     setRuns([]);
-    setPlayers(resetPlayers);
     setSelectedRunSourceId(null);
   };
 
@@ -171,8 +164,7 @@ export default function TacticsBoard() {
   };
 
   const getPlayerById = (id: string): TacticalPlayer | undefined => {
-    return players.find((player) => player.id === id) ||
-           opponentPlayers.find((player) => player.id === id);
+    return allPlayers.find((player) => player.id === id);
   };
 
   const getRunEndpoint = (runId: string): { x: number; y: number } | null => {
@@ -210,7 +202,7 @@ export default function TacticsBoard() {
     const rect = boardRef.current!.getBoundingClientRect();
     const nextPos = boardToPitchCoords(clientX, clientY, rect);
 
-    setPlayers((prev) => 
+    setAllPlayers((prev) => 
       prev.map((p) => (p.id === draggingId ? { ...p, posX: nextPos.x, posY: nextPos.y } : p))
     );
   };
@@ -233,17 +225,15 @@ export default function TacticsBoard() {
       }
     ];
 
-    saveSnapshot(players, newRuns);
+    saveSnapshot(allPlayers, newRuns);
     setRuns(newRuns);
-    
-    // Automatically set up for chaining from this run endpoint
-    setSelectedRunSourceId(`run-end-${runId}`);
+    setSelectedRunSourceId(null);
   };
 
   const asJson = useMemo(
     () =>
       JSON.stringify(
-        players.map((p) => ({ 
+        allPlayers.map((p) => ({ 
           id: p.id, 
           posX: Number(p.posX.toFixed(1)), 
           posY: Number(p.posY.toFixed(1)),
@@ -253,7 +243,7 @@ export default function TacticsBoard() {
         null,
         2
       ),
-    [players]
+    [allPlayers]
   );
 
   return (
@@ -362,14 +352,14 @@ export default function TacticsBoard() {
         onPointerMove={(event) => updateByPointer(event.clientX, event.clientY)}
         onPointerUp={() => {
           if (draggingId) {
-            saveSnapshot(players, runs);
+            saveSnapshot(allPlayers, runs);
           }
           setDraggingId(null);
           dragStartRef.current = null;
         }}
         onPointerLeave={() => {
           if (draggingId) {
-            saveSnapshot(players, runs);
+            saveSnapshot(allPlayers, runs);
           }
           setDraggingId(null);
           dragStartRef.current = null;
@@ -428,30 +418,8 @@ export default function TacticsBoard() {
           })}
         </svg>
 
-        {/* Render clickable run endpoints */}
-        {runs.map((run) => {
-          const endpoint = pitchToBoardCoords(run.toX, run.toY);
-          return (
-            <button
-              key={`run-end-${run.id}`}
-              type="button"
-              className={`absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-all ${
-                selectedRunSourceId === `run-end-${run.id}`
-                  ? 'border-yellow-300 bg-yellow-200'
-                  : 'border-yellow-400 bg-transparent hover:bg-yellow-100'
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                startRunFromRunEnd(run.id);
-              }}
-              title={`Chain from this run endpoint`}
-              style={{ left: `${endpoint.x}%`, top: `${endpoint.y}%` }}
-            />
-          );
-        })}
-
         {/* Render players */}
-        {[...players, ...opponentPlayers].map((player) => {
+        {allPlayers.map((player) => {
           const mapped = pitchToBoardCoords(player.posX, player.posY);
           const isSelected = selectedRunSourceId === player.id;
           return (
@@ -489,6 +457,28 @@ export default function TacticsBoard() {
             >
               {player.name}
             </button>
+          );
+        })}
+
+        {/* Render clickable run endpoints - after players so they appear on top */}
+        {runs.map((run) => {
+          const endpoint = pitchToBoardCoords(run.toX, run.toY);
+          return (
+            <button
+              key={`run-end-btn-${run.id}`}
+              type="button"
+              className={`absolute z-10 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-all ${
+                selectedRunSourceId === `run-end-${run.id}`
+                  ? 'border-yellow-200 bg-yellow-300'
+                  : 'border-yellow-400 bg-transparent hover:bg-yellow-400'
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                startRunFromRunEnd(run.id);
+              }}
+              title="Click to extend run from here"
+              style={{ left: `${endpoint.x}%`, top: `${endpoint.y}%` }}
+            />
           );
         })}
       </div>
