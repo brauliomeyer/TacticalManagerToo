@@ -22,6 +22,12 @@ type RunStart = {
   y?: number;
 };
 
+type TacticsSnapshot = {
+  players: TacticalPlayer[];
+  runs: RunLine[];
+  timestamp: number;
+};
+
 const initialPlayers: TacticalPlayer[] = [
   { id: 'gk', name: 'GK', posX: 14, posY: 50 },
   { id: 'lb', name: 'LB', posX: 24, posY: 30 },
@@ -95,16 +101,54 @@ export default function TacticsBoard() {
   const [runStartId, setRunStartId] = useState<string | null>(null);
   const [runChainStart, setRunChainStart] = useState<RunStart | null>(null);
   const [runs, setRuns] = useState<RunLine[]>([]);
+  const [history, setHistory] = useState<TacticsSnapshot[]>([
+    { players: initialPlayers, runs: [], timestamp: Date.now() }
+  ]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+
+  const saveSnapshot = (newPlayers: TacticalPlayer[], newRuns: RunLine[]) => {
+    setHistory((prev) => {
+      const trimmed = prev.slice(0, historyIndex + 1);
+      return [
+        ...trimmed,
+        { players: newPlayers, runs: newRuns, timestamp: Date.now() }
+      ];
+    });
+    setHistoryIndex((prev) => prev + 1);
+  };
+
+  const undoMove = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setPlayers(history[newIndex].players);
+      setRuns(history[newIndex].runs);
+    }
+  };
+
+  const redoMove = () => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setPlayers(history[newIndex].players);
+      setRuns(history[newIndex].runs);
+    }
+  };
 
   const undoLastRun = () => {
-    setRuns((prev) => prev.slice(0, -1));
+    const newRuns = runs.slice(0, -1);
+    saveSnapshot(players, newRuns);
+    setRuns(newRuns);
   };
 
   const removeRun = (runId: string) => {
-    setRuns((prev) => prev.filter((run) => run.id !== runId));
+    const newRuns = runs.filter((run) => run.id !== runId);
+    saveSnapshot(players, newRuns);
+    setRuns(newRuns);
   };
 
   const clearRuns = () => {
+    saveSnapshot(players, []);
     setRuns([]);
   };
 
@@ -146,15 +190,27 @@ export default function TacticsBoard() {
     const sourceId = runStartId || `chain-${Date.now()}`;
     const fromId = runChainStart ? runChainStart.id! : runStartId!;
 
-    setRuns((prev) => [
-      ...prev,
+    const newRuns = [
+      ...runs,
       {
         id: sourceId,
         fromId: fromId,
         toX: target.x,
         toY: target.y
       }
-    ]);
+    ];
+
+    // Save snapshot with new run
+    setHistory((prev) => {
+      const trimmed = prev.slice(0, historyIndex + 1);
+      return [
+        ...trimmed,
+        { players: players, runs: newRuns, timestamp: Date.now() }
+      ];
+    });
+    setHistoryIndex((prev) => prev + 1);
+
+    setRuns(newRuns);
 
     // After placing run, enable chaining from the endpoint
     setRunStartId(null);
@@ -192,6 +248,27 @@ export default function TacticsBoard() {
           <p>Click a player while holding <span className="font-bold">Shift</span> to start a run, then click the pitch to place the arrow.</p>
           <p className="mt-2">Opponent is shown in <span className="text-red-300">red</span>.</p>
           {runStartId ? <p className="mt-2 text-[#ffe26d]">Run from: {runStartId}</p> : null}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={undoMove}
+              disabled={historyIndex <= 0}
+              className="rounded border border-[#68e154] bg-[#1e6d1f] px-2 py-1 text-[10px] font-bold text-[#68e154] disabled:cursor-not-allowed disabled:opacity-40"
+              title="Undo tactic change"
+            >
+              ↶ Undo
+            </button>
+            <button
+              type="button"
+              onClick={redoMove}
+              disabled={historyIndex >= history.length - 1}
+              className="rounded border border-[#68e154] bg-[#1e6d1f] px-2 py-1 text-[10px] font-bold text-[#68e154] disabled:cursor-not-allowed disabled:opacity-40"
+              title="Redo tactic change"
+            >
+              ↷ Redo
+            </button>
+            <span className="text-[10px] text-[#9fd28d]">Step {historyIndex + 1} of {history.length}</span>
+          </div>
         </div>
         <div className="rounded border border-[#68e154] bg-[#122b13] p-3 text-xs text-[#d7ff9f]">
           <p className="font-semibold text-[#efe56b]">Legend</p>
@@ -276,10 +353,16 @@ export default function TacticsBoard() {
         className="relative h-[420px] w-full overflow-hidden rounded border-2 border-[#74be5f] bg-[#1f5b1a] shadow-[inset_0_0_35px_rgba(0,0,0,0.45)]"
         onPointerMove={(event) => updateByPointer(event.clientX, event.clientY)}
         onPointerUp={() => {
+          if (draggingId) {
+            saveSnapshot(players, runs);
+          }
           setDraggingId(null);
           dragStartRef.current = null;
         }}
         onPointerLeave={() => {
+          if (draggingId) {
+            saveSnapshot(players, runs);
+          }
           setDraggingId(null);
           dragStartRef.current = null;
         }}
@@ -370,7 +453,7 @@ export default function TacticsBoard() {
         })}
       </div>
 
-      <p className="mt-3 text-xs text-[#efe56b]">Shift+click any player (blue or red), then click pitch to place arrow. Use "Chain from last" to extend runs. Remove with Undo/Clear/X buttons.</p>
+      <p className="mt-3 text-xs text-[#efe56b]">Shift+click any player (blue or red), then click pitch to place arrow. Use "Chain from last" to extend runs. Use Undo/Redo to navigate changes. Remove with Undo/Clear/X buttons.</p>
       <pre className="hidden mt-2 max-h-40 overflow-auto border border-[#68e154] bg-[#0b5f15] p-2 text-[11px] leading-4">{asJson}</pre>
     </section>
   );
