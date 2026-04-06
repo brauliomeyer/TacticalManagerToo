@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 type TacticalPlayer = {
   id: string;
@@ -51,6 +51,18 @@ const opponentPlayers: TacticalPlayer[] = [
   { id: 'orw', name: 'RW', posX: 48, posY: 80, origX: 48, origY: 80, color: 'red' }
 ];
 
+const STORAGE_KEY = 'tacticsboard-v1';
+
+function loadSavedState(): { players: TacticalPlayer[]; runs: RunLine[] } | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as { players: TacticalPlayer[]; runs: RunLine[] };
+  } catch {
+    return null;
+  }
+}
+
 function clamp(value: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, value));
 }
@@ -91,14 +103,26 @@ export default function TacticsBoard() {
   const boardRef = useRef<HTMLDivElement | null>(null);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const didDragRef = useRef(false);
-  const [allPlayers, setAllPlayers] = useState<TacticalPlayer[]>([...initialPlayers, ...opponentPlayers]);
+
+  const saved = loadSavedState();
+  const [allPlayers, setAllPlayers] = useState<TacticalPlayer[]>(
+    saved?.players ?? [...initialPlayers, ...opponentPlayers]
+  );
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [selectedRunSourceId, setSelectedRunSourceId] = useState<string | null>(null);
-  const [runs, setRuns] = useState<RunLine[]>([]);
+  const [runs, setRuns] = useState<RunLine[]>(saved?.runs ?? []);
   const [history, setHistory] = useState<TacticsSnapshot[]>(
-    [{ players: [...initialPlayers, ...opponentPlayers], runs: [], timestamp: Date.now() }]
+    [{ players: saved?.players ?? [...initialPlayers, ...opponentPlayers], runs: saved?.runs ?? [], timestamp: Date.now() }]
   );
   const [historyIndex, setHistoryIndex] = useState(0);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ players: allPlayers, runs }));
+    } catch {
+      // storage unavailable or full
+    }
+  }, [allPlayers, runs]);
 
   const saveSnapshot = (newPlayers: TacticalPlayer[], newRuns: RunLine[]) => {
     setHistory((prev) => {
