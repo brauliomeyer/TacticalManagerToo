@@ -3,14 +3,33 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 enum PlayerRole {
   GOALKEEPER
-  DEFENDER
-  MIDFIELDER
-  ATTACKER
+  CENTER_BACK
+  LEFT_BACK
+  RIGHT_BACK
+  SWEEPER
+  LEFT_WING_BACK
+  RIGHT_WING_BACK
+  CENTRAL_MIDFIELDER
+  DEFENSIVE_MIDFIELDER
+  ATTACKING_MIDFIELDER
+  LEFT_MIDFIELDER
+  RIGHT_MIDFIELDER
+  BOX_TO_BOX_MIDFIELDER
+  ANCHOR
+  LEFT_WINGER
+  RIGHT_WINGER
+  INVERTED_WINGER
+  SECOND_STRIKER
+  STRIKER
+  TARGET_MAN
+  FALSE_NINE
+  PLAYMAKER
 }
 
 model League {
@@ -28,8 +47,7 @@ model League {
   @@index([season])
 }
 
-model Club {env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  git status
+model Club {
   id          String          @id @default(uuid())
   name        String
   budget      Int             @default(0)
