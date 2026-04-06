@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import cors from 'cors';
-import express from 'express';
+import express, { type NextFunction, type Request, type Response } from 'express';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import { PrismaClient } from '@prisma/client';
@@ -11,13 +11,16 @@ const prisma = new PrismaClient();
 const app = express();
 const httpServer = createServer(app);
 
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173';
+const PORT = Number(process.env.PORT ?? 4000);
+
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173'
+    origin: CLIENT_ORIGIN
   }
 });
 
-app.use(cors());
+app.use(cors({ origin: CLIENT_ORIGIN, optionsSuccessStatus: 200 }));
 app.use(express.json());
 
 app.get('/health', (_req, res) => {
@@ -72,11 +75,33 @@ app.post('/matches/simulate', async (req, res) => {
   res.json(result);
 });
 
+app.use((_req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
+app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
+  console.error('Unhandled error:', err);
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  res.status(500).json({ error: 'Internal server error' });
+});
+
 io.on('connection', (socket) => {
   socket.emit('match:message', 'Connected to Tactical Manager live match feed.');
 });
 
-const port = Number(process.env.PORT ?? 4000);
-httpServer.listen(port, () => {
-  console.log(`Backend listening on http://localhost:${port}`);
+const server = httpServer.listen(PORT, () => {
+  console.log(`Backend listening on http://0.0.0.0:${PORT}`);
 });
+
+const shutdown = () => {
+  console.log('Shutting down server...');
+  server.close(() => {
+    prisma.$disconnect().finally(() => process.exit(0));
+  });
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

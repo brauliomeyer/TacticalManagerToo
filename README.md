@@ -219,6 +219,40 @@ volumes:
 ## 4) Run instructions
 
 ### Local development
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Start development servers:
+   ```bash
+   npm run dev
+   ```
+3. Open the app:
+   - Frontend: `http://localhost:5173`
+   - Backend: `http://localhost:4000`
+
+### Production with Docker Compose
+1. Copy `.env.example` to `.env` and update values if needed.
+2. Build and start services:
+   ```bash
+   docker compose build
+   docker compose up -d
+   ```
+3. Open the frontend at `http://localhost:5173`.
+
+### Build and validation
+- Build all workspaces:
+  ```bash
+  npm run build
+  ```
+- Run lint checks:
+  ```bash
+  npm run lint
+  ```
+
+The frontend is served as a static production build through `nginx`, and the backend runs from compiled `dist` code in Node.
+
+### Local development
 
 1. Install dependencies:
    ```bash

@@ -7,6 +7,12 @@ export default defineConfig({
   base,
   plugins: [react()],
   server: {
+    host: '0.0.0.0',
     port: 5173
+  },
+  build: {
+    target: 'es2022',
+    sourcemap: process.env.SOURCE_MAP === 'true',
+    chunkSizeWarningLimit: 1500
   }
 });
