@@ -16,7 +16,7 @@ type RunLine = {
 };
 
 const initialPlayers: TacticalPlayer[] = [
-  { id: 'gk', name: 'GK', posX: 8, posY: 50 },
+  { id: 'gk', name: 'GK', posX: 11, posY: 50 },
   { id: 'lb', name: 'LB', posX: 24, posY: 30 },
   { id: 'cb1', name: 'CB', posX: 24, posY: 50 },
   { id: 'cb2', name: 'CB', posX: 24, posY: 70 },
@@ -30,7 +30,7 @@ const initialPlayers: TacticalPlayer[] = [
 ];
 
 const opponentPlayers: TacticalPlayer[] = [
-  { id: 'ogk', name: 'GK', posX: 92, posY: 50, color: 'red' },
+  { id: 'ogk', name: 'GK', posX: 89, posY: 50, color: 'red' },
   { id: 'olb', name: 'LB', posX: 76, posY: 30, color: 'red' },
   { id: 'ocb1', name: 'CB', posX: 76, posY: 45, color: 'red' },
   { id: 'ocb2', name: 'CB', posX: 76, posY: 55, color: 'red' },
@@ -45,6 +45,33 @@ const opponentPlayers: TacticalPlayer[] = [
 
 function clamp(value: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, value));
+}
+
+const PITCH_BOUNDS = {
+  minX: 3,
+  maxX: 97,
+  minY: 3,
+  maxY: 97
+};
+
+const PITCH_WIDTH = PITCH_BOUNDS.maxX - PITCH_BOUNDS.minX;
+const PITCH_HEIGHT = PITCH_BOUNDS.maxY - PITCH_BOUNDS.minY;
+
+function boardToPitchCoords(clientX: number, clientY: number, rect: DOMRect) {
+  const boardX = clamp(((clientX - rect.left) / rect.width) * 100);
+  const boardY = clamp(((clientY - rect.top) / rect.height) * 100);
+
+  return {
+    x: clamp(((boardX - PITCH_BOUNDS.minX) / PITCH_WIDTH) * 100),
+    y: clamp(((boardY - PITCH_BOUNDS.minY) / PITCH_HEIGHT) * 100)
+  };
+}
+
+function pitchToBoardCoords(posX: number, posY: number) {
+  return {
+    x: PITCH_BOUNDS.minX + (clamp(posX) / 100) * PITCH_WIDTH,
+    y: PITCH_BOUNDS.minY + (clamp(posY) / 100) * PITCH_HEIGHT
+  };
 }
 
 export default function TacticsBoard() {
@@ -68,26 +95,24 @@ export default function TacticsBoard() {
     if (!draggingId || !boardRef.current) return;
 
     const rect = boardRef.current.getBoundingClientRect();
-    const posX = clamp(((clientX - rect.left) / rect.width) * 100);
-    const posY = clamp(((clientY - rect.top) / rect.height) * 100);
+    const nextPos = boardToPitchCoords(clientX, clientY, rect);
 
-    setPlayers((prev) => prev.map((p) => (p.id === draggingId ? { ...p, posX, posY } : p)));
+    setPlayers((prev) => prev.map((p) => (p.id === draggingId ? { ...p, posX: nextPos.x, posY: nextPos.y } : p)));
   };
 
   const handleBoardClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!runStartId || !boardRef.current) return;
 
     const rect = boardRef.current.getBoundingClientRect();
-    const toX = clamp(((event.clientX - rect.left) / rect.width) * 100);
-    const toY = clamp(((event.clientY - rect.top) / rect.height) * 100);
+    const target = boardToPitchCoords(event.clientX, event.clientY, rect);
 
     setRuns((prev) => [
       ...prev,
       {
         id: `run-${prev.length + 1}`,
         fromId: runStartId,
-        toX,
-        toY
+        toX: target.x,
+        toY: target.y
       }
     ]);
     setRunStartId(null);
@@ -156,13 +181,15 @@ export default function TacticsBoard() {
           {runs.map((run) => {
             const from = getPlayerById(run.fromId);
             if (!from) return null;
+            const fromBoard = pitchToBoardCoords(from.posX, from.posY);
+            const toBoard = pitchToBoardCoords(run.toX, run.toY);
             return (
               <line
                 key={run.id}
-                x1={from.posX}
-                y1={from.posY}
-                x2={run.toX}
-                y2={run.toY}
+                x1={fromBoard.x}
+                y1={fromBoard.y}
+                x2={toBoard.x}
+                y2={toBoard.y}
                 stroke="#ffe26d"
                 strokeWidth={0.7}
                 strokeDasharray="2 2"
@@ -173,6 +200,9 @@ export default function TacticsBoard() {
         </svg>
 
         {[...players, ...opponentPlayers].map((player) => (
+          (() => {
+            const mapped = pitchToBoardCoords(player.posX, player.posY);
+            return (
           <button
             className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border text-[10px] font-bold ${
               player.color === 'red'
@@ -192,11 +222,13 @@ export default function TacticsBoard() {
                 setDraggingId(player.id);
               }
             }}
-            style={{ left: `${player.posX}%`, top: `${player.posY}%` }}
+            style={{ left: `${mapped.x}%`, top: `${mapped.y}%` }}
             type="button"
           >
             {player.name}
           </button>
+            );
+          })()
         ))}
       </div>
 
