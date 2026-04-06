@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState } from 'react';
-import type { MouseEvent } from 'react';
 
 type TacticalPlayer = {
   id: string;
@@ -75,7 +74,7 @@ export default function TacticsBoard() {
     setPlayers((prev) => prev.map((p) => (p.id === draggingId ? { ...p, posX, posY } : p)));
   };
 
-  const handleBoardClick = (event: MouseEvent<HTMLDivElement>) => {
+  const handleBoardClick = (event: any) => {
     if (!runStartId || !boardRef.current) return;
 
     const rect = boardRef.current.getBoundingClientRect();
