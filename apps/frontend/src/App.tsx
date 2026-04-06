@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import type { ManagerSummary, MatchEvent } from '@tmt/shared';
-import MatchScreen from './components/MatchScreen';
-import TacticsBoard from './components/TacticsBoard';
-import { fallbackClubs } from './fallbackClubs';
+import MatchScreen from './components/MatchScreen.tsx';
+import TacticsBoard from './components/TacticsBoard.tsx';
+import { fallbackClubs } from './fallbackClubs.ts';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
