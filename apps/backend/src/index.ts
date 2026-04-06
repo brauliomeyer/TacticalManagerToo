@@ -34,7 +34,7 @@ app.get('/clubs', async (_req, res) => {
   });
 
   res.json(
-    clubs.map((club) => ({
+    clubs.map((club: (typeof clubs)[number]) => ({
       id: club.id,
       name: club.name,
       country: club.league?.country ?? null,
