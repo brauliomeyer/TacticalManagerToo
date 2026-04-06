@@ -28,8 +28,22 @@ app.get('/health', (_req, res) => {
 });
 
 app.get('/clubs', async (_req, res) => {
-  const clubs = await prisma.club.findMany({ include: { players: true } });
-  res.json(clubs);
+  const clubs = await prisma.club.findMany({
+    include: { league: true },
+    orderBy: [{ league: { name: 'asc' } }, { name: 'asc' }]
+  });
+
+  res.json(
+    clubs.map((club) => ({
+      id: club.id,
+      name: club.name,
+      country: club.league?.country ?? null,
+      budget: club.budget,
+      reputation: club.reputation,
+      leagueId: club.leagueId,
+      leagueName: club.league?.name ?? null
+    }))
+  );
 });
 
 app.get('/manager/summary', async (_req, res) => {

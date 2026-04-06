@@ -13,6 +13,8 @@ interface Club {
   country: string;
   budget: number;
   reputation: number;
+  leagueId?: string | null;
+  leagueName?: string | null;
 }
 
 type PageKey = 'mail' | 'board' | 'squad' | 'cup' | 'human' | 'manager' | 'manage' | 'transfers' | 'training' | 'tactics' | 'match';
@@ -49,7 +51,7 @@ const pageDescriptions: Record<PageKey, { title: string; text: string }> = {
   match: { title: 'Live Match', text: 'Live simulatie met eventlog en mini-pitch.' }
 };
 
-function PagePanel({ page, clubs }: { page: PageKey; clubs: Club[] }) {
+function PagePanel({ page, activeClub }: { page: PageKey; activeClub: Club }) {
   if (page === 'tactics') return <TacticsBoard />;
   if (page === 'match') return <MatchScreen />;
 
@@ -61,15 +63,27 @@ function PagePanel({ page, clubs }: { page: PageKey; clubs: Club[] }) {
       <div className="retro-pitch mb-3 h-52 border-2 border-[#8ee486]" />
       <p className="border border-[#98ca7a] bg-[#256d22] px-2 py-1 text-xs text-[#d5f8b6]">{pageDescriptions[page].text}</p>
       <p className="mt-3 border border-[#98ca7a] bg-[#1f641d] px-2 py-1 text-xs text-[#d5f8b6]">
-        Active club: <strong>{clubs[0]?.name ?? 'Notts Forest'}</strong>
+        Active club: <strong>{activeClub.name}</strong>
       </p>
     </section>
   );
 }
 
+function normalizeClubs(payload: unknown): Club[] {
+  if (Array.isArray(payload)) {
+    return payload as Club[];
+  }
+
+  if (payload && typeof payload === 'object' && Array.isArray((payload as { clubs?: unknown[] }).clubs)) {
+    return (payload as { clubs: Club[] }).clubs;
+  }
+
+  return [];
+}
+
 export default function App() {
   const [clubs, setClubs] = useState<Club[]>([]);
-  const [activeClubIndex, setActiveClubIndex] = useState<number>(0);
+  const [activeClubId, setActiveClubId] = useState<string | null>(null);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [summary, setSummary] = useState<ManagerSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +92,10 @@ export default function App() {
   useEffect(() => {
     axios
       .get<Club[]>(`${API_BASE}/clubs`)
-      .then((res) => setClubs(res.data))
+      .then((res) => {
+        const nextClubs = normalizeClubs(res.data);
+        setClubs(nextClubs);
+      })
       .catch(() => setError('Could not load clubs from backend.'));
 
     axios
@@ -97,27 +114,64 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (activeClubIndex >= clubs.length) {
-      setActiveClubIndex(0);
+    if (clubs.length === 0) {
+      setActiveClubId(null);
+      return;
     }
-  }, [clubs, activeClubIndex]);
 
-  const activeClub = clubs[activeClubIndex] ?? { id: '', name: 'Notts Forest', country: '', budget: 0, reputation: 0 };
+    if (!activeClubId || !clubs.some((club) => club.id === activeClubId)) {
+      setActiveClubId(clubs[0].id);
+    }
+  }, [clubs, activeClubId]);
+
+  const fallbackClub: Club = {
+    id: '',
+    name: 'Notts Forest',
+    country: '1st Division',
+    budget: 0,
+    reputation: 0,
+    leagueId: null,
+    leagueName: '1st Division'
+  };
+
+  const activeClub = clubs.find((club) => club.id === activeClubId) ?? fallbackClub;
+
+  const competitionClubs = useMemo(() => {
+    if (clubs.length === 0) return [];
+    if (activeClub.leagueId) {
+      const sameLeague = clubs.filter((club) => club.leagueId === activeClub.leagueId);
+      if (sameLeague.length > 0) return sameLeague;
+    }
+
+    if (activeClub.country) {
+      const sameCountry = clubs.filter((club) => club.country === activeClub.country);
+      if (sameCountry.length > 0) return sameCountry;
+    }
+
+    return clubs;
+  }, [clubs, activeClub.leagueId, activeClub.country]);
+
+  const activeCompetitionIndex = Math.max(
+    0,
+    competitionClubs.findIndex((club) => club.id === activeClub.id)
+  );
 
   const fixture = useMemo(() => {
     if (clubs.length < 2) return null;
-    const awayIndex = (activeClubIndex + 1) % clubs.length;
-    return { homeClubId: activeClub.id, awayClubId: clubs[awayIndex].id };
-  }, [clubs, activeClubIndex, activeClub.id]);
+    const awayClub = clubs.find((club) => club.id !== activeClub.id) ?? clubs[0];
+    return { homeClubId: activeClub.id, awayClubId: awayClub.id };
+  }, [clubs, activeClub.id]);
 
   const previousClub = () => {
-    if (clubs.length === 0) return;
-    setActiveClubIndex((current) => (current - 1 + clubs.length) % clubs.length);
+    if (competitionClubs.length === 0) return;
+    const nextIndex = (activeCompetitionIndex - 1 + competitionClubs.length) % competitionClubs.length;
+    setActiveClubId(competitionClubs[nextIndex].id);
   };
 
   const nextClub = () => {
-    if (clubs.length === 0) return;
-    setActiveClubIndex((current) => (current + 1) % clubs.length);
+    if (competitionClubs.length === 0) return;
+    const nextIndex = (activeCompetitionIndex + 1) % competitionClubs.length;
+    setActiveClubId(competitionClubs[nextIndex].id);
   };
 
   const simulate = async () => {
@@ -136,7 +190,7 @@ export default function App() {
     <main className="min-h-screen bg-[#1a1e2b] p-4 text-[#d4f6a7] md:p-8">
       <section className="mx-auto max-w-6xl border-4 border-[#6f4ca1] bg-[#2a8a2b] shadow-[0_0_0_4px_#120d1f]">
         <header className="flex items-center justify-between border-b-4 border-[#6f4ca1] bg-black px-4 py-3 text-[#ebe25f]">
-          <h1 className="text-2xl font-black uppercase tracking-widest">Nott Forest</h1>
+          <h1 className="text-2xl font-black uppercase tracking-widest">{activeClub.name}</h1>
           <button
             className="border-2 border-[#ebe25f] bg-[#2a8a2b] px-3 py-1 text-xs font-bold uppercase"
             onClick={simulate}
@@ -154,13 +208,15 @@ export default function App() {
                 <p className="text-[10px] uppercase tracking-[0.2em] text-[#2e1f4a]">{activeClub.country || '1st Division'}</p>
               </div>
             </div>
-            <p className="mb-2 bg-[#2a8a2b] px-2 py-1 font-bold uppercase text-[#0e1d0f]">1st Division</p>
+            <p className="mb-2 bg-[#2a8a2b] px-2 py-1 font-bold uppercase text-[#0e1d0f]">
+              {(activeClub.leagueName || activeClub.country || '1st Division').toUpperCase()}
+            </p>
             <div className="mb-3 flex items-center justify-between gap-2 rounded border border-[#d0121b] bg-[#2a8a2b] px-2 py-2 text-xs font-bold text-[#d0121b]">
               <button
                 type="button"
                 onClick={previousClub}
                 className="rounded border border-[#d0121b] bg-[#f0d9cf] px-3 py-1 text-xs font-bold text-[#2e1f4a]"
-                disabled={clubs.length <= 1}
+                disabled={competitionClubs.length <= 1}
               >
                 ‹
               </button>
@@ -169,7 +225,7 @@ export default function App() {
                 type="button"
                 onClick={nextClub}
                 className="rounded border border-[#d0121b] bg-[#f0d9cf] px-3 py-1 text-xs font-bold text-[#2e1f4a]"
-                disabled={clubs.length <= 1}
+                disabled={competitionClubs.length <= 1}
               >
                 ›
               </button>
@@ -193,7 +249,7 @@ export default function App() {
             </ul>
             <div className="mt-3 border border-[#98ca7a] bg-[#256d22] p-2 text-[#d5f8b6]">
               <p className="font-bold uppercase">Club Value</p>
-              <p>€{(clubs[0]?.budget ?? 0).toLocaleString()}</p>
+              <p>€{(activeClub.budget ?? 0).toLocaleString()}</p>
             </div>
           </aside>
 
@@ -215,7 +271,7 @@ export default function App() {
               ))}
             </div>
 
-            <PagePanel clubs={clubs} page={activePage} />
+            <PagePanel activeClub={activeClub} page={activePage} />
 
             {error ? (
               <p className="mt-3 border border-[#98ca7a] bg-[#256d22] px-2 py-1 text-xs text-[#d5f8b6]">{error}</p>
