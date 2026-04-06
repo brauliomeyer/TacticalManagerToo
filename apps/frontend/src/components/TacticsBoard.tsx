@@ -117,7 +117,7 @@ export default function TacticsBoard() {
       </div>
 
       <div
-        className="relative h-[420px] w-full overflow-hidden rounded border-2 border-[#97f77a] bg-[#153d18]"
+        className="relative h-[420px] w-full overflow-hidden rounded bg-[#153d18]"
         onPointerMove={(event) => updateByPointer(event.clientX, event.clientY)}
         onPointerUp={() => setDraggingId(null)}
         onPointerLeave={() => setDraggingId(null)}
