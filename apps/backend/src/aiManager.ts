@@ -1,5 +1,5 @@
 export type TacticalStyle = 'defensive' | 'balanced' | 'attacking';
-export type PlayerRole = 'GOALKEEPER' | 'DEFENDER' | 'MIDFIELDER' | 'ATTACKER';
+export type PlayerRole = 'GOALKEEPER' | 'CENTER_BACK' | 'LEFT_BACK' | 'RIGHT_BACK' | 'SWEEPER' | 'LEFT_WING_BACK' | 'RIGHT_WING_BACK' | 'CENTRAL_MIDFIELDER' | 'DEFENSIVE_MIDFIELDER' | 'ATTACKING_MIDFIELDER' | 'LEFT_MIDFIELDER' | 'RIGHT_MIDFIELDER' | 'BOX_TO_BOX_MIDFIELDER' | 'ANCHOR' | 'LEFT_WINGER' | 'RIGHT_WINGER' | 'INVERTED_WINGER' | 'SECOND_STRIKER' | 'STRIKER' | 'TARGET_MAN' | 'FALSE_NINE' | 'PLAYMAKER';
 
 export interface AIPlayer {
   id: string;
@@ -33,32 +33,51 @@ export interface AIPlan {
 }
 
 const STARTING_SLOTS: Record<PlayerRole, Array<{ x: number; y: number }>> = {
-  GOALKEEPER: [{ x: 50, y: 8 }],
-  DEFENDER: [
-    { x: 18, y: 24 },
-    { x: 38, y: 26 },
-    { x: 62, y: 26 },
-    { x: 82, y: 24 }
-  ],
-  MIDFIELDER: [
-    { x: 24, y: 52 },
-    { x: 50, y: 56 },
-    { x: 76, y: 52 }
-  ],
-  ATTACKER: [
-    { x: 30, y: 78 },
-    { x: 50, y: 84 },
-    { x: 70, y: 78 }
-  ]
+  GOALKEEPER: [{ x: 50, y: 5 }],
+  CENTER_BACK: [{ x: 50, y: 25 }],
+  LEFT_BACK: [{ x: 10, y: 30 }],
+  RIGHT_BACK: [{ x: 90, y: 30 }],
+  SWEEPER: [{ x: 50, y: 15 }],
+  LEFT_WING_BACK: [{ x: 15, y: 35 }],
+  RIGHT_WING_BACK: [{ x: 85, y: 35 }],
+  CENTRAL_MIDFIELDER: [{ x: 50, y: 45 }],
+  DEFENSIVE_MIDFIELDER: [{ x: 35, y: 50 }],
+  ATTACKING_MIDFIELDER: [{ x: 50, y: 65 }],
+  LEFT_MIDFIELDER: [{ x: 25, y: 60 }],
+  RIGHT_MIDFIELDER: [{ x: 75, y: 60 }],
+  BOX_TO_BOX_MIDFIELDER: [{ x: 55, y: 50 }],
+  ANCHOR: [{ x: 40, y: 40 }],
+  LEFT_WINGER: [{ x: 20, y: 80 }],
+  RIGHT_WINGER: [{ x: 80, y: 80 }],
+  INVERTED_WINGER: [{ x: 30, y: 75 }],
+  SECOND_STRIKER: [{ x: 40, y: 75 }],
+  STRIKER: [{ x: 50, y: 90 }],
+  TARGET_MAN: [{ x: 50, y: 88 }],
+  FALSE_NINE: [{ x: 50, y: 85 }],
+  PLAYMAKER: [{ x: 45, y: 55 }]
 };
 
 function roleScore(player: AIPlayer, role: PlayerRole) {
   const common = player.form * 0.2 + player.stamina * 0.15 + player.morale * 0.15;
 
   if (role === 'GOALKEEPER') return common + player.pas * 0.2 + player.phy * 0.15 + player.def * 0.15 + player.dri * 0.15;
-  if (role === 'DEFENDER') return common + player.def * 0.35 + player.phy * 0.25 + player.pas * 0.1 + player.pac * 0.1;
-  if (role === 'MIDFIELDER') return common + player.pas * 0.35 + player.dri * 0.2 + player.pac * 0.1 + player.def * 0.1;
-  return common + player.sho * 0.35 + player.pac * 0.2 + player.dri * 0.15 + player.phy * 0.1;
+  if (role === 'CENTER_BACK' || role === 'LEFT_BACK' || role === 'RIGHT_BACK') return common + player.def * 0.35 + player.phy * 0.25 + player.pas * 0.1 + player.pac * 0.1;
+  if (role === 'SWEEPER') return common + player.def * 0.3 + player.pas * 0.25 + player.phy * 0.2 + player.dri * 0.1;
+  if (role === 'LEFT_WING_BACK' || role === 'RIGHT_WING_BACK') return common + player.def * 0.25 + player.pac * 0.2 + player.pas * 0.15 + player.dri * 0.15;
+  if (role === 'CENTRAL_MIDFIELDER') return common + player.pas * 0.25 + player.def * 0.2 + player.dri * 0.15 + player.phy * 0.1;
+  if (role === 'DEFENSIVE_MIDFIELDER') return common + player.def * 0.25 + player.pas * 0.25 + player.phy * 0.2 + player.dri * 0.1;
+  if (role === 'ATTACKING_MIDFIELDER') return common + player.pas * 0.25 + player.dri * 0.2 + player.sho * 0.15 + player.pac * 0.1;
+  if (role === 'LEFT_MIDFIELDER' || role === 'RIGHT_MIDFIELDER') return common + player.pas * 0.2 + player.dri * 0.2 + player.pac * 0.15 + player.def * 0.1;
+  if (role === 'BOX_TO_BOX_MIDFIELDER') return common + player.pac * 0.2 + player.def * 0.15 + player.sho * 0.15 + player.pas * 0.15;
+  if (role === 'ANCHOR') return common + player.def * 0.3 + player.pas * 0.25 + player.phy * 0.15 + player.dri * 0.1;
+  if (role === 'LEFT_WINGER' || role === 'RIGHT_WINGER') return common + player.pac * 0.25 + player.dri * 0.2 + player.sho * 0.15 + player.pas * 0.1;
+  if (role === 'INVERTED_WINGER') return common + player.dri * 0.25 + player.pas * 0.2 + player.pac * 0.15 + player.sho * 0.1;
+  if (role === 'SECOND_STRIKER') return common + player.sho * 0.25 + player.pas * 0.2 + player.dri * 0.15 + player.pac * 0.1;
+  if (role === 'STRIKER') return common + player.sho * 0.35 + player.pac * 0.2 + player.dri * 0.15 + player.phy * 0.1;
+  if (role === 'TARGET_MAN') return common + player.phy * 0.3 + player.sho * 0.25 + player.pac * 0.15 + player.def * 0.1;
+  if (role === 'FALSE_NINE') return common + player.pas * 0.3 + player.dri * 0.25 + player.sho * 0.15 + player.pac * 0.1;
+  if (role === 'PLAYMAKER') return common + player.pas * 0.4 + player.dri * 0.25 + player.sho * 0.1 + player.def * 0.05;
+  return common + player.pas * 0.2 + player.dri * 0.2 + player.sho * 0.2 + player.def * 0.2; // default fallback
 }
 
 function clamp(value: number, min: number, max: number) {

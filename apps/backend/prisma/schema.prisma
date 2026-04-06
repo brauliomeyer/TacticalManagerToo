@@ -28,7 +28,8 @@ model League {
   @@index([season])
 }
 
-model Club {
+model Club {env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  git status
   id          String          @id @default(uuid())
   name        String
   budget      Int             @default(0)
