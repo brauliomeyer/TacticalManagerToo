@@ -88,6 +88,18 @@ export default function TacticsBoard() {
   const [runStartId, setRunStartId] = useState<string | null>(null);
   const [runs, setRuns] = useState<RunLine[]>([]);
 
+  const undoLastRun = () => {
+    setRuns((prev) => prev.slice(0, -1));
+  };
+
+  const removeRun = (runId: string) => {
+    setRuns((prev) => prev.filter((run) => run.id !== runId));
+  };
+
+  const clearRuns = () => {
+    setRuns([]);
+  };
+
   const asJson = useMemo(
     () =>
       JSON.stringify(
@@ -153,6 +165,56 @@ export default function TacticsBoard() {
           <div className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-full bg-blue-600 border border-blue-300" /> Your players</div>
           <div className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-full bg-red-600 border border-red-300" /> Opponent</div>
           <div className="flex items-center gap-2"><span className="inline-block h-0.5 w-8 bg-yellow-300" style={{ borderStyle: 'dashed' }} /> Run line</div>
+
+          <p className="mt-3 font-semibold text-[#efe56b]">Run controls</p>
+          <div className="mt-1 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={undoLastRun}
+              disabled={runs.length === 0}
+              className="rounded border border-[#efe56b] bg-[#1e6d1f] px-2 py-1 text-[11px] font-bold text-[#efe56b] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Undo last
+            </button>
+            <button
+              type="button"
+              onClick={clearRuns}
+              disabled={runs.length === 0}
+              className="rounded border border-[#efe56b] bg-[#1e6d1f] px-2 py-1 text-[11px] font-bold text-[#efe56b] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Clear all
+            </button>
+            {runStartId ? (
+              <button
+                type="button"
+                onClick={() => setRunStartId(null)}
+                className="rounded border border-[#ffe26d] bg-[#3d5e1e] px-2 py-1 text-[11px] font-bold text-[#ffe26d]"
+              >
+                Cancel start
+              </button>
+            ) : null}
+          </div>
+
+          <p className="mt-2 text-[11px] text-[#d7ff9f]">Runs: {runs.length}</p>
+          {runs.length > 0 ? (
+            <ul className="mt-1 max-h-20 space-y-1 overflow-auto">
+              {runs.slice(-4).reverse().map((run) => (
+                <li key={`run-item-${run.id}`} className="flex items-center justify-between gap-2 rounded border border-[#68e154] bg-[#114012] px-2 py-1">
+                  <span className="truncate">{run.fromId} → ({Math.round(run.toX)}, {Math.round(run.toY)})</span>
+                  <button
+                    type="button"
+                    onClick={() => removeRun(run.id)}
+                    className="rounded border border-[#ff9f9f] bg-[#5c1f1f] px-1 py-0.5 text-[10px] font-bold text-[#ffd7d7]"
+                    aria-label={`Delete run ${run.id}`}
+                  >
+                    X
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-[11px] text-[#9fd28d]">No runs yet.</p>
+          )}
         </div>
       </div>
 
@@ -253,7 +315,7 @@ export default function TacticsBoard() {
         })}
       </div>
 
-      <p className="mt-3 text-xs text-[#efe56b]">Drag your own players from left to right. Use Shift+click on a player, then click the pitch to place a dotted run arrow.</p>
+      <p className="mt-3 text-xs text-[#efe56b]">Shift+click a player, then click the pitch to place a run arrow. Remove runs with Undo last, Clear all, or the X button in Run controls.</p>
       <pre className="hidden mt-2 max-h-40 overflow-auto border border-[#68e154] bg-[#0b5f15] p-2 text-[11px] leading-4">{asJson}</pre>
     </section>
   );
