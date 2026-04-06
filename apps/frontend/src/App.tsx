@@ -108,7 +108,7 @@ function normalizeClubs(payload: unknown): Club[] {
 }
 
 function getDefaultClubId(clubs: Club[]) {
-  return clubs.find((club) => club.name === 'Nottingham Forest FC')?.id ?? clubs[0]?.id ?? null;
+  return clubs.find((club: Club) => club.name === 'Nottingham Forest FC')?.id ?? clubs[0]?.id ?? null;
 }
 
 function getDivisionSortRank(name: string) {
@@ -207,7 +207,7 @@ export default function App() {
       });
 
     return Array.from(groups.values())
-      .map((group) => ({
+      .map((group: DivisionGroup) => ({
         ...group,
         clubs: [...group.clubs].sort((left, right) => left.name.localeCompare(right.name))
       }))
@@ -279,7 +279,7 @@ export default function App() {
 
   const buildFallbackStandings = (division: DivisionGroup | null): StandingRow[] => {
     if (!division) return [];
-    return division.clubs.map((club, index) => ({
+    return division.clubs.map((club: Club, index: number) => ({
       position: index + 1,
       clubId: club.id,
       clubName: club.name,
@@ -523,7 +523,7 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {standingsRows.map((row) => (
+                      {standingsRows.map((row: StandingRow) => (
                         <tr key={row.clubId} className="border-t border-[#2a8a2b] odd:bg-[#115d16] even:bg-[#0f5714]">
                           <td className="px-2 py-1">{row.position}</td>
                           <td className="px-2 py-1">{row.clubName}</td>

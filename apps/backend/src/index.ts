@@ -69,7 +69,7 @@ app.get('/leagues/:leagueId/standings', async (req, res) => {
   if (rows.length > 0) {
     res.json({
       league: { id: league.id, name: league.name, season: league.season },
-      standings: rows.map((row, index) => ({
+      standings: rows.map((row: (typeof rows)[number], index: number) => ({
         position: row.position > 0 ? row.position : index + 1,
         clubId: row.clubId,
         clubName: row.club.name,
@@ -94,7 +94,7 @@ app.get('/leagues/:leagueId/standings', async (req, res) => {
 
   res.json({
     league: { id: league.id, name: league.name, season: league.season },
-    standings: clubs.map((club, index) => ({
+    standings: clubs.map((club: (typeof clubs)[number], index: number) => ({
       position: index + 1,
       clubId: club.id,
       clubName: club.name,
