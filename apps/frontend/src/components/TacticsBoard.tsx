@@ -48,15 +48,15 @@ function clamp(value: number, min = 0, max = 100) {
 }
 
 const PITCH_BOUNDS = {
-  minX: 3,
-  maxX: 97,
-  minY: 3,
-  maxY: 97
+  minX: 1,
+  maxX: 99,
+  minY: 1,
+  maxY: 99
 };
 
 const PITCH_WIDTH = PITCH_BOUNDS.maxX - PITCH_BOUNDS.minX;
 const PITCH_HEIGHT = PITCH_BOUNDS.maxY - PITCH_BOUNDS.minY;
-const PLAYER_SAFE_MARGIN = 3;
+const PLAYER_SAFE_MARGIN = 6;
 
 function clampPlayerPos(value: number) {
   return clamp(value, PLAYER_SAFE_MARGIN, 100 - PLAYER_SAFE_MARGIN);
@@ -81,6 +81,8 @@ function pitchToBoardCoords(posX: number, posY: number) {
 
 export default function TacticsBoard() {
   const boardRef = useRef<HTMLDivElement | null>(null);
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const didDragRef = useRef(false);
   const [players, setPlayers] = useState<TacticalPlayer[]>(initialPlayers);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [runStartId, setRunStartId] = useState<string | null>(null);
@@ -98,6 +100,14 @@ export default function TacticsBoard() {
 
   const updateByPointer = (clientX: number, clientY: number) => {
     if (!draggingId || !boardRef.current) return;
+
+    if (dragStartRef.current) {
+      const dx = Math.abs(clientX - dragStartRef.current.x);
+      const dy = Math.abs(clientY - dragStartRef.current.y);
+      if (dx > 2 || dy > 2) {
+        didDragRef.current = true;
+      }
+    }
 
     const rect = boardRef.current.getBoundingClientRect();
     const nextPos = boardToPitchCoords(clientX, clientY, rect);
@@ -149,8 +159,14 @@ export default function TacticsBoard() {
       <div
         className="relative h-[420px] w-full overflow-hidden rounded border-2 border-[#74be5f] bg-[#1f5b1a] shadow-[inset_0_0_35px_rgba(0,0,0,0.45)]"
         onPointerMove={(event) => updateByPointer(event.clientX, event.clientY)}
-        onPointerUp={() => setDraggingId(null)}
-        onPointerLeave={() => setDraggingId(null)}
+        onPointerUp={() => {
+          setDraggingId(null);
+          dragStartRef.current = null;
+        }}
+        onPointerLeave={() => {
+          setDraggingId(null);
+          dragStartRef.current = null;
+        }}
         onClick={handleBoardClick}
         ref={boardRef}
       >
@@ -161,24 +177,24 @@ export default function TacticsBoard() {
               <path d="M 0 0 L 10 5 L 0 10 Z" fill="#ffe26d" />
             </marker>
           </defs>
-          <rect x="3" y="3" width="94" height="94" fill="none" stroke="rgba(255,255,255,0.88)" strokeWidth="0.8" />
-          <line x1="50" y1="3" x2="50" y2="97" stroke="rgba(255,255,255,0.84)" strokeWidth="0.45" />
+          <rect x="1" y="1" width="98" height="98" fill="none" stroke="rgba(255,255,255,0.88)" strokeWidth="0.8" />
+          <line x1="50" y1="1" x2="50" y2="99" stroke="rgba(255,255,255,0.84)" strokeWidth="0.45" />
           <circle cx="50" cy="50" r="7" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.45" />
           <circle cx="50" cy="50" r="0.9" fill="rgba(255,255,255,0.95)" />
-          <rect x="3" y="20" width="16" height="60" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.45" />
-          <rect x="81" y="20" width="16" height="60" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.45" />
-          <rect x="3" y="35" width="6" height="30" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.42" />
-          <rect x="91" y="35" width="6" height="30" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.42" />
+          <rect x="1" y="20" width="18" height="60" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.45" />
+          <rect x="81" y="20" width="18" height="60" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.45" />
+          <rect x="1" y="35" width="8" height="30" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.42" />
+          <rect x="91" y="35" width="8" height="30" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.42" />
           <circle cx="14" cy="50" r="0.65" fill="rgba(255,255,255,0.95)" />
           <circle cx="86" cy="50" r="0.65" fill="rgba(255,255,255,0.95)" />
           <path d="M19,42 A8,8 0 0 1 19,58" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.42" />
           <path d="M81,42 A8,8 0 0 0 81,58" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.42" />
-          <path d="M3,3 q3,0 3,3" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.38" />
-          <path d="M3,97 q3,0 3,-3" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.38" />
-          <path d="M97,3 q-3,0 -3,3" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.38" />
-          <path d="M97,97 q-3,0 -3,-3" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.38" />
-          <rect x="1.2" y="43" width="1.8" height="14" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.35" />
-          <rect x="97" y="43" width="1.8" height="14" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.35" />
+          <path d="M1,1 q3,0 3,3" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.38" />
+          <path d="M1,99 q3,0 3,-3" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.38" />
+          <path d="M99,1 q-3,0 -3,3" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.38" />
+          <path d="M99,99 q-3,0 -3,-3" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.38" />
+          <rect x="0.4" y="43" width="1.4" height="14" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.35" />
+          <rect x="98.2" y="43" width="1.4" height="14" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.35" />
           {runs.map((run) => {
             const from = getPlayerById(run.fromId);
             if (!from) return null;
@@ -214,13 +230,19 @@ export default function TacticsBoard() {
             key={player.id}
             onPointerDown={(event) => {
               event.preventDefault();
-              if (event.shiftKey) {
-                setRunStartId(player.id);
+              if (player.color !== 'red' && event.shiftKey) {
+                setDraggingId(player.id);
+                dragStartRef.current = { x: event.clientX, y: event.clientY };
+                didDragRef.current = false;
+              }
+            }}
+            onClick={(event) => {
+              if (!event.shiftKey) return;
+              if (didDragRef.current) {
+                didDragRef.current = false;
                 return;
               }
-              if (player.color !== 'red') {
-                setDraggingId(player.id);
-              }
+              setRunStartId(player.id);
             }}
             style={{ left: `${mapped.x}%`, top: `${mapped.y}%` }}
             type="button"
