@@ -117,22 +117,16 @@ export default function TacticsBoard() {
       </div>
 
       <div
-        className="relative h-[420px] w-full overflow-hidden rounded border-2 border-[#74be5f] bg-[#1e5b1a] shadow-[inset_0_0_35px_rgba(0,0,0,0.55)]"
+        className="relative h-[420px] w-full overflow-hidden rounded border-2 border-[#74be5f] bg-[#1f5b1a] shadow-[inset_0_0_35px_rgba(0,0,0,0.55)]"
         onPointerMove={(event) => updateByPointer(event.clientX, event.clientY)}
         onPointerUp={() => setDraggingId(null)}
         onPointerLeave={() => setDraggingId(null)}
         onClick={handleBoardClick}
         ref={boardRef}
       >
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(255,255,255,0.05),_transparent_20%),linear-gradient(180deg,_rgba(255,255,255,0.04)_0,_rgba(255,255,255,0.04)_1px,_transparent_1px),linear-gradient(90deg,_rgba(255,255,255,0.04)_0,_rgba(255,255,255,0.04)_1px,_transparent_1px)] bg-[length:100%_28px,100%_28px,28px_100%]" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(26,93,27,0.9)_0,rgba(26,93,27,0.9)_20%,rgba(28,101,28,0.9)_20%,rgba(28,101,28,0.9)_40%,rgba(26,93,27,0.9)_40%,rgba(26,93,27,0.9)_60%,rgba(28,101,28,0.9)_60%,rgba(28,101,28,0.9)_80%,rgba(26,93,27,0.9)_80%,rgba(26,93,27,0.9)_100%)]" />
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/2 top-0 h-full w-px bg-white/30" />
-          <div className="absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30" />
-          <div className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/80" />
-          <div className="absolute left-0 top-12 h-40 w-28 border border-white/30" />
-          <div className="absolute right-0 top-12 h-40 w-28 border border-white/30" />
-          <div className="absolute left-0 top-1/2 h-12 w-14 border border-white/30 -translate-y-1/2" />
-          <div className="absolute right-0 top-1/2 h-12 w-14 border border-white/30 -translate-y-1/2" />
+          <div className="absolute inset-2 rounded-[1.1rem] border border-white/80" />
         </div>
 
         <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none">
@@ -141,6 +135,30 @@ export default function TacticsBoard() {
               <path d="M 0 0 L 10 5 L 0 10 Z" fill="#ffe26d" />
             </marker>
           </defs>
+          <rect x="3" y="3" width="94" height="94" rx="4" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="0.8" />
+          <line x1="50" y1="3" x2="50" y2="97" stroke="rgba(255,255,255,0.78)" strokeWidth="0.5" />
+          <circle cx="50" cy="50" r="14" fill="none" stroke="rgba(255,255,255,0.78)" strokeWidth="0.5" />
+          <circle cx="50" cy="50" r="0.9" fill="rgba(255,255,255,0.95)" />
+          <rect x="5" y="28" width="22" height="44" rx="1" fill="none" stroke="rgba(255,255,255,0.78)" strokeWidth="0.55" />
+          <rect x="73" y="28" width="22" height="44" rx="1" fill="none" stroke="rgba(255,255,255,0.78)" strokeWidth="0.55" />
+          <rect x="10" y="36" width="12" height="28" rx="1" fill="none" stroke="rgba(255,255,255,0.78)" strokeWidth="0.45" />
+          <rect x="78" y="36" width="12" height="28" rx="1" fill="none" stroke="rgba(255,255,255,0.78)" strokeWidth="0.45" />
+          <line x1="12" y1="50" x2="12" y2="50" stroke="rgba(255,255,255,0.85)" strokeWidth="2" />
+          <line x1="88" y1="50" x2="88" y2="50" stroke="rgba(255,255,255,0.85)" strokeWidth="2" />
+          <path d="M23,40 A10,10 0 0 1 23,60" fill="none" stroke="rgba(255,255,255,0.78)" strokeWidth="0.45" />
+          <path d="M77,40 A10,10 0 0 0 77,60" fill="none" stroke="rgba(255,255,255,0.78)" strokeWidth="0.45" />
+          <path d="M10,10 h6" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.55" />
+          <path d="M10,90 h6" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.55" />
+          <path d="M90,10 h6" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.55" />
+          <path d="M90,90 h6" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.55" />
+          <line x1="9" y1="7" x2="9" y2="20" stroke="rgba(255,255,255,0.85)" strokeWidth="0.6" />
+          <polygon points="9,7 13,10 9,13" fill="#ff4a4a" />
+          <line x1="91" y1="7" x2="91" y2="20" stroke="rgba(255,255,255,0.85)" strokeWidth="0.6" />
+          <polygon points="91,7 87,10 91,13" fill="#ff4a4a" />
+          <line x1="9" y1="93" x2="9" y2="80" stroke="rgba(255,255,255,0.85)" strokeWidth="0.6" />
+          <polygon points="9,93 13,90 9,87" fill="#ff4a4a" />
+          <line x1="91" y1="93" x2="91" y2="80" stroke="rgba(255,255,255,0.85)" strokeWidth="0.6" />
+          <polygon points="91,93 87,90 91,87" fill="#ff4a4a" />
           {runs.map((run) => {
             const from = getPlayerById(run.fromId);
             if (!from) return null;
