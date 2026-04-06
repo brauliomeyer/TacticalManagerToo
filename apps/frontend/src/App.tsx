@@ -119,7 +119,7 @@ export default function App() {
       return;
     }
 
-    if (!activeClubId || !clubs.some((club) => club.id === activeClubId)) {
+    if (!activeClubId || !clubs.some((club: Club) => club.id === activeClubId)) {
       setActiveClubId(clubs[0].id);
     }
   }, [clubs, activeClubId]);
@@ -134,17 +134,17 @@ export default function App() {
     leagueName: '1st Division'
   };
 
-  const activeClub = clubs.find((club) => club.id === activeClubId) ?? fallbackClub;
+  const activeClub = clubs.find((club: Club) => club.id === activeClubId) ?? fallbackClub;
 
   const competitionClubs = useMemo(() => {
     if (clubs.length === 0) return [];
     if (activeClub.leagueId) {
-      const sameLeague = clubs.filter((club) => club.leagueId === activeClub.leagueId);
+      const sameLeague = clubs.filter((club: Club) => club.leagueId === activeClub.leagueId);
       if (sameLeague.length > 0) return sameLeague;
     }
 
     if (activeClub.country) {
-      const sameCountry = clubs.filter((club) => club.country === activeClub.country);
+      const sameCountry = clubs.filter((club: Club) => club.country === activeClub.country);
       if (sameCountry.length > 0) return sameCountry;
     }
 
@@ -153,12 +153,12 @@ export default function App() {
 
   const activeCompetitionIndex = Math.max(
     0,
-    competitionClubs.findIndex((club) => club.id === activeClub.id)
+    competitionClubs.findIndex((club: Club) => club.id === activeClub.id)
   );
 
   const fixture = useMemo(() => {
     if (clubs.length < 2) return null;
-    const awayClub = clubs.find((club) => club.id !== activeClub.id) ?? clubs[0];
+    const awayClub = clubs.find((club: Club) => club.id !== activeClub.id) ?? clubs[0];
     return { homeClubId: activeClub.id, awayClubId: awayClub.id };
   }, [clubs, activeClub.id]);
 
