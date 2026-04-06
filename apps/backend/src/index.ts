@@ -46,6 +46,71 @@ app.get('/clubs', async (_req, res) => {
   );
 });
 
+app.get('/leagues/:leagueId/standings', async (req, res) => {
+  const leagueId = String(req.params.leagueId);
+
+  const league = await prisma.league.findUnique({ where: { id: leagueId } });
+  if (!league) {
+    res.status(404).json({ error: 'League not found' });
+    return;
+  }
+
+  const rows = await prisma.tableStanding.findMany({
+    where: { leagueId },
+    include: { club: true },
+    orderBy: [
+      { points: 'desc' },
+      { goalDiff: 'desc' },
+      { goalsFor: 'desc' },
+      { club: { name: 'asc' } }
+    ]
+  });
+
+  if (rows.length > 0) {
+    res.json({
+      league: { id: league.id, name: league.name, season: league.season },
+      standings: rows.map((row, index) => ({
+        position: row.position > 0 ? row.position : index + 1,
+        clubId: row.clubId,
+        clubName: row.club.name,
+        played: row.played,
+        won: row.won,
+        drawn: row.drawn,
+        lost: row.lost,
+        goalsFor: row.goalsFor,
+        goalsAgainst: row.goalsAgainst,
+        goalDiff: row.goalDiff,
+        points: row.points,
+        updatedAt: row.updatedAt
+      }))
+    });
+    return;
+  }
+
+  const clubs = await prisma.club.findMany({
+    where: { leagueId },
+    orderBy: { name: 'asc' }
+  });
+
+  res.json({
+    league: { id: league.id, name: league.name, season: league.season },
+    standings: clubs.map((club, index) => ({
+      position: index + 1,
+      clubId: club.id,
+      clubName: club.name,
+      played: 0,
+      won: 0,
+      drawn: 0,
+      lost: 0,
+      goalsFor: 0,
+      goalsAgainst: 0,
+      goalDiff: 0,
+      points: 0,
+      updatedAt: null
+    }))
+  });
+});
+
 app.get('/manager/summary', async (_req, res) => {
   const clubs = await prisma.club.findMany();
   const summary: ManagerSummary = {

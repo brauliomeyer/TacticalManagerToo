@@ -25,6 +25,21 @@ interface DivisionGroup {
   clubs: Club[];
 }
 
+interface StandingRow {
+  position: number;
+  clubId: string;
+  clubName: string;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDiff: number;
+  points: number;
+  updatedAt: string | null;
+}
+
 type PageKey = 'mail' | 'board' | 'squad' | 'cup' | 'human' | 'manager' | 'manage' | 'transfers' | 'training' | 'tactics' | 'match';
 
 const socket = io(API_BASE, { autoConnect: false });
@@ -114,6 +129,11 @@ export default function App() {
   const [summary, setSummary] = useState<ManagerSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activePage, setActivePage] = useState<PageKey>('mail');
+  const [showStandings, setShowStandings] = useState(false);
+  const [standingsLoading, setStandingsLoading] = useState(false);
+  const [standingsError, setStandingsError] = useState<string | null>(null);
+  const [standingsRows, setStandingsRows] = useState<StandingRow[]>([]);
+  const [standingsDivisionName, setStandingsDivisionName] = useState<string>('');
 
   useEffect(() => {
     axios
@@ -257,6 +277,52 @@ export default function App() {
     setActiveClubId(targetClub.id);
   };
 
+  const buildFallbackStandings = (division: DivisionGroup | null): StandingRow[] => {
+    if (!division) return [];
+    return division.clubs.map((club, index) => ({
+      position: index + 1,
+      clubId: club.id,
+      clubName: club.name,
+      played: 0,
+      won: 0,
+      drawn: 0,
+      lost: 0,
+      goalsFor: 0,
+      goalsAgainst: 0,
+      goalDiff: 0,
+      points: 0,
+      updatedAt: null
+    }));
+  };
+
+  const openDivisionStandings = async () => {
+    if (!activeDivision) return;
+
+    setShowStandings(true);
+    setStandingsDivisionName(activeDivision.name);
+    setStandingsError(null);
+    setStandingsLoading(true);
+
+    if (!activeClub.leagueId) {
+      setStandingsRows(buildFallbackStandings(activeDivision));
+      setStandingsLoading(false);
+      return;
+    }
+
+    try {
+      const res = await axios.get<{ league: { id: string; name: string; season: number }; standings: StandingRow[] }>(
+        `${API_BASE}/leagues/${activeClub.leagueId}/standings`
+      );
+      setStandingsDivisionName(res.data.league.name);
+      setStandingsRows(res.data.standings);
+    } catch {
+      setStandingsRows(buildFallbackStandings(activeDivision));
+      setStandingsError('Live standings konden niet geladen worden, fallback is getoond.');
+    } finally {
+      setStandingsLoading(false);
+    }
+  };
+
   const simulate = async () => {
     if (!fixture) return;
 
@@ -291,9 +357,14 @@ export default function App() {
                 <p className="text-[10px] uppercase tracking-[0.2em] text-[#2e1f4a]">{activeClub.country || '1st Division'}</p>
               </div>
             </div>
-            <p className="mb-2 bg-[#2a8a2b] px-2 py-1 font-bold uppercase text-[#0e1d0f]">
+            <button
+              type="button"
+              onClick={openDivisionStandings}
+              className="mb-2 w-full border border-[#0e1d0f] bg-[#2a8a2b] px-2 py-1 text-left font-bold uppercase text-[#0e1d0f] hover:bg-[#46b047]"
+              title="Open divisie standings"
+            >
               {(activeClub.leagueName || activeClub.country || '1st Division').toUpperCase()}
-            </p>
+            </button>
             <div className="mb-2 flex items-center justify-between gap-2 rounded border border-[#6f4ca1] bg-[#1f641d] px-2 py-2 text-[10px] font-bold text-[#efe56b]">
               <button
                 type="button"
@@ -415,6 +486,64 @@ export default function App() {
             </ul>
           </aside>
         </div>
+
+        {showStandings ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+            <section className="w-full max-w-4xl border-4 border-[#6f4ca1] bg-[#0d5e13] p-3 text-xs text-[#d5f8b6]">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="font-black uppercase text-[#efe56b]">{standingsDivisionName} Standings</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowStandings(false)}
+                  className="border border-[#efe56b] bg-[#2a8a2b] px-2 py-1 font-bold uppercase text-[#efe56b]"
+                >
+                  Close
+                </button>
+              </div>
+
+              {standingsError ? <p className="mb-2 text-[#ffcf9f]">{standingsError}</p> : null}
+
+              {standingsLoading ? (
+                <p>Loading standings...</p>
+              ) : (
+                <div className="max-h-[60vh] overflow-auto border border-[#98ca7a]">
+                  <table className="w-full border-collapse text-left text-[11px]">
+                    <thead className="bg-[#1f641d] text-[#efe56b]">
+                      <tr>
+                        <th className="px-2 py-1">Pos</th>
+                        <th className="px-2 py-1">Team</th>
+                        <th className="px-2 py-1">P</th>
+                        <th className="px-2 py-1">W</th>
+                        <th className="px-2 py-1">D</th>
+                        <th className="px-2 py-1">L</th>
+                        <th className="px-2 py-1">GF</th>
+                        <th className="px-2 py-1">GA</th>
+                        <th className="px-2 py-1">GD</th>
+                        <th className="px-2 py-1">Pts</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {standingsRows.map((row) => (
+                        <tr key={row.clubId} className="border-t border-[#2a8a2b] odd:bg-[#115d16] even:bg-[#0f5714]">
+                          <td className="px-2 py-1">{row.position}</td>
+                          <td className="px-2 py-1">{row.clubName}</td>
+                          <td className="px-2 py-1">{row.played}</td>
+                          <td className="px-2 py-1">{row.won}</td>
+                          <td className="px-2 py-1">{row.drawn}</td>
+                          <td className="px-2 py-1">{row.lost}</td>
+                          <td className="px-2 py-1">{row.goalsFor}</td>
+                          <td className="px-2 py-1">{row.goalsAgainst}</td>
+                          <td className="px-2 py-1">{row.goalDiff}</td>
+                          <td className="px-2 py-1 font-bold text-[#efe56b]">{row.points}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </div>
+        ) : null}
       </section>
     </main>
   );
