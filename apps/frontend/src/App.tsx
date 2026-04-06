@@ -69,6 +69,7 @@ function PagePanel({ page, clubs }: { page: PageKey; clubs: Club[] }) {
 
 export default function App() {
   const [clubs, setClubs] = useState<Club[]>([]);
+  const [activeClubIndex, setActiveClubIndex] = useState<number>(0);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [summary, setSummary] = useState<ManagerSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -95,10 +96,29 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (activeClubIndex >= clubs.length) {
+      setActiveClubIndex(0);
+    }
+  }, [clubs, activeClubIndex]);
+
+  const activeClub = clubs[activeClubIndex] ?? { id: '', name: 'Notts Forest', country: '', budget: 0, reputation: 0 };
+
   const fixture = useMemo(() => {
     if (clubs.length < 2) return null;
-    return { homeClubId: clubs[0].id, awayClubId: clubs[1].id };
-  }, [clubs]);
+    const awayIndex = (activeClubIndex + 1) % clubs.length;
+    return { homeClubId: activeClub.id, awayClubId: clubs[awayIndex].id };
+  }, [clubs, activeClubIndex, activeClub.id]);
+
+  const previousClub = () => {
+    if (clubs.length === 0) return;
+    setActiveClubIndex((current) => (current - 1 + clubs.length) % clubs.length);
+  };
+
+  const nextClub = () => {
+    if (clubs.length === 0) return;
+    setActiveClubIndex((current) => (current + 1) % clubs.length);
+  };
 
   const simulate = async () => {
     if (!fixture) return;
@@ -129,8 +149,28 @@ export default function App() {
         <div className="grid gap-4 p-4 md:grid-cols-[220px_1fr_300px]">
           <aside className="border-4 border-[#6f4ca1] bg-[#2e1f4a] p-3 text-xs">
             <div className="mb-3 border-2 border-white bg-[#fff7de] p-2 text-center text-[#d0121b]">
-              <p className="text-lg font-black">⚽</p>
-              <p className="font-black uppercase">Notts Forest</p>
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={previousClub}
+                  className="rounded border border-[#d0121b] bg-[#f0d9cf] px-2 py-1 text-xs font-bold text-[#2e1f4a]"
+                  disabled={clubs.length <= 1}
+                >
+                  ‹
+                </button>
+                <div className="flex-1 px-2">
+                  <p className="text-lg font-black">{activeClub.name}</p>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#2e1f4a]">{activeClub.country || '1st Division'}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={nextClub}
+                  className="rounded border border-[#d0121b] bg-[#f0d9cf] px-2 py-1 text-xs font-bold text-[#2e1f4a]"
+                  disabled={clubs.length <= 1}
+                >
+                  ›
+                </button>
+              </div>
             </div>
             <p className="mb-3 bg-[#2a8a2b] px-2 py-1 font-bold uppercase text-[#0e1d0f]">1st Division</p>
             <ul className="space-y-1">
