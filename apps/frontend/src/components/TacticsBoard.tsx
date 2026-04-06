@@ -16,7 +16,7 @@ type RunLine = {
 };
 
 const initialPlayers: TacticalPlayer[] = [
-  { id: 'gk', name: 'GK', posX: 11, posY: 50 },
+  { id: 'gk', name: 'GK', posX: 14, posY: 50 },
   { id: 'lb', name: 'LB', posX: 24, posY: 30 },
   { id: 'cb1', name: 'CB', posX: 24, posY: 50 },
   { id: 'cb2', name: 'CB', posX: 24, posY: 70 },
@@ -30,7 +30,7 @@ const initialPlayers: TacticalPlayer[] = [
 ];
 
 const opponentPlayers: TacticalPlayer[] = [
-  { id: 'ogk', name: 'GK', posX: 89, posY: 50, color: 'red' },
+  { id: 'ogk', name: 'GK', posX: 86, posY: 50, color: 'red' },
   { id: 'olb', name: 'LB', posX: 76, posY: 30, color: 'red' },
   { id: 'ocb1', name: 'CB', posX: 76, posY: 45, color: 'red' },
   { id: 'ocb2', name: 'CB', posX: 76, posY: 55, color: 'red' },
@@ -56,21 +56,26 @@ const PITCH_BOUNDS = {
 
 const PITCH_WIDTH = PITCH_BOUNDS.maxX - PITCH_BOUNDS.minX;
 const PITCH_HEIGHT = PITCH_BOUNDS.maxY - PITCH_BOUNDS.minY;
+const PLAYER_SAFE_MARGIN = 3;
+
+function clampPlayerPos(value: number) {
+  return clamp(value, PLAYER_SAFE_MARGIN, 100 - PLAYER_SAFE_MARGIN);
+}
 
 function boardToPitchCoords(clientX: number, clientY: number, rect: DOMRect) {
   const boardX = clamp(((clientX - rect.left) / rect.width) * 100);
   const boardY = clamp(((clientY - rect.top) / rect.height) * 100);
 
   return {
-    x: clamp(((boardX - PITCH_BOUNDS.minX) / PITCH_WIDTH) * 100),
-    y: clamp(((boardY - PITCH_BOUNDS.minY) / PITCH_HEIGHT) * 100)
+    x: clampPlayerPos(((boardX - PITCH_BOUNDS.minX) / PITCH_WIDTH) * 100),
+    y: clampPlayerPos(((boardY - PITCH_BOUNDS.minY) / PITCH_HEIGHT) * 100)
   };
 }
 
 function pitchToBoardCoords(posX: number, posY: number) {
   return {
-    x: PITCH_BOUNDS.minX + (clamp(posX) / 100) * PITCH_WIDTH,
-    y: PITCH_BOUNDS.minY + (clamp(posY) / 100) * PITCH_HEIGHT
+    x: PITCH_BOUNDS.minX + (clampPlayerPos(posX) / 100) * PITCH_WIDTH,
+    y: PITCH_BOUNDS.minY + (clampPlayerPos(posY) / 100) * PITCH_HEIGHT
   };
 }
 
@@ -150,10 +155,6 @@ export default function TacticsBoard() {
         ref={boardRef}
       >
         <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(90deg,rgba(93,201,38,0.8)_0,rgba(93,201,38,0.8)_5%,rgba(78,178,31,0.82)_5%,rgba(78,178,31,0.82)_10%)]" />
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-2 border border-white/80" />
-        </div>
-
         <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none">
           <defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -199,10 +200,9 @@ export default function TacticsBoard() {
           })}
         </svg>
 
-        {[...players, ...opponentPlayers].map((player) => (
-          (() => {
-            const mapped = pitchToBoardCoords(player.posX, player.posY);
-            return (
+        {[...players, ...opponentPlayers].map((player) => {
+          const mapped = pitchToBoardCoords(player.posX, player.posY);
+          return (
           <button
             className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border text-[10px] font-bold ${
               player.color === 'red'
@@ -227,9 +227,8 @@ export default function TacticsBoard() {
           >
             {player.name}
           </button>
-            );
-          })()
-        ))}
+          );
+        })}
       </div>
 
       <p className="mt-3 text-xs text-[#efe56b]">Drag your own players from left to right. Use Shift+click on a player, then click the pitch to place a dotted run arrow.</p>
