@@ -5,21 +5,16 @@ type TacticalPlayer = {
   name: string;
   posX: number;
   posY: number;
+  origX: number;
+  origY: number;
   color?: string;
 };
 
 type RunLine = {
   id: string;
-  fromId: string;
+  fromId: string; // Can be player.id or "run-end-{runId}"
   toX: number;
   toY: number;
-};
-
-type RunStart = {
-  type: 'player' | 'position';
-  id?: string;
-  x?: number;
-  y?: number;
 };
 
 type TacticsSnapshot = {
@@ -29,31 +24,31 @@ type TacticsSnapshot = {
 };
 
 const initialPlayers: TacticalPlayer[] = [
-  { id: 'gk', name: 'GK', posX: 14, posY: 50 },
-  { id: 'lb', name: 'LB', posX: 24, posY: 30 },
-  { id: 'cb1', name: 'CB', posX: 24, posY: 50 },
-  { id: 'cb2', name: 'CB', posX: 24, posY: 70 },
-  { id: 'rb', name: 'RB', posX: 24, posY: 90 },
-  { id: 'cm1', name: 'CM', posX: 45, posY: 30 },
-  { id: 'cm2', name: 'CM', posX: 45, posY: 50 },
-  { id: 'cm3', name: 'CM', posX: 45, posY: 70 },
-  { id: 'lw', name: 'LW', posX: 70, posY: 20 },
-  { id: 'st', name: 'ST', posX: 82, posY: 50 },
-  { id: 'rw', name: 'RW', posX: 70, posY: 80 }
+  { id: 'gk', name: 'GK', posX: 14, posY: 50, origX: 14, origY: 50 },
+  { id: 'lb', name: 'LB', posX: 24, posY: 30, origX: 24, origY: 30 },
+  { id: 'cb1', name: 'CB', posX: 24, posY: 50, origX: 24, origY: 50 },
+  { id: 'cb2', name: 'CB', posX: 24, posY: 70, origX: 24, origY: 70 },
+  { id: 'rb', name: 'RB', posX: 24, posY: 90, origX: 24, origY: 90 },
+  { id: 'cm1', name: 'CM', posX: 45, posY: 30, origX: 45, origY: 30 },
+  { id: 'cm2', name: 'CM', posX: 45, posY: 50, origX: 45, origY: 50 },
+  { id: 'cm3', name: 'CM', posX: 45, posY: 70, origX: 45, origY: 70 },
+  { id: 'lw', name: 'LW', posX: 70, posY: 20, origX: 70, origY: 20 },
+  { id: 'st', name: 'ST', posX: 82, posY: 50, origX: 82, origY: 50 },
+  { id: 'rw', name: 'RW', posX: 70, posY: 80, origX: 70, origY: 80 }
 ];
 
 const opponentPlayers: TacticalPlayer[] = [
-  { id: 'ogk', name: 'GK', posX: 86, posY: 50, color: 'red' },
-  { id: 'olb', name: 'LB', posX: 76, posY: 30, color: 'red' },
-  { id: 'ocb1', name: 'CB', posX: 76, posY: 45, color: 'red' },
-  { id: 'ocb2', name: 'CB', posX: 76, posY: 55, color: 'red' },
-  { id: 'orb', name: 'RB', posX: 76, posY: 70, color: 'red' },
-  { id: 'ocm1', name: 'CM', posX: 60, posY: 25, color: 'red' },
-  { id: 'ocm2', name: 'CM', posX: 60, posY: 50, color: 'red' },
-  { id: 'ocm3', name: 'CM', posX: 60, posY: 75, color: 'red' },
-  { id: 'olw', name: 'LW', posX: 48, posY: 20, color: 'red' },
-  { id: 'ost', name: 'ST', posX: 36, posY: 50, color: 'red' },
-  { id: 'orw', name: 'RW', posX: 48, posY: 80, color: 'red' }
+  { id: 'ogk', name: 'GK', posX: 86, posY: 50, origX: 86, origY: 50, color: 'red' },
+  { id: 'olb', name: 'LB', posX: 76, posY: 30, origX: 76, origY: 30, color: 'red' },
+  { id: 'ocb1', name: 'CB', posX: 76, posY: 45, origX: 76, origY: 45, color: 'red' },
+  { id: 'ocb2', name: 'CB', posX: 76, posY: 55, origX: 76, origY: 55, color: 'red' },
+  { id: 'orb', name: 'RB', posX: 76, posY: 70, origX: 76, origY: 70, color: 'red' },
+  { id: 'ocm1', name: 'CM', posX: 60, posY: 25, origX: 60, origY: 25, color: 'red' },
+  { id: 'ocm2', name: 'CM', posX: 60, posY: 50, origX: 60, origY: 50, color: 'red' },
+  { id: 'ocm3', name: 'CM', posX: 60, posY: 75, origX: 60, origY: 75, color: 'red' },
+  { id: 'olw', name: 'LW', posX: 48, posY: 20, origX: 48, origY: 20, color: 'red' },
+  { id: 'ost', name: 'ST', posX: 36, posY: 50, origX: 36, origY: 50, color: 'red' },
+  { id: 'orw', name: 'RW', posX: 48, posY: 80, origX: 48, origY: 80, color: 'red' }
 ];
 
 function clamp(value: number, min = 0, max = 100) {
@@ -98,12 +93,11 @@ export default function TacticsBoard() {
   const didDragRef = useRef(false);
   const [players, setPlayers] = useState<TacticalPlayer[]>(initialPlayers);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [runStartId, setRunStartId] = useState<string | null>(null);
-  const [runChainStart, setRunChainStart] = useState<RunStart | null>(null);
+  const [selectedRunSourceId, setSelectedRunSourceId] = useState<string | null>(null);
   const [runs, setRuns] = useState<RunLine[]>([]);
-  const [history, setHistory] = useState<TacticsSnapshot[]>([
-    { players: initialPlayers, runs: [], timestamp: Date.now() }
-  ]);
+  const [history, setHistory] = useState<TacticsSnapshot[]>(
+    [{ players: initialPlayers, runs: [], timestamp: Date.now() }]
+  );
   const [historyIndex, setHistoryIndex] = useState(0);
 
   const saveSnapshot = (newPlayers: TacticalPlayer[], newRuns: RunLine[]) => {
@@ -139,28 +133,68 @@ export default function TacticsBoard() {
     const newRuns = runs.slice(0, -1);
     saveSnapshot(players, newRuns);
     setRuns(newRuns);
+    setSelectedRunSourceId(null);
   };
 
   const removeRun = (runId: string) => {
     const newRuns = runs.filter((run) => run.id !== runId);
-    saveSnapshot(players, newRuns);
+    
+    // Reset player to original position if this run started from that player
+    const run = runs.find((r) => r.id === runId);
+    let updatedPlayers = players;
+    if (run && !run.fromId.startsWith('run-end-')) {
+      // This run started from a player, reset them to their original position
+      updatedPlayers = players.map((p) =>
+        p.id === run.fromId ? { ...p, posX: p.origX, posY: p.origY } : p
+      );
+    }
+    
+    saveSnapshot(updatedPlayers, newRuns);
     setRuns(newRuns);
   };
 
   const clearRuns = () => {
-    saveSnapshot(players, []);
+    // Reset all players to their original positions
+    const resetPlayers = players.map((p) => ({
+      ...p,
+      posX: p.origX,
+      posY: p.origY
+    }));
+    saveSnapshot(resetPlayers, []);
     setRuns([]);
+    setPlayers(resetPlayers);
+    setSelectedRunSourceId(null);
   };
 
-  const asJson = useMemo(
-    () =>
-      JSON.stringify(
-        players.map((p) => ({ id: p.id, posX: Number(p.posX.toFixed(1)), posY: Number(p.posY.toFixed(1)) })),
-        null,
-        2
-      ),
-    [players]
-  );
+  const cancelRunSetup = () => {
+    setSelectedRunSourceId(null);
+  };
+
+  const getPlayerById = (id: string): TacticalPlayer | undefined => {
+    return players.find((player) => player.id === id) ||
+           opponentPlayers.find((player) => player.id === id);
+  };
+
+  const getRunEndpoint = (runId: string): { x: number; y: number } | null => {
+    const run = runs.find((r) => r.id === runId);
+    return run ? { x: run.toX, y: run.toY } : null;
+  };
+
+  const startRunFromRunEnd = (runId: string) => {
+    setSelectedRunSourceId(`run-end-${runId}`);
+  };
+
+  const getSourceCoordinates = (sourceId: string): { x: number; y: number } | null => {
+    if (sourceId.startsWith('run-end-')) {
+      // Extract runId from "run-end-{runId}"
+      const runId = sourceId.replace('run-end-', '');
+      return getRunEndpoint(runId);
+    } else {
+      // It's a player ID
+      const player = getPlayerById(sourceId);
+      return player ? { x: player.posX, y: player.posY } : null;
+    }
+  };
 
   const updateByPointer = (clientX: number, clientY: number) => {
     if (!draggingId || !boardRef.current) return;
@@ -176,65 +210,51 @@ export default function TacticsBoard() {
     const rect = boardRef.current!.getBoundingClientRect();
     const nextPos = boardToPitchCoords(clientX, clientY, rect);
 
-    setPlayers((prev) => prev.map((p) => (p.id === draggingId ? { ...p, posX: nextPos.x, posY: nextPos.y } : p)));
+    setPlayers((prev) => 
+      prev.map((p) => (p.id === draggingId ? { ...p, posX: nextPos.x, posY: nextPos.y } : p))
+    );
   };
 
   const handleBoardClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!runStartId && !runChainStart) return;
-    if (!boardRef.current) return;
+    if (!selectedRunSourceId || !boardRef.current) return;
 
     const rect = boardRef.current!.getBoundingClientRect();
     const target = boardToPitchCoords(event.clientX, event.clientY, rect);
 
-    // Determine the source - either from player or from last run endpoint
-    const sourceId = runStartId || `chain-${Date.now()}`;
-    const fromId = runChainStart ? runChainStart.id! : runStartId!;
-
+    // Create new run with unique ID
+    const runId = `run-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const newRuns = [
       ...runs,
       {
-        id: sourceId,
-        fromId: fromId,
+        id: runId,
+        fromId: selectedRunSourceId,
         toX: target.x,
         toY: target.y
       }
     ];
 
-    // Save snapshot with new run
-    setHistory((prev) => {
-      const trimmed = prev.slice(0, historyIndex + 1);
-      return [
-        ...trimmed,
-        { players: players, runs: newRuns, timestamp: Date.now() }
-      ];
-    });
-    setHistoryIndex((prev) => prev + 1);
-
+    saveSnapshot(players, newRuns);
     setRuns(newRuns);
-
-    // After placing run, enable chaining from the endpoint
-    setRunStartId(null);
-    setRunChainStart({
-      type: 'position',
-      id: sourceId,
-      x: target.x,
-      y: target.y
-    });
+    
+    // Automatically set up for chaining from this run endpoint
+    setSelectedRunSourceId(`run-end-${runId}`);
   };
 
-  const startNewChain = () => {
-    if (runs.length > 0) {
-      const lastRun = runs[runs.length - 1];
-      setRunChainStart({
-        type: 'position',
-        id: `chain-from-${lastRun.id}`,
-        x: lastRun.toX,
-        y: lastRun.toY
-      });
-    }
-  };
-
-  const getPlayerById = (id: string) => players.find((player) => player.id === id) || opponentPlayers.find((player) => player.id === id);
+  const asJson = useMemo(
+    () =>
+      JSON.stringify(
+        players.map((p) => ({ 
+          id: p.id, 
+          posX: Number(p.posX.toFixed(1)), 
+          posY: Number(p.posY.toFixed(1)),
+          origX: Number(p.origX.toFixed(1)),
+          origY: Number(p.origY.toFixed(1))
+        })),
+        null,
+        2
+      ),
+    [players]
+  );
 
   return (
     <section className="border-4 border-[#6f4ca1] bg-[#0f8f1f] p-3 font-mono text-[#d7ff9f]">
@@ -244,10 +264,16 @@ export default function TacticsBoard() {
         <div className="rounded border border-[#68e154] bg-[#122b13] p-3 text-xs text-[#d7ff9f]">
           <p className="font-semibold text-[#efe56b]">Board mode</p>
           <p>Left-to-right layout</p>
-          <p>Shift+drag your players</p>
-          <p>Click a player while holding <span className="font-bold">Shift</span> to start a run, then click the pitch to place the arrow.</p>
+          <p><span className="font-bold">Shift+drag</span> any player (blue or red) to reposition</p>
+          <p><span className="font-bold">Shift+click</span> a player to select as run source (highlighted)</p>
+          <p>Then <span className="font-bold">click the pitch</span> to place the run arrow there</p>
+          <p><span className="font-bold">Click run endpoint circles</span> to chain into next run</p>
           <p className="mt-2">Opponent is shown in <span className="text-red-300">red</span>.</p>
-          {runStartId ? <p className="mt-2 text-[#ffe26d]">Run from: {runStartId}</p> : null}
+          {selectedRunSourceId && (
+            <p className="mt-2 text-[#ffe26d] font-bold">
+              ▶ Run source selected: {selectedRunSourceId.startsWith('run-end-') ? 'Run endpoint' : selectedRunSourceId}
+            </p>
+          )}
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               type="button"
@@ -275,6 +301,7 @@ export default function TacticsBoard() {
           <div className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-full bg-blue-600 border border-blue-300" /> Your players</div>
           <div className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-full bg-red-600 border border-red-300" /> Opponent</div>
           <div className="flex items-center gap-2"><span className="inline-block h-0.5 w-8 bg-yellow-300" style={{ borderStyle: 'dashed' }} /> Run line</div>
+          <div className="flex items-center gap-2"><span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-yellow-400 bg-transparent" /> Run endpoint</div>
 
           <p className="mt-3 font-semibold text-[#efe56b]">Run controls</p>
           <div className="mt-1 flex flex-wrap gap-2">
@@ -294,33 +321,15 @@ export default function TacticsBoard() {
             >
               Clear all
             </button>
-            {runStartId ? (
+            {selectedRunSourceId && (
               <button
                 type="button"
-                onClick={() => setRunStartId(null)}
+                onClick={cancelRunSetup}
                 className="rounded border border-[#ffe26d] bg-[#3d5e1e] px-2 py-1 text-[11px] font-bold text-[#ffe26d]"
               >
-                Cancel start
+                Cancel run
               </button>
-            ) : null}
-            {runChainStart ? (
-              <button
-                type="button"
-                onClick={() => setRunChainStart(null)}
-                className="rounded border border-[#ffe26d] bg-[#3d5e1e] px-2 py-1 text-[11px] font-bold text-[#ffe26d]"
-              >
-                Cancel chain
-              </button>
-            ) : null}
-            {!runChainStart && runs.length > 0 ? (
-              <button
-                type="button"
-                onClick={startNewChain}
-                className="rounded border border-[#68e154] bg-[#1e6d1f] px-2 py-1 text-[11px] font-bold text-[#68e154]"
-              >
-                Chain from last
-              </button>
-            ) : null}
+            )}
           </div>
 
           <p className="mt-2 text-[11px] text-[#d7ff9f]">Runs: {runs.length}</p>
@@ -328,7 +337,9 @@ export default function TacticsBoard() {
             <ul className="mt-1 max-h-20 space-y-1 overflow-auto">
               {runs.slice(-4).reverse().map((run) => (
                 <li key={`run-item-${run.id}`} className="flex items-center justify-between gap-2 rounded border border-[#68e154] bg-[#114012] px-2 py-1">
-                  <span className="truncate">{run.fromId} → ({Math.round(run.toX)}, {Math.round(run.toY)})</span>
+                  <span className="truncate text-[10px]">
+                    {run.fromId.startsWith('run-end-') ? '↪' : '→'} {run.fromId.startsWith('run-end-') ? 'chain' : run.fromId} to ({Math.round(run.toX)}, {Math.round(run.toY)})
+                  </span>
                   <button
                     type="button"
                     onClick={() => removeRun(run.id)}
@@ -342,9 +353,6 @@ export default function TacticsBoard() {
             </ul>
           ) : (
             <p className="mt-1 text-[11px] text-[#9fd28d]">No runs yet.</p>
-          )}
-          {runChainStart && (
-            <p className="mt-2 text-[10px] text-[#ffe26d]">📍 Chaining from run endpoint • click pitch to continue</p>
           )}
         </div>
       </div>
@@ -394,66 +402,100 @@ export default function TacticsBoard() {
           <path d="M99,99 q-3,0 -3,-3" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="0.38" />
           <rect x="0.4" y="43" width="1.4" height="14" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.35" />
           <rect x="98.2" y="43" width="1.4" height="14" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.35" />
+          
+          {/* Render run lines */}
           {runs.map((run) => {
-            const from = getPlayerById(run.fromId);
-            if (!from) return null;
-            const fromBoard = pitchToBoardCoords(from.posX, from.posY);
+            const source = getSourceCoordinates(run.fromId);
+            if (!source) return null;
+            const fromBoard = pitchToBoardCoords(source.x, source.y);
             const toBoard = pitchToBoardCoords(run.toX, run.toY);
             return (
-              <line
-                key={run.id}
-                x1={fromBoard.x}
-                y1={fromBoard.y}
-                x2={toBoard.x}
-                y2={toBoard.y}
-                stroke="#ffe26d"
-                strokeWidth={0.7}
-                strokeDasharray="2 2"
-                markerEnd="url(#arrow)"
-              />
+              <g key={run.id}>
+                {/* Dashed line */}
+                <line
+                  x1={fromBoard.x}
+                  y1={fromBoard.y}
+                  x2={toBoard.x}
+                  y2={toBoard.y}
+                  stroke="#ffe26d"
+                  strokeWidth={0.7}
+                  strokeDasharray="2 2"
+                  markerEnd="url(#arrow)"
+                  pointerEvents="none"
+                />
+              </g>
             );
           })}
         </svg>
 
+        {/* Render clickable run endpoints */}
+        {runs.map((run) => {
+          const endpoint = pitchToBoardCoords(run.toX, run.toY);
+          return (
+            <button
+              key={`run-end-${run.id}`}
+              type="button"
+              className={`absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-all ${
+                selectedRunSourceId === `run-end-${run.id}`
+                  ? 'border-yellow-300 bg-yellow-200'
+                  : 'border-yellow-400 bg-transparent hover:bg-yellow-100'
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                startRunFromRunEnd(run.id);
+              }}
+              title={`Chain from this run endpoint`}
+              style={{ left: `${endpoint.x}%`, top: `${endpoint.y}%` }}
+            />
+          );
+        })}
+
+        {/* Render players */}
         {[...players, ...opponentPlayers].map((player) => {
           const mapped = pitchToBoardCoords(player.posX, player.posY);
+          const isSelected = selectedRunSourceId === player.id;
           return (
-          <button
-            className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border text-[10px] font-bold ${
-              player.color === 'red'
-                ? 'border-red-400 bg-red-600 text-white'
-                : draggingId === player.id
-                ? 'border-[#efe56b] bg-[#1f3c80] text-[#d2e1ff]'
-                : 'border-[#8fc6ff] bg-[#2d4f8f] text-white'
-            }`}
-            key={player.id}
-            onPointerDown={(event) => {
-              event.preventDefault();
-              if (event.shiftKey) {
-                setDraggingId(player.id);
-                dragStartRef.current = { x: event.clientX, y: event.clientY };
-                didDragRef.current = false;
-              }
-            }}
-            onClick={(event) => {
-              if (!event.shiftKey) return;
-              if (didDragRef.current) {
-                didDragRef.current = false;
-                return;
-              }
-              setRunChainStart(null);
-              setRunStartId(player.id);
-            }}
-            style={{ left: `${mapped.x}%`, top: `${mapped.y}%` }}
-            type="button"
-          >
-            {player.name}
-          </button>
+            <button
+              className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border text-[10px] font-bold transition-all ${
+                isSelected
+                  ? 'border-[#ffe26d] bg-[#4a7c2e] text-[#ffe26d] ring-2 ring-[#ffe26d]'
+                  : player.color === 'red'
+                  ? 'border-red-400 bg-red-600 text-white hover:border-red-300'
+                  : draggingId === player.id
+                  ? 'border-[#efe56b] bg-[#1f3c80] text-[#d2e1ff]'
+                  : 'border-[#8fc6ff] bg-[#2d4f8f] text-white hover:border-[#a8d5ff]'
+              }`}
+              key={player.id}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                if (event.shiftKey) {
+                  setDraggingId(player.id);
+                  dragStartRef.current = { x: event.clientX, y: event.clientY };
+                  didDragRef.current = false;
+                }
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (!event.shiftKey) return;
+                if (didDragRef.current) {
+                  didDragRef.current = false;
+                  return;
+                }
+                setSelectedRunSourceId(player.id);
+              }}
+              style={{ left: `${mapped.x}%`, top: `${mapped.y}%` }}
+              type="button"
+              title={`${player.name} (Shift+drag to move, Shift+click to start run)`}
+            >
+              {player.name}
+            </button>
           );
         })}
       </div>
 
-      <p className="mt-3 text-xs text-[#efe56b]">Shift+click any player (blue or red), then click pitch to place arrow. Use "Chain from last" to extend runs. Use Undo/Redo to navigate changes. Remove with Undo/Clear/X buttons.</p>
+      <p className="mt-3 text-xs text-[#efe56b]">
+        Shift+drag to move any player • Shift+click to select run source • Click pitch to place run • Click run endpoints to chain • Use Undo/Redo to navigate
+      </p>
       <pre className="hidden mt-2 max-h-40 overflow-auto border border-[#68e154] bg-[#0b5f15] p-2 text-[11px] leading-4">{asJson}</pre>
     </section>
   );
