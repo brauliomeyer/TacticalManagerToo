@@ -510,51 +510,51 @@ export default function TacticsBoard({ starters = [] }: TacticsBoardProps) {
           const assignedName = player.color !== 'red' ? starterNames[player.id] : undefined;
           const hasStarter = !!assignedName;
           return (
-            <button
-              className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border font-bold transition-all ${
-                hasStarter ? 'h-9 w-9 text-[8px] leading-tight' : 'h-8 w-8 text-[10px]'
-              } ${
-                isSelected
-                  ? 'border-[#ffe26d] bg-[#4a7c2e] text-[#ffe26d] ring-2 ring-[#ffe26d]'
-                  : player.color === 'red'
-                  ? 'border-red-400 bg-red-600 text-white hover:border-red-300'
-                  : draggingId === player.id
-                  ? 'border-[#efe56b] bg-[#1f3c80] text-[#d2e1ff]'
-                  : hasStarter
-                  ? 'border-[#efe56b] bg-[#2d4f8f] text-white hover:border-[#a8d5ff]'
-                  : 'border-[#8fc6ff] bg-[#2d4f8f] text-white hover:border-[#a8d5ff]'
-              }`}
+            <div
               key={player.id}
-              onPointerDown={(event) => {
-                event.preventDefault();
-                if (event.shiftKey) {
-                  setDraggingId(player.id);
-                  dragStartRef.current = { x: event.clientX, y: event.clientY };
-                  didDragRef.current = false;
-                }
-              }}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (!event.shiftKey) return;
-                if (didDragRef.current) {
-                  didDragRef.current = false;
-                  return;
-                }
-                setSelectedRunSourceId(player.id);
-              }}
+              className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
               style={{ left: `${mapped.x}%`, top: `${mapped.y}%` }}
-              type="button"
-              title={`${assignedName ? `${assignedName} (${player.name})` : player.name} (Shift+drag to move, Shift+click to start run)`}
             >
-              {hasStarter ? (
-                <span className="flex flex-col items-center leading-[1.1]">
-                  <span className="text-[7px] text-[#efe56b]">{player.name}</span>
-                  <span className="truncate max-w-[34px]">{assignedName}</span>
+              <button
+                className={`h-8 w-8 rounded-full border font-bold transition-all text-[10px] ${
+                  isSelected
+                    ? 'border-[#ffe26d] bg-[#4a7c2e] text-[#ffe26d] ring-2 ring-[#ffe26d]'
+                    : player.color === 'red'
+                    ? 'border-red-400 bg-red-600 text-white hover:border-red-300'
+                    : draggingId === player.id
+                    ? 'border-[#efe56b] bg-[#1f3c80] text-[#d2e1ff]'
+                    : hasStarter
+                    ? 'border-[#efe56b] bg-[#2d4f8f] text-white hover:border-[#a8d5ff]'
+                    : 'border-[#8fc6ff] bg-[#2d4f8f] text-white hover:border-[#a8d5ff]'
+                }`}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  if (event.shiftKey) {
+                    setDraggingId(player.id);
+                    dragStartRef.current = { x: event.clientX, y: event.clientY };
+                    didDragRef.current = false;
+                  }
+                }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (!event.shiftKey) return;
+                  if (didDragRef.current) {
+                    didDragRef.current = false;
+                    return;
+                  }
+                  setSelectedRunSourceId(player.id);
+                }}
+                type="button"
+                title={`${assignedName ? `${assignedName} (${player.name})` : player.name} (Shift+drag to move, Shift+click to start run)`}
+              >
+                {player.name}
+              </button>
+              {hasStarter && (
+                <span className="mt-[1px] whitespace-nowrap rounded bg-black/70 px-1 py-[1px] text-[8px] font-bold text-[#efe56b] pointer-events-none">
+                  {assignedName}
                 </span>
-              ) : (
-                player.name
               )}
-            </button>
+            </div>
           );
         })}
 
