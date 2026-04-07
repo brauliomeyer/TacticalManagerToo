@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import type { ManagerSummary, MatchEvent } from '@tmt/shared';
 import MatchScreen from './components/MatchScreen';
 import TacticsBoard from './components/TacticsBoard';
+import ClubCrest from './components/ClubCrest';
 import { fallbackClubs } from './fallbackClubs';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
@@ -243,6 +244,64 @@ function buildFallbackSquad(club: Club): SquadPlayer[] {
   });
 }
 
+function PositionDropdown({ currentRole, originalRole, onChange }: {
+  currentRole: string;
+  originalRole: string;
+  onChange: (role: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const isOverridden = currentRole !== originalRole;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`border border-[#b78bda] px-1 py-0.5 text-xs font-semibold ${
+          isOverridden ? 'bg-[#2563eb] text-white' : 'bg-[#d5b5ec] text-[#2e1f4a]'
+        }`}
+      >
+        {currentRole.replace(/_/g, ' ')} ▾
+      </button>
+      {open ? (
+        <div className="absolute left-0 top-full z-50 max-h-48 overflow-auto border border-[#b78bda] bg-[#1a1e2b] shadow-lg">
+          {ALL_POSITIONS.map((pos) => {
+            const isOriginal = pos === originalRole;
+            const isSelected = pos === currentRole;
+            return (
+              <button
+                key={pos}
+                type="button"
+                onClick={() => { onChange(pos); setOpen(false); }}
+                className={`block w-full whitespace-nowrap px-2 py-1 text-left text-xs font-semibold hover:bg-[#374151] ${
+                  isSelected
+                    ? 'bg-[#2563eb] text-white'
+                    : isOriginal
+                      ? 'text-[#f87171]'
+                      : 'text-[#d4f6a7]'
+                }`}
+              >
+                {pos.replace(/_/g, ' ')}{isOriginal ? ' ★' : ''}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function SquadPanel({
   activeClub,
   players,
@@ -299,7 +358,7 @@ function SquadPanel({
   return (
     <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
       <h2 className="mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
-        Squad - {activeClub.name}
+        <span className="inline-flex items-center gap-2"><ClubCrest clubName={activeClub.name} size={24} />Squad - {activeClub.name}</span>
       </h2>
 
       <div className="mb-3 grid gap-2 md:grid-cols-3">
@@ -361,15 +420,11 @@ function SquadPanel({
                   <tr key={player.id} className="border-t border-[#2a8a2b] odd:bg-[#115d16] even:bg-[#0f5714]">
                     <td className="px-2 py-1">{player.name}</td>
                     <td className="px-2 py-1">
-                      <select
-                        value={positionOverrides[player.id] ?? player.role}
-                        onChange={(e) => onPositionChange(player.id, e.target.value)}
-                        className="border border-[#b78bda] bg-[#d5b5ec] px-1 py-0.5 text-xs text-[#2e1f4a]"
-                      >
-                        {ALL_POSITIONS.map((pos) => (
-                          <option key={pos} value={pos}>{pos.replace(/_/g, ' ')}</option>
-                        ))}
-                      </select>
+                      <PositionDropdown
+                        currentRole={positionOverrides[player.id] ?? player.role}
+                        originalRole={player.role}
+                        onChange={(role) => onPositionChange(player.id, role)}
+                      />
                     </td>
                     <td className="px-2 py-1 text-center">{player.age}</td>
                     <td className="px-2 py-1 text-center">{getOverall(player)}</td>
@@ -821,7 +876,7 @@ export default function App() {
     <main className="min-h-screen bg-[#1a1e2b] p-4 text-[#d4f6a7] md:p-8">
       <section className="mx-auto max-w-6xl border-4 border-[#6f4ca1] bg-[#2a8a2b] shadow-[0_0_0_4px_#120d1f]">
         <header className="flex items-center justify-between border-b-4 border-[#6f4ca1] bg-black px-4 py-3 text-[#ebe25f]">
-          <h1 className="text-2xl font-black uppercase tracking-widest">{activeClub.name}</h1>
+          <h1 className="flex items-center gap-3 text-2xl font-black uppercase tracking-widest"><ClubCrest clubName={activeClub.name} size={36} />{activeClub.name}</h1>
           <button
             className="border-2 border-[#ebe25f] bg-[#2a8a2b] px-3 py-1 text-sm font-bold uppercase"
             onClick={simulate}
@@ -835,6 +890,7 @@ export default function App() {
           <aside className="border-4 border-[#6f4ca1] bg-[#2e1f4a] p-3 text-sm">
             <div className="mb-3 border-2 border-white bg-[#fff7de] p-2 text-center text-[#d0121b]">
               <div className="px-2">
+                <ClubCrest clubName={activeClub.name} size={56} />
                 <p className="text-lg font-black">{activeClub.name}</p>
                 <p className="text-xs uppercase tracking-[0.2em] text-[#2e1f4a]">{activeClub.country || '1st Division'}</p>
               </div>
@@ -1024,7 +1080,7 @@ export default function App() {
                       {standingsRows.map((row: StandingRow) => (
                         <tr key={row.clubId} className="border-t border-[#2a8a2b] odd:bg-[#115d16] even:bg-[#0f5714]">
                           <td className="px-2 py-1">{row.position}</td>
-                          <td className="px-2 py-1">{row.clubName}</td>
+                          <td className="px-2 py-1"><span className="inline-flex items-center gap-1"><ClubCrest clubName={row.clubName} size={16} />{row.clubName}</span></td>
                           <td className="px-2 py-1">{row.played}</td>
                           <td className="px-2 py-1">{row.won}</td>
                           <td className="px-2 py-1">{row.drawn}</td>
