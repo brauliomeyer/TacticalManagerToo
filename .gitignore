@@ -4,6 +4,8 @@ node_modules/
 # Build
 dist/
 coverage/
+*.tsbuildinfo
+apps/frontend/src/fallbackClubs.js
 
 # Env
 .env
