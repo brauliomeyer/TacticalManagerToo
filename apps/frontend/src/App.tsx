@@ -99,6 +99,30 @@ const fallbackLastNames = [
 
 type PageKey = 'mail' | 'board' | 'squad' | 'cup' | 'human' | 'manager' | 'manage' | 'transfers' | 'training' | 'tactics' | 'match';
 
+const SQUAD_STORAGE_KEY = 'tmt-squad-statuses';
+
+function loadSquadStatuses(clubId: string): Record<string, SquadStatus> {
+  try {
+    const raw = localStorage.getItem(SQUAD_STORAGE_KEY);
+    if (!raw) return {};
+    const all = JSON.parse(raw) as Record<string, Record<string, SquadStatus>>;
+    return all[clubId] ?? {};
+  } catch {
+    return {};
+  }
+}
+
+function saveSquadStatuses(clubId: string, statuses: Record<string, SquadStatus>) {
+  try {
+    const raw = localStorage.getItem(SQUAD_STORAGE_KEY);
+    const all = raw ? (JSON.parse(raw) as Record<string, Record<string, SquadStatus>>) : {};
+    all[clubId] = statuses;
+    localStorage.setItem(SQUAD_STORAGE_KEY, JSON.stringify(all));
+  } catch {
+    // storage unavailable
+  }
+}
+
 const socket = io(API_BASE, { autoConnect: false });
 
 const sideMenu: { key: PageKey; label: string }[] = [
@@ -508,24 +532,22 @@ export default function App() {
       .then((res) => {
         const loadedPlayers = res.data.players.length > 0 ? res.data.players : buildFallbackSquad(selectedClub);
         setSquadPlayers(loadedPlayers);
-        setSquadStatuses((prev) => {
-          const next: Record<string, SquadStatus> = {};
-          loadedPlayers.forEach((player: SquadPlayer) => {
-            next[player.id] = prev[player.id] ?? 'EXCLUDED';
-          });
-          return next;
+        const saved = loadSquadStatuses(activeClubId);
+        const next: Record<string, SquadStatus> = {};
+        loadedPlayers.forEach((player: SquadPlayer) => {
+          next[player.id] = saved[player.id] ?? 'EXCLUDED';
         });
+        setSquadStatuses(next);
       })
       .catch(() => {
         const fallbackPlayers = buildFallbackSquad(selectedClub);
         setSquadPlayers(fallbackPlayers);
-        setSquadStatuses((prev) => {
-          const next: Record<string, SquadStatus> = {};
-          fallbackPlayers.forEach((player: SquadPlayer) => {
-            next[player.id] = prev[player.id] ?? 'EXCLUDED';
-          });
-          return next;
+        const saved = loadSquadStatuses(activeClubId);
+        const next: Record<string, SquadStatus> = {};
+        fallbackPlayers.forEach((player: SquadPlayer) => {
+          next[player.id] = saved[player.id] ?? 'EXCLUDED';
         });
+        setSquadStatuses(next);
         setSquadError('Live selectie kon niet geladen worden, fallback selectie is getoond.');
       })
       .finally(() => {
@@ -707,7 +729,9 @@ export default function App() {
         const currentBench = Object.values(prev).filter((s) => s === 'BENCH').length;
         if (prev[playerId] !== 'BENCH' && currentBench >= MAX_BENCH) return prev;
       }
-      return { ...prev, [playerId]: target };
+      const next = { ...prev, [playerId]: target };
+      if (activeClubId) saveSquadStatuses(activeClubId, next);
+      return next;
     });
   };
 
