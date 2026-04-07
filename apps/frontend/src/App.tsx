@@ -221,14 +221,14 @@ function SquadPanel({
 
   return (
     <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
-      <h2 className="mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-xs font-bold uppercase text-[#2e1f4a]">
+      <h2 className="mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
         Squad - {activeClub.name}
       </h2>
 
       <div className="mb-3 grid gap-2 md:grid-cols-3">
-        <div className={`border p-2 text-xs ${startersFull ? 'border-[#efe56b] bg-[#3a6e1d] text-[#efe56b]' : 'border-[#98ca7a] bg-[#1f641d] text-[#d5f8b6]'}`}>Basis: <strong>{starters}/{MAX_STARTERS}</strong></div>
-        <div className={`border p-2 text-xs ${benchFull ? 'border-[#efe56b] bg-[#3a6e1d] text-[#efe56b]' : 'border-[#98ca7a] bg-[#1f641d] text-[#d5f8b6]'}`}>Reserve: <strong>{bench}/{MAX_BENCH}</strong></div>
-        <div className="border border-[#98ca7a] bg-[#1f641d] p-2 text-xs text-[#d5f8b6]">Uitgesloten: <strong>{excluded}</strong></div>
+        <div className={`border p-2 text-sm font-semibold ${startersFull ? 'border-[#efe56b] bg-[#3a6e1d] text-[#efe56b]' : 'border-[#98ca7a] bg-[#1f641d] text-[#d5f8b6]'}`}>Basis: <strong>{starters}/{MAX_STARTERS}</strong></div>
+        <div className={`border p-2 text-sm font-semibold ${benchFull ? 'border-[#efe56b] bg-[#3a6e1d] text-[#efe56b]' : 'border-[#98ca7a] bg-[#1f641d] text-[#d5f8b6]'}`}>Reserve: <strong>{bench}/{MAX_BENCH}</strong></div>
+        <div className="border border-[#98ca7a] bg-[#1f641d] p-2 text-sm font-semibold text-[#d5f8b6]">Uitgesloten: <strong>{excluded}</strong></div>
       </div>
 
       <div className="mb-3 grid gap-2 md:grid-cols-3">
@@ -236,12 +236,12 @@ function SquadPanel({
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Zoek speler..."
-          className="border border-[#b78bda] bg-[#d5b5ec] px-2 py-1 text-xs text-[#2e1f4a]"
+          className="border border-[#b78bda] bg-[#d5b5ec] px-2 py-1 text-sm text-[#2e1f4a]"
         />
         <select
           value={roleFilter}
           onChange={(event) => onRoleFilterChange(event.target.value)}
-          className="border border-[#b78bda] bg-[#d5b5ec] px-2 py-1 text-xs text-[#2e1f4a]"
+          className="border border-[#b78bda] bg-[#d5b5ec] px-2 py-1 text-sm text-[#2e1f4a]"
         >
           {roleOptions.map((role: string) => (
             <option key={role} value={role}>{role}</option>
@@ -250,7 +250,7 @@ function SquadPanel({
         <select
           value={sortBy}
           onChange={(event) => onSortChange(event.target.value as SquadSortKey)}
-          className="border border-[#b78bda] bg-[#d5b5ec] px-2 py-1 text-xs text-[#2e1f4a]"
+          className="border border-[#b78bda] bg-[#d5b5ec] px-2 py-1 text-sm text-[#2e1f4a]"
         >
           <option value="overall">Sort: Overall</option>
           <option value="potential">Sort: Potential</option>
@@ -260,13 +260,13 @@ function SquadPanel({
         </select>
       </div>
 
-      {loading ? <p className="text-xs">Spelers laden...</p> : null}
-      {error ? <p className="mb-2 text-xs text-[#ffcf9f]">{error}</p> : null}
+      {loading ? <p className="text-sm">Spelers laden...</p> : null}
+      {error ? <p className="mb-2 text-sm text-[#ffcf9f]">{error}</p> : null}
 
       {!loading ? (
         <div className="max-h-[55vh] overflow-auto border border-[#98ca7a]">
-          <table className="w-full border-collapse text-[11px]">
-            <thead className="bg-[#1f641d] text-[#efe56b]">
+          <table className="w-full border-collapse text-xs">
+            <thead className="bg-[#1f641d] text-[#efe56b] font-semibold">
               <tr>
                 <th className="px-2 py-1 text-left">Name</th>
                 <th className="px-2 py-1 text-left">Role</th>
@@ -294,7 +294,7 @@ function SquadPanel({
                           type="button"
                           onClick={() => onStatusChange(player.id, 'STARTER')}
                           disabled={status !== 'STARTER' && startersFull}
-                          className={`border px-2 py-0.5 ${status === 'STARTER' ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]' : startersFull ? 'border-[#666] bg-[#888] text-[#444] cursor-not-allowed opacity-50' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
+                          className={`border px-2 py-0.5 text-xs font-semibold ${status === 'STARTER' ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]' : startersFull ? 'border-[#666] bg-[#888] text-[#444] cursor-not-allowed opacity-50' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
                           title={status !== 'STARTER' && startersFull ? `Basis is vol (${MAX_STARTERS}/${MAX_STARTERS})` : ''}
                         >
                           Basis
@@ -303,7 +303,7 @@ function SquadPanel({
                           type="button"
                           onClick={() => onStatusChange(player.id, 'BENCH')}
                           disabled={status !== 'BENCH' && benchFull}
-                          className={`border px-2 py-0.5 ${status === 'BENCH' ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]' : benchFull ? 'border-[#666] bg-[#888] text-[#444] cursor-not-allowed opacity-50' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
+                          className={`border px-2 py-0.5 text-xs font-semibold ${status === 'BENCH' ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]' : benchFull ? 'border-[#666] bg-[#888] text-[#444] cursor-not-allowed opacity-50' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
                           title={status !== 'BENCH' && benchFull ? `Reserve is vol (${MAX_BENCH}/${MAX_BENCH})` : ''}
                         >
                           Reserve
@@ -311,7 +311,7 @@ function SquadPanel({
                         <button
                           type="button"
                           onClick={() => onStatusChange(player.id, 'EXCLUDED')}
-                          className={`border px-2 py-0.5 ${status === 'EXCLUDED' ? 'border-[#ff6b6b] bg-[#ff6b6b] text-[#2e1f4a]' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
+                          className={`border px-2 py-0.5 text-xs font-semibold ${status === 'EXCLUDED' ? 'border-[#ff6b6b] bg-[#ff6b6b] text-[#2e1f4a]' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
                         >
                           Uitgesloten
                         </button>
@@ -383,15 +383,15 @@ function PagePanel({
 
   return (
     <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
-      <h2 className="mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-xs font-bold uppercase text-[#2e1f4a]">
+      <h2 className="mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
         {pageDescriptions[page].title}
       </h2>
       <div className="retro-pitch mb-3 h-52 border-2 border-[#8ee486]" />
-      <p className="border border-[#98ca7a] bg-[#256d22] px-2 py-1 text-xs text-[#d5f8b6]">{pageDescriptions[page].text}</p>
-      <p className="mt-3 border border-[#98ca7a] bg-[#1f641d] px-2 py-1 text-xs text-[#d5f8b6]">
+      <p className="border border-[#98ca7a] bg-[#256d22] px-2 py-1 text-sm text-[#d5f8b6]">{pageDescriptions[page].text}</p>
+      <p className="mt-3 border border-[#98ca7a] bg-[#1f641d] px-2 py-1 text-sm text-[#d5f8b6]">
         Division: <strong>{activeClub.leagueName ?? activeClub.country ?? '1st Division'}</strong>
       </p>
-      <p className="mt-3 border border-[#98ca7a] bg-[#1f641d] px-2 py-1 text-xs text-[#d5f8b6]">
+      <p className="mt-3 border border-[#98ca7a] bg-[#1f641d] px-2 py-1 text-sm text-[#d5f8b6]">
         Active club: <strong>{activeClub.name}</strong>
       </p>
     </section>
@@ -717,7 +717,7 @@ export default function App() {
         <header className="flex items-center justify-between border-b-4 border-[#6f4ca1] bg-black px-4 py-3 text-[#ebe25f]">
           <h1 className="text-2xl font-black uppercase tracking-widest">{activeClub.name}</h1>
           <button
-            className="border-2 border-[#ebe25f] bg-[#2a8a2b] px-3 py-1 text-xs font-bold uppercase"
+            className="border-2 border-[#ebe25f] bg-[#2a8a2b] px-3 py-1 text-sm font-bold uppercase"
             onClick={simulate}
             type="button"
           >
@@ -726,11 +726,11 @@ export default function App() {
         </header>
 
         <div className="grid gap-4 p-4 md:grid-cols-[220px_1fr_300px]">
-          <aside className="border-4 border-[#6f4ca1] bg-[#2e1f4a] p-3 text-xs">
+          <aside className="border-4 border-[#6f4ca1] bg-[#2e1f4a] p-3 text-sm">
             <div className="mb-3 border-2 border-white bg-[#fff7de] p-2 text-center text-[#d0121b]">
               <div className="px-2">
                 <p className="text-lg font-black">{activeClub.name}</p>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-[#2e1f4a]">{activeClub.country || '1st Division'}</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-[#2e1f4a]">{activeClub.country || '1st Division'}</p>
               </div>
             </div>
             <button
@@ -741,7 +741,7 @@ export default function App() {
             >
               {(activeClub.leagueName || activeClub.country || '1st Division').toUpperCase()}
             </button>
-            <div className="mb-2 flex items-center justify-between gap-2 rounded border border-[#6f4ca1] bg-[#1f641d] px-2 py-2 text-[10px] font-bold text-[#efe56b]">
+            <div className="mb-2 flex items-center justify-between gap-2 rounded border border-[#6f4ca1] bg-[#1f641d] px-2 py-2 text-xs font-bold text-[#efe56b]">
               <button
                 type="button"
                 onClick={previousDivision}
@@ -781,7 +781,7 @@ export default function App() {
                 ›
               </button>
             </div>
-            <p className="mb-3 border border-[#98ca7a] bg-[#1f641d] px-2 py-1 text-[10px] uppercase text-[#d5f8b6]">
+            <p className="mb-3 border border-[#98ca7a] bg-[#1f641d] px-2 py-1 text-xs uppercase text-[#d5f8b6]">
               {activeClub.leagueName ?? '1st Division'} • Club {activeCompetitionIndex + 1} / {competitionClubs.length || 1}
             </p>
             <ul className="space-y-1">
@@ -808,7 +808,7 @@ export default function App() {
           </aside>
 
           <section>
-            <div className="mb-3 grid grid-cols-4 gap-2 text-center text-[10px] uppercase text-[#2e1f4a]">
+            <div className="mb-3 grid grid-cols-4 gap-2 text-center text-xs uppercase text-[#2e1f4a]">
               {topTabs.map((item) => (
                 <button
                   className={`border p-2 font-bold ${
@@ -842,11 +842,11 @@ export default function App() {
             />
 
             {error ? (
-              <p className="mt-3 border border-[#98ca7a] bg-[#256d22] px-2 py-1 text-xs text-[#d5f8b6]">{error}</p>
+              <p className="mt-3 border border-[#98ca7a] bg-[#256d22] px-2 py-1 text-sm text-[#d5f8b6]">{error}</p>
             ) : null}
           </section>
 
-          <aside className="border-4 border-[#6f4ca1] bg-[#0d5e13] p-3 text-xs text-[#d5f8b6]">
+          <aside className="border-4 border-[#6f4ca1] bg-[#0d5e13] p-3 text-sm text-[#d5f8b6]">
             <h2 className="mb-2 font-black uppercase text-[#efe56b]">Managerbook</h2>
             {summary ? (
               <ul className="space-y-1">
@@ -879,7 +879,7 @@ export default function App() {
 
         {showStandings ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-            <section className="w-full max-w-4xl border-4 border-[#6f4ca1] bg-[#0d5e13] p-3 text-xs text-[#d5f8b6]">
+            <section className="w-full max-w-4xl border-4 border-[#6f4ca1] bg-[#0d5e13] p-3 text-sm text-[#d5f8b6]">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="font-black uppercase text-[#efe56b]">{standingsDivisionName} Standings</h2>
                 <button
@@ -897,7 +897,7 @@ export default function App() {
                 <p>Loading standings...</p>
               ) : (
                 <div className="max-h-[60vh] overflow-auto border border-[#98ca7a]">
-                  <table className="w-full border-collapse text-left text-[11px]">
+                  <table className="w-full border-collapse text-left text-xs">
                     <thead className="bg-[#1f641d] text-[#efe56b]">
                       <tr>
                         <th className="px-2 py-1">Pos</th>

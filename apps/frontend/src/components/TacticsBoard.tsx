@@ -336,7 +336,7 @@ export default function TacticsBoard({ starters = [] }: TacticsBoardProps) {
       <h2 className="mb-3 bg-black px-2 py-1 text-sm font-bold uppercase tracking-wider text-[#efe56b]">Tactics Board</h2>
 
       <div className="mb-3 grid gap-2 sm:grid-cols-[1fr_auto]">
-        <div className="rounded border border-[#68e154] bg-[#122b13] p-3 text-xs text-[#d7ff9f]">
+        <div className="rounded border border-[#68e154] bg-[#122b13] p-3 text-sm text-[#d7ff9f]">
           <p className="font-semibold text-[#efe56b]">Board mode</p>
           <p>Left-to-right layout</p>
           <p><span className="font-bold">Shift+drag</span> any player (blue or red) to reposition</p>
@@ -354,7 +354,7 @@ export default function TacticsBoard({ starters = [] }: TacticsBoardProps) {
               type="button"
               onClick={undoMove}
               disabled={historyIndex <= 0}
-              className="rounded border border-[#68e154] bg-[#1e6d1f] px-2 py-1 text-[10px] font-bold text-[#68e154] disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded border border-[#68e154] bg-[#1e6d1f] px-2 py-1 text-xs font-bold text-[#68e154] disabled:cursor-not-allowed disabled:opacity-40"
               title="Undo tactic change"
             >
               ↶ Undo
@@ -363,15 +363,15 @@ export default function TacticsBoard({ starters = [] }: TacticsBoardProps) {
               type="button"
               onClick={redoMove}
               disabled={historyIndex >= history.length - 1}
-              className="rounded border border-[#68e154] bg-[#1e6d1f] px-2 py-1 text-[10px] font-bold text-[#68e154] disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded border border-[#68e154] bg-[#1e6d1f] px-2 py-1 text-xs font-bold text-[#68e154] disabled:cursor-not-allowed disabled:opacity-40"
               title="Redo tactic change"
             >
               ↷ Redo
             </button>
-            <span className="text-[10px] text-[#9fd28d]">Step {historyIndex + 1} of {history.length}</span>
+            <span className="text-xs text-[#9fd28d]">Step {historyIndex + 1} of {history.length}</span>
           </div>
         </div>
-        <div className="rounded border border-[#68e154] bg-[#122b13] p-3 text-xs text-[#d7ff9f]">
+        <div className="rounded border border-[#68e154] bg-[#122b13] p-3 text-sm text-[#d7ff9f]">
           <p className="font-semibold text-[#efe56b]">Legend</p>
           <div className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-full bg-blue-600 border border-blue-300" /> Your players</div>
           <div className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-full bg-red-600 border border-red-300" /> Opponent</div>
@@ -384,7 +384,7 @@ export default function TacticsBoard({ starters = [] }: TacticsBoardProps) {
               type="button"
               onClick={undoLastRun}
               disabled={runs.length === 0}
-              className="rounded border border-[#efe56b] bg-[#1e6d1f] px-2 py-1 text-[11px] font-bold text-[#efe56b] disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded border border-[#efe56b] bg-[#1e6d1f] px-2 py-1 text-xs font-bold text-[#efe56b] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Undo last
             </button>
@@ -392,7 +392,7 @@ export default function TacticsBoard({ starters = [] }: TacticsBoardProps) {
               type="button"
               onClick={clearRuns}
               disabled={runs.length === 0}
-              className="rounded border border-[#efe56b] bg-[#1e6d1f] px-2 py-1 text-[11px] font-bold text-[#efe56b] disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded border border-[#efe56b] bg-[#1e6d1f] px-2 py-1 text-xs font-bold text-[#efe56b] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Clear all
             </button>
@@ -400,25 +400,25 @@ export default function TacticsBoard({ starters = [] }: TacticsBoardProps) {
               <button
                 type="button"
                 onClick={cancelRunSetup}
-                className="rounded border border-[#ffe26d] bg-[#3d5e1e] px-2 py-1 text-[11px] font-bold text-[#ffe26d]"
+                className="rounded border border-[#ffe26d] bg-[#3d5e1e] px-2 py-1 text-xs font-bold text-[#ffe26d]"
               >
                 Cancel run
               </button>
             )}
           </div>
 
-          <p className="mt-2 text-[11px] text-[#d7ff9f]">Runs: {runs.length}</p>
+          <p className="mt-2 text-xs text-[#d7ff9f]">Runs: {runs.length}</p>
           {runs.length > 0 ? (
             <ul className="mt-1 max-h-20 space-y-1 overflow-auto">
               {runs.slice(-4).reverse().map((run) => (
                 <li key={`run-item-${run.id}`} className="flex items-center justify-between gap-2 rounded border border-[#68e154] bg-[#114012] px-2 py-1">
-                  <span className="truncate text-[10px]">
+                  <span className="truncate text-xs">
                     {run.fromId.startsWith('run-end-') ? '↪' : '→'} {run.fromId.startsWith('run-end-') ? 'chain' : run.fromId} to ({Math.round(run.toX)}, {Math.round(run.toY)})
                   </span>
                   <button
                     type="button"
                     onClick={() => removeRun(run.id)}
-                    className="rounded border border-[#ff9f9f] bg-[#5c1f1f] px-1 py-0.5 text-[10px] font-bold text-[#ffd7d7]"
+                    className="rounded border border-[#ff9f9f] bg-[#5c1f1f] px-1 py-0.5 text-xs font-bold text-[#ffd7d7]"
                     aria-label={`Delete run ${run.id}`}
                   >
                     X
@@ -427,7 +427,7 @@ export default function TacticsBoard({ starters = [] }: TacticsBoardProps) {
               ))}
             </ul>
           ) : (
-            <p className="mt-1 text-[11px] text-[#9fd28d]">No runs yet.</p>
+            <p className="mt-1 text-xs text-[#9fd28d]">No runs yet.</p>
           )}
         </div>
       </div>
@@ -516,7 +516,7 @@ export default function TacticsBoard({ starters = [] }: TacticsBoardProps) {
               style={{ left: `${mapped.x}%`, top: `${mapped.y}%` }}
             >
               <button
-                className={`h-8 w-8 rounded-full border font-bold transition-all text-[10px] ${
+                className={`h-8 w-8 rounded-full border font-bold transition-all text-[11px] ${
                   isSelected
                     ? 'border-[#ffe26d] bg-[#4a7c2e] text-[#ffe26d] ring-2 ring-[#ffe26d]'
                     : player.color === 'red'
@@ -550,7 +550,7 @@ export default function TacticsBoard({ starters = [] }: TacticsBoardProps) {
                 {player.name}
               </button>
               {hasStarter && (
-                <span className="mt-[1px] whitespace-nowrap rounded bg-black/70 px-1 py-[1px] text-[8px] font-bold text-[#efe56b] pointer-events-none">
+                <span className="mt-[1px] whitespace-nowrap rounded bg-black/75 px-1.5 py-[2px] text-[10px] font-bold text-[#efe56b] pointer-events-none shadow-sm">
                   {assignedName}
                 </span>
               )}
@@ -581,10 +581,10 @@ export default function TacticsBoard({ starters = [] }: TacticsBoardProps) {
         })}
       </div>
 
-      <p className="mt-3 text-xs text-[#efe56b]">
+      <p className="mt-3 text-sm text-[#efe56b]">
         Shift+drag to move any player • Shift+click to select run source • Click pitch to place run • Click run endpoints to chain • Use Undo/Redo to navigate
       </p>
-      <pre className="hidden mt-2 max-h-40 overflow-auto border border-[#68e154] bg-[#0b5f15] p-2 text-[11px] leading-4">{asJson}</pre>
+      <pre className="hidden mt-2 max-h-40 overflow-auto border border-[#68e154] bg-[#0b5f15] p-2 text-xs leading-4">{asJson}</pre>
     </section>
   );
 }
