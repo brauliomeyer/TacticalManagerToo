@@ -8,6 +8,7 @@ interface StarterPlayer {
 
 interface TacticsBoardProps {
   starters?: StarterPlayer[];
+  clubId?: string;
 }
 
 type TacticalPlayer = {
@@ -110,11 +111,13 @@ function mapStartersToPositions(starters: StarterPlayer[]): Record<string, strin
   return result;
 }
 
-const STORAGE_KEY = 'tacticsboard-v1';
+function storageKeyForClub(clubId?: string) {
+  return clubId ? `tacticsboard-v1-${clubId}` : 'tacticsboard-v1';
+}
 
-function loadSavedState(): { players: TacticalPlayer[]; runs: RunLine[] } | null {
+function loadSavedState(clubId?: string): { players: TacticalPlayer[]; runs: RunLine[] } | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKeyForClub(clubId));
     if (!raw) return null;
     return JSON.parse(raw) as { players: TacticalPlayer[]; runs: RunLine[] };
   } catch {
@@ -158,32 +161,52 @@ function pitchToBoardCoords(posX: number, posY: number) {
   };
 }
 
-export default function TacticsBoard({ starters = [] }: TacticsBoardProps) {
+export default function TacticsBoard({ starters = [], clubId }: TacticsBoardProps) {
   const boardRef = useRef<HTMLDivElement | null>(null);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const didDragRef = useRef(false);
 
-  const saved = loadSavedState();
-  const [allPlayers, setAllPlayers] = useState<TacticalPlayer[]>(
-    saved?.players ?? [...initialPlayers, ...opponentPlayers]
-  );
+  const defaultPlayers = [...initialPlayers, ...opponentPlayers];
+
+  const [allPlayers, setAllPlayers] = useState<TacticalPlayer[]>(() => {
+    const saved = loadSavedState(clubId);
+    return saved?.players ?? defaultPlayers;
+  });
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [selectedRunSourceId, setSelectedRunSourceId] = useState<string | null>(null);
-  const [runs, setRuns] = useState<RunLine[]>(saved?.runs ?? []);
-  const [history, setHistory] = useState<TacticsSnapshot[]>(
-    [{ players: saved?.players ?? [...initialPlayers, ...opponentPlayers], runs: saved?.runs ?? [], timestamp: Date.now() }]
-  );
+  const [runs, setRuns] = useState<RunLine[]>(() => {
+    const saved = loadSavedState(clubId);
+    return saved?.runs ?? [];
+  });
+  const [history, setHistory] = useState<TacticsSnapshot[]>(() => {
+    const saved = loadSavedState(clubId);
+    return [{ players: saved?.players ?? defaultPlayers, runs: saved?.runs ?? [], timestamp: Date.now() }];
+  });
   const [historyIndex, setHistoryIndex] = useState(0);
 
   const starterNames = useMemo(() => mapStartersToPositions(starters), [starters]);
 
+  // Reset board state when switching clubs
+  useEffect(() => {
+    const saved = loadSavedState(clubId);
+    const players = saved?.players ?? [...initialPlayers, ...opponentPlayers];
+    const savedRuns = saved?.runs ?? [];
+    setAllPlayers(players);
+    setRuns(savedRuns);
+    setHistory([{ players, runs: savedRuns, timestamp: Date.now() }]);
+    setHistoryIndex(0);
+    setDraggingId(null);
+    setSelectedRunSourceId(null);
+  }, [clubId]);
+
+  // Persist to localStorage per club
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ players: allPlayers, runs }));
+      localStorage.setItem(storageKeyForClub(clubId), JSON.stringify({ players: allPlayers, runs }));
     } catch {
       // storage unavailable or full
     }
-  }, [allPlayers, runs]);
+  }, [allPlayers, runs, clubId]);
 
   const saveSnapshot = (newPlayers: TacticalPlayer[], newRuns: RunLine[]) => {
     setHistory((prev) => {

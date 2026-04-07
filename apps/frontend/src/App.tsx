@@ -383,7 +383,7 @@ function PagePanel({
 }) {
   if (page === 'tactics') {
     const starters = squadPlayers.filter((p) => squadStatuses[p.id] === 'STARTER');
-    return <TacticsBoard starters={starters} />;
+    return <TacticsBoard starters={starters} clubId={activeClub?.id} />;
   }
   if (page === 'match') return <MatchScreen />;
   if (page === 'squad') {
