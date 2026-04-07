@@ -294,7 +294,7 @@ function SquadPanel({
                           type="button"
                           onClick={() => onStatusChange(player.id, 'STARTER')}
                           disabled={status !== 'STARTER' && startersFull}
-                          className={`border px-2 py-0.5 ${status === 'STARTER' ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]' : status !== 'STARTER' && startersFull ? 'border-[#666] bg-[#888] text-[#444] cursor-not-allowed opacity-50' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
+                          className={`border px-2 py-0.5 ${status === 'STARTER' ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]' : startersFull ? 'border-[#666] bg-[#888] text-[#444] cursor-not-allowed opacity-50' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
                           title={status !== 'STARTER' && startersFull ? `Basis is vol (${MAX_STARTERS}/${MAX_STARTERS})` : ''}
                         >
                           Basis
@@ -303,7 +303,7 @@ function SquadPanel({
                           type="button"
                           onClick={() => onStatusChange(player.id, 'BENCH')}
                           disabled={status !== 'BENCH' && benchFull}
-                          className={`border px-2 py-0.5 ${status === 'BENCH' ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]' : status !== 'BENCH' && benchFull ? 'border-[#666] bg-[#888] text-[#444] cursor-not-allowed opacity-50' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
+                          className={`border px-2 py-0.5 ${status === 'BENCH' ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]' : benchFull ? 'border-[#666] bg-[#888] text-[#444] cursor-not-allowed opacity-50' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
                           title={status !== 'BENCH' && benchFull ? `Reserve is vol (${MAX_BENCH}/${MAX_BENCH})` : ''}
                         >
                           Reserve
@@ -694,16 +694,17 @@ export default function App() {
   };
 
   const setPlayerStatus = (playerId: string, status: SquadStatus) => {
+    const target: SquadStatus = status;
     setSquadStatuses((prev) => {
-      if (status === 'STARTER') {
+      if (target === 'STARTER') {
         const currentStarters = Object.values(prev).filter((s) => s === 'STARTER').length;
         if (prev[playerId] !== 'STARTER' && currentStarters >= MAX_STARTERS) return prev;
       }
-      if (status === 'BENCH') {
+      if (target === 'BENCH') {
         const currentBench = Object.values(prev).filter((s) => s === 'BENCH').length;
         if (prev[playerId] !== 'BENCH' && currentBench >= MAX_BENCH) return prev;
       }
-      return { ...prev, [playerId]: status };
+      return { ...prev, [playerId]: target };
     });
   };
 
