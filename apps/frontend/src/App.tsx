@@ -63,6 +63,31 @@ type SquadStatus = 'STARTER' | 'BENCH' | 'EXCLUDED';
 const MAX_STARTERS = 11;
 const MAX_BENCH = 12;
 
+const ALL_POSITIONS = [
+  'GOALKEEPER',
+  'LEFT_BACK',
+  'RIGHT_BACK',
+  'CENTER_BACK',
+  'SWEEPER',
+  'LEFT_WING_BACK',
+  'RIGHT_WING_BACK',
+  'DEFENSIVE_MIDFIELDER',
+  'CENTRAL_MIDFIELDER',
+  'ATTACKING_MIDFIELDER',
+  'BOX_TO_BOX_MIDFIELDER',
+  'PLAYMAKER',
+  'ANCHOR',
+  'LEFT_WINGER',
+  'RIGHT_WINGER',
+  'LEFT_MIDFIELDER',
+  'RIGHT_MIDFIELDER',
+  'INVERTED_WINGER',
+  'STRIKER',
+  'TARGET_MAN',
+  'FALSE_NINE',
+  'SECOND_STRIKER',
+] as const;
+
 const fallbackSquadRoles = [
   'GOALKEEPER',
   'LEFT_BACK',
@@ -118,6 +143,30 @@ function saveSquadStatuses(clubId: string, statuses: Record<string, SquadStatus>
     const all = raw ? (JSON.parse(raw) as Record<string, Record<string, SquadStatus>>) : {};
     all[clubId] = statuses;
     localStorage.setItem(SQUAD_STORAGE_KEY, JSON.stringify(all));
+  } catch {
+    // storage unavailable
+  }
+}
+
+const POSITION_OVERRIDES_KEY = 'tmt-position-overrides';
+
+function loadPositionOverrides(clubId: string): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(POSITION_OVERRIDES_KEY);
+    if (!raw) return {};
+    const all = JSON.parse(raw) as Record<string, Record<string, string>>;
+    return all[clubId] ?? {};
+  } catch {
+    return {};
+  }
+}
+
+function savePositionOverrides(clubId: string, overrides: Record<string, string>) {
+  try {
+    const raw = localStorage.getItem(POSITION_OVERRIDES_KEY);
+    const all = raw ? (JSON.parse(raw) as Record<string, Record<string, string>>) : {};
+    all[clubId] = overrides;
+    localStorage.setItem(POSITION_OVERRIDES_KEY, JSON.stringify(all));
   } catch {
     // storage unavailable
   }
@@ -203,10 +252,12 @@ function SquadPanel({
   roleFilter,
   sortBy,
   statuses,
+  positionOverrides,
   onSearchChange,
   onRoleFilterChange,
   onSortChange,
-  onStatusChange
+  onStatusChange,
+  onPositionChange
 }: {
   activeClub: Club;
   players: SquadPlayer[];
@@ -219,14 +270,16 @@ function SquadPanel({
   onSearchChange: (value: string) => void;
   onRoleFilterChange: (value: string) => void;
   onSortChange: (value: SquadSortKey) => void;
+  positionOverrides: Record<string, string>;
   onStatusChange: (playerId: string, status: SquadStatus) => void;
+  onPositionChange: (playerId: string, role: string) => void;
 }) {
-  const roleOptions = ['ALL', ...Array.from(new Set(players.map((player: SquadPlayer) => player.role))).sort((a, b) => a.localeCompare(b))];
+  const roleOptions = ['ALL', ...Array.from(new Set(players.map((player: SquadPlayer) => positionOverrides[player.id] ?? player.role))).sort((a, b) => a.localeCompare(b))];
 
   const visiblePlayers = [...players]
     .filter((player: SquadPlayer) => {
       const matchesSearch = player.name.toLowerCase().includes(search.trim().toLowerCase());
-      const matchesRole = roleFilter === 'ALL' || player.role === roleFilter;
+      const matchesRole = roleFilter === 'ALL' || (positionOverrides[player.id] ?? player.role) === roleFilter;
       return matchesSearch && matchesRole;
     })
     .sort((left: SquadPlayer, right: SquadPlayer) => {
@@ -307,7 +360,17 @@ function SquadPanel({
                 return (
                   <tr key={player.id} className="border-t border-[#2a8a2b] odd:bg-[#115d16] even:bg-[#0f5714]">
                     <td className="px-2 py-1">{player.name}</td>
-                    <td className="px-2 py-1">{player.role}</td>
+                    <td className="px-2 py-1">
+                      <select
+                        value={positionOverrides[player.id] ?? player.role}
+                        onChange={(e) => onPositionChange(player.id, e.target.value)}
+                        className="border border-[#b78bda] bg-[#d5b5ec] px-1 py-0.5 text-xs text-[#2e1f4a]"
+                      >
+                        {ALL_POSITIONS.map((pos) => (
+                          <option key={pos} value={pos}>{pos.replace(/_/g, ' ')}</option>
+                        ))}
+                      </select>
+                    </td>
                     <td className="px-2 py-1 text-center">{player.age}</td>
                     <td className="px-2 py-1 text-center">{getOverall(player)}</td>
                     <td className="px-2 py-1 text-center">{player.morale}</td>
@@ -362,10 +425,12 @@ function PagePanel({
   squadRoleFilter,
   squadSortBy,
   squadStatuses,
+  positionOverrides,
   onSquadSearchChange,
   onSquadRoleFilterChange,
   onSquadSortChange,
-  onSquadStatusChange
+  onSquadStatusChange,
+  onPositionChange
 }: {
   page: PageKey;
   activeClub: Club;
@@ -376,13 +441,17 @@ function PagePanel({
   squadRoleFilter: string;
   squadSortBy: SquadSortKey;
   squadStatuses: Record<string, SquadStatus>;
+  positionOverrides: Record<string, string>;
   onSquadSearchChange: (value: string) => void;
   onSquadRoleFilterChange: (value: string) => void;
   onSquadSortChange: (value: SquadSortKey) => void;
   onSquadStatusChange: (playerId: string, status: SquadStatus) => void;
+  onPositionChange: (playerId: string, role: string) => void;
 }) {
   if (page === 'tactics') {
-    const starters = squadPlayers.filter((p) => squadStatuses[p.id] === 'STARTER');
+    const starters = squadPlayers
+      .filter((p) => squadStatuses[p.id] === 'STARTER')
+      .map((p) => ({ ...p, role: positionOverrides[p.id] ?? p.role }));
     return <TacticsBoard starters={starters} clubId={activeClub?.id} />;
   }
   if (page === 'match') return <MatchScreen />;
@@ -397,10 +466,12 @@ function PagePanel({
         roleFilter={squadRoleFilter}
         sortBy={squadSortBy}
         statuses={squadStatuses}
+        positionOverrides={positionOverrides}
         onSearchChange={onSquadSearchChange}
         onRoleFilterChange={onSquadRoleFilterChange}
         onSortChange={onSquadSortChange}
         onStatusChange={onSquadStatusChange}
+        onPositionChange={onPositionChange}
       />
     );
   }
@@ -468,6 +539,7 @@ export default function App() {
   const [squadRoleFilter, setSquadRoleFilter] = useState('ALL');
   const [squadSortBy, setSquadSortBy] = useState<SquadSortKey>('overall');
   const [squadStatuses, setSquadStatuses] = useState<Record<string, SquadStatus>>({});
+  const [positionOverrides, setPositionOverrides] = useState<Record<string, string>>({});
 
   useEffect(() => {
     axios
@@ -538,6 +610,7 @@ export default function App() {
           next[player.id] = saved[player.id] ?? 'EXCLUDED';
         });
         setSquadStatuses(next);
+        setPositionOverrides(loadPositionOverrides(activeClubId));
       })
       .catch(() => {
         const fallbackPlayers = buildFallbackSquad(selectedClub);
@@ -548,6 +621,7 @@ export default function App() {
           next[player.id] = saved[player.id] ?? 'EXCLUDED';
         });
         setSquadStatuses(next);
+        setPositionOverrides(loadPositionOverrides(activeClubId));
         setSquadError('Live selectie kon niet geladen worden, fallback selectie is getoond.');
       })
       .finally(() => {
@@ -718,6 +792,14 @@ export default function App() {
     }
   };
 
+  const setPlayerPosition = (playerId: string, role: string) => {
+    setPositionOverrides((prev) => {
+      const next = { ...prev, [playerId]: role };
+      if (activeClubId) savePositionOverrides(activeClubId, next);
+      return next;
+    });
+  };
+
   const setPlayerStatus = (playerId: string, status: SquadStatus) => {
     const target: SquadStatus = status;
     setSquadStatuses((prev) => {
@@ -859,10 +941,12 @@ export default function App() {
               squadRoleFilter={squadRoleFilter}
               squadSortBy={squadSortBy}
               squadStatuses={squadStatuses}
+              positionOverrides={positionOverrides}
               onSquadSearchChange={setSquadSearch}
               onSquadRoleFilterChange={setSquadRoleFilter}
               onSquadSortChange={setSquadSortBy}
               onSquadStatusChange={setPlayerStatus}
+              onPositionChange={setPlayerPosition}
             />
 
             {error ? (
