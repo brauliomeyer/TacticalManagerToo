@@ -357,7 +357,10 @@ function PagePanel({
   onSquadSortChange: (value: SquadSortKey) => void;
   onSquadStatusChange: (playerId: string, status: SquadStatus) => void;
 }) {
-  if (page === 'tactics') return <TacticsBoard />;
+  if (page === 'tactics') {
+    const starters = squadPlayers.filter((p) => squadStatuses[p.id] === 'STARTER');
+    return <TacticsBoard starters={starters} />;
+  }
   if (page === 'match') return <MatchScreen />;
   if (page === 'squad') {
     return (

@@ -1,5 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
+interface StarterPlayer {
+  id: string;
+  name: string;
+  role: string;
+}
+
+interface TacticsBoardProps {
+  starters?: StarterPlayer[];
+}
+
 type TacticalPlayer = {
   id: string;
   name: string;
@@ -51,6 +61,55 @@ const opponentPlayers: TacticalPlayer[] = [
   { id: 'orw', name: 'RW', posX: 48, posY: 80, origX: 48, origY: 80, color: 'red' }
 ];
 
+/** Maps a tactical board position ID to an ordered list of squad roles that can fill it. */
+const positionToRoles: Record<string, string[]> = {
+  gk:  ['GOALKEEPER'],
+  lb:  ['LEFT_BACK', 'LEFT_WING_BACK'],
+  cb1: ['CENTER_BACK', 'SWEEPER'],
+  cb2: ['CENTER_BACK', 'SWEEPER'],
+  rb:  ['RIGHT_BACK', 'RIGHT_WING_BACK'],
+  cm1: ['CENTRAL_MIDFIELDER', 'BOX_TO_BOX_MIDFIELDER', 'ANCHOR'],
+  cm2: ['DEFENSIVE_MIDFIELDER', 'CENTRAL_MIDFIELDER', 'ANCHOR'],
+  cm3: ['ATTACKING_MIDFIELDER', 'PLAYMAKER', 'CENTRAL_MIDFIELDER'],
+  lw:  ['LEFT_WINGER', 'INVERTED_WINGER', 'LEFT_MIDFIELDER'],
+  st:  ['STRIKER', 'TARGET_MAN', 'FALSE_NINE', 'SECOND_STRIKER'],
+  rw:  ['RIGHT_WINGER', 'INVERTED_WINGER', 'RIGHT_MIDFIELDER'],
+};
+
+/** Given the 11 starters, return a mapping of board position id → player last name. */
+function mapStartersToPositions(starters: StarterPlayer[]): Record<string, string> {
+  const result: Record<string, string> = {};
+  const used = new Set<string>();
+  const posIds = Object.keys(positionToRoles);
+
+  // First pass: exact role matches
+  for (const posId of posIds) {
+    const roles = positionToRoles[posId];
+    for (const role of roles) {
+      const match = starters.find((s) => s.role === role && !used.has(s.id));
+      if (match) {
+        const parts = match.name.split(' ');
+        result[posId] = parts[parts.length - 1];
+        used.add(match.id);
+        break;
+      }
+    }
+  }
+
+  // Second pass: fill remaining positions with unassigned starters
+  for (const posId of posIds) {
+    if (result[posId]) continue;
+    const remaining = starters.find((s) => !used.has(s.id));
+    if (remaining) {
+      const parts = remaining.name.split(' ');
+      result[posId] = parts[parts.length - 1];
+      used.add(remaining.id);
+    }
+  }
+
+  return result;
+}
+
 const STORAGE_KEY = 'tacticsboard-v1';
 
 function loadSavedState(): { players: TacticalPlayer[]; runs: RunLine[] } | null {
@@ -99,7 +158,7 @@ function pitchToBoardCoords(posX: number, posY: number) {
   };
 }
 
-export default function TacticsBoard() {
+export default function TacticsBoard({ starters = [] }: TacticsBoardProps) {
   const boardRef = useRef<HTMLDivElement | null>(null);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const didDragRef = useRef(false);
@@ -115,6 +174,8 @@ export default function TacticsBoard() {
     [{ players: saved?.players ?? [...initialPlayers, ...opponentPlayers], runs: saved?.runs ?? [], timestamp: Date.now() }]
   );
   const [historyIndex, setHistoryIndex] = useState(0);
+
+  const starterNames = useMemo(() => mapStartersToPositions(starters), [starters]);
 
   useEffect(() => {
     try {
@@ -446,15 +507,21 @@ export default function TacticsBoard() {
         {allPlayers.map((player) => {
           const mapped = pitchToBoardCoords(player.posX, player.posY);
           const isSelected = selectedRunSourceId === player.id;
+          const assignedName = player.color !== 'red' ? starterNames[player.id] : undefined;
+          const hasStarter = !!assignedName;
           return (
             <button
-              className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border text-[10px] font-bold transition-all ${
+              className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border font-bold transition-all ${
+                hasStarter ? 'h-9 w-9 text-[8px] leading-tight' : 'h-8 w-8 text-[10px]'
+              } ${
                 isSelected
                   ? 'border-[#ffe26d] bg-[#4a7c2e] text-[#ffe26d] ring-2 ring-[#ffe26d]'
                   : player.color === 'red'
                   ? 'border-red-400 bg-red-600 text-white hover:border-red-300'
                   : draggingId === player.id
                   ? 'border-[#efe56b] bg-[#1f3c80] text-[#d2e1ff]'
+                  : hasStarter
+                  ? 'border-[#efe56b] bg-[#2d4f8f] text-white hover:border-[#a8d5ff]'
                   : 'border-[#8fc6ff] bg-[#2d4f8f] text-white hover:border-[#a8d5ff]'
               }`}
               key={player.id}
@@ -477,9 +544,16 @@ export default function TacticsBoard() {
               }}
               style={{ left: `${mapped.x}%`, top: `${mapped.y}%` }}
               type="button"
-              title={`${player.name} (Shift+drag to move, Shift+click to start run)`}
+              title={`${assignedName ? `${assignedName} (${player.name})` : player.name} (Shift+drag to move, Shift+click to start run)`}
             >
-              {player.name}
+              {hasStarter ? (
+                <span className="flex flex-col items-center leading-[1.1]">
+                  <span className="text-[7px] text-[#efe56b]">{player.name}</span>
+                  <span className="truncate max-w-[34px]">{assignedName}</span>
+                </span>
+              ) : (
+                player.name
+              )}
             </button>
           );
         })}
