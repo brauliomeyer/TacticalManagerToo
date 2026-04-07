@@ -58,7 +58,10 @@ interface SquadPlayer {
 }
 
 type SquadSortKey = 'overall' | 'name' | 'age' | 'morale' | 'potential';
-type SquadStatus = 'STARTER' | 'ROTATION' | 'DEVELOPMENT';
+type SquadStatus = 'STARTER' | 'BENCH' | 'EXCLUDED';
+
+const MAX_STARTERS = 11;
+const MAX_BENCH = 12;
 
 const fallbackSquadRoles = [
   'GOALKEEPER',
@@ -210,9 +213,11 @@ function SquadPanel({
       return getOverall(right) - getOverall(left);
     });
 
-  const starters = players.filter((player: SquadPlayer) => (statuses[player.id] ?? 'ROTATION') === 'STARTER').length;
-  const rotation = players.filter((player: SquadPlayer) => (statuses[player.id] ?? 'ROTATION') === 'ROTATION').length;
-  const development = players.filter((player: SquadPlayer) => (statuses[player.id] ?? 'ROTATION') === 'DEVELOPMENT').length;
+  const starters = players.filter((player: SquadPlayer) => (statuses[player.id] ?? 'EXCLUDED') === 'STARTER').length;
+  const bench = players.filter((player: SquadPlayer) => (statuses[player.id] ?? 'EXCLUDED') === 'BENCH').length;
+  const excluded = players.filter((player: SquadPlayer) => (statuses[player.id] ?? 'EXCLUDED') === 'EXCLUDED').length;
+  const startersFull = starters >= MAX_STARTERS;
+  const benchFull = bench >= MAX_BENCH;
 
   return (
     <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
@@ -221,9 +226,9 @@ function SquadPanel({
       </h2>
 
       <div className="mb-3 grid gap-2 md:grid-cols-3">
-        <div className="border border-[#98ca7a] bg-[#1f641d] p-2 text-xs text-[#d5f8b6]">Starters: <strong>{starters}</strong></div>
-        <div className="border border-[#98ca7a] bg-[#1f641d] p-2 text-xs text-[#d5f8b6]">Rotation: <strong>{rotation}</strong></div>
-        <div className="border border-[#98ca7a] bg-[#1f641d] p-2 text-xs text-[#d5f8b6]">Development: <strong>{development}</strong></div>
+        <div className={`border p-2 text-xs ${startersFull ? 'border-[#efe56b] bg-[#3a6e1d] text-[#efe56b]' : 'border-[#98ca7a] bg-[#1f641d] text-[#d5f8b6]'}`}>Basis: <strong>{starters}/{MAX_STARTERS}</strong></div>
+        <div className={`border p-2 text-xs ${benchFull ? 'border-[#efe56b] bg-[#3a6e1d] text-[#efe56b]' : 'border-[#98ca7a] bg-[#1f641d] text-[#d5f8b6]'}`}>Reserve: <strong>{bench}/{MAX_BENCH}</strong></div>
+        <div className="border border-[#98ca7a] bg-[#1f641d] p-2 text-xs text-[#d5f8b6]">Uitgesloten: <strong>{excluded}</strong></div>
       </div>
 
       <div className="mb-3 grid gap-2 md:grid-cols-3">
@@ -274,7 +279,7 @@ function SquadPanel({
             </thead>
             <tbody>
               {visiblePlayers.map((player: SquadPlayer) => {
-                const status = statuses[player.id] ?? 'ROTATION';
+                const status = statuses[player.id] ?? 'EXCLUDED';
                 return (
                   <tr key={player.id} className="border-t border-[#2a8a2b] odd:bg-[#115d16] even:bg-[#0f5714]">
                     <td className="px-2 py-1">{player.name}</td>
@@ -288,23 +293,27 @@ function SquadPanel({
                         <button
                           type="button"
                           onClick={() => onStatusChange(player.id, 'STARTER')}
-                          className={`border px-2 py-0.5 ${status === 'STARTER' ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
+                          disabled={status !== 'STARTER' && startersFull}
+                          className={`border px-2 py-0.5 ${status === 'STARTER' ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]' : status !== 'STARTER' && startersFull ? 'border-[#666] bg-[#888] text-[#444] cursor-not-allowed opacity-50' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
+                          title={status !== 'STARTER' && startersFull ? `Basis is vol (${MAX_STARTERS}/${MAX_STARTERS})` : ''}
                         >
-                          Starter
+                          Basis
                         </button>
                         <button
                           type="button"
-                          onClick={() => onStatusChange(player.id, 'ROTATION')}
-                          className={`border px-2 py-0.5 ${status === 'ROTATION' ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
+                          onClick={() => onStatusChange(player.id, 'BENCH')}
+                          disabled={status !== 'BENCH' && benchFull}
+                          className={`border px-2 py-0.5 ${status === 'BENCH' ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]' : status !== 'BENCH' && benchFull ? 'border-[#666] bg-[#888] text-[#444] cursor-not-allowed opacity-50' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
+                          title={status !== 'BENCH' && benchFull ? `Reserve is vol (${MAX_BENCH}/${MAX_BENCH})` : ''}
                         >
-                          Rotation
+                          Reserve
                         </button>
                         <button
                           type="button"
-                          onClick={() => onStatusChange(player.id, 'DEVELOPMENT')}
-                          className={`border px-2 py-0.5 ${status === 'DEVELOPMENT' ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
+                          onClick={() => onStatusChange(player.id, 'EXCLUDED')}
+                          className={`border px-2 py-0.5 ${status === 'EXCLUDED' ? 'border-[#ff6b6b] bg-[#ff6b6b] text-[#2e1f4a]' : 'border-[#b78bda] bg-[#caa6e6] text-[#2e1f4a]'}`}
                         >
-                          Development
+                          Uitgesloten
                         </button>
                       </div>
                     </td>
@@ -499,7 +508,7 @@ export default function App() {
         setSquadStatuses((prev) => {
           const next: Record<string, SquadStatus> = {};
           loadedPlayers.forEach((player: SquadPlayer) => {
-            next[player.id] = prev[player.id] ?? 'ROTATION';
+            next[player.id] = prev[player.id] ?? 'EXCLUDED';
           });
           return next;
         });
@@ -510,7 +519,7 @@ export default function App() {
         setSquadStatuses((prev) => {
           const next: Record<string, SquadStatus> = {};
           fallbackPlayers.forEach((player: SquadPlayer) => {
-            next[player.id] = prev[player.id] ?? 'ROTATION';
+            next[player.id] = prev[player.id] ?? 'EXCLUDED';
           });
           return next;
         });
@@ -685,7 +694,17 @@ export default function App() {
   };
 
   const setPlayerStatus = (playerId: string, status: SquadStatus) => {
-    setSquadStatuses((prev) => ({ ...prev, [playerId]: status }));
+    setSquadStatuses((prev) => {
+      if (status === 'STARTER') {
+        const currentStarters = Object.values(prev).filter((s) => s === 'STARTER').length;
+        if (prev[playerId] !== 'STARTER' && currentStarters >= MAX_STARTERS) return prev;
+      }
+      if (status === 'BENCH') {
+        const currentBench = Object.values(prev).filter((s) => s === 'BENCH').length;
+        if (prev[playerId] !== 'BENCH' && currentBench >= MAX_BENCH) return prev;
+      }
+      return { ...prev, [playerId]: status };
+    });
   };
 
   return (
