@@ -5,6 +5,7 @@ import type { ManagerSummary, MatchEvent } from '@tmt/shared';
 import MatchScreen from './components/MatchScreen';
 import TacticsBoard from './components/TacticsBoard';
 import BoardRoom from './components/BoardRoom';
+import Mailbox from './components/Mailbox';
 import ClubCrest from './components/ClubCrest';
 import { fallbackClubs } from './fallbackClubs';
 import {
@@ -884,6 +885,7 @@ function RightSidebar({
 function PagePanel({
   page,
   activeClub,
+  clubs,
   squadPlayers,
   squadLoading,
   squadError,
@@ -901,6 +903,7 @@ function PagePanel({
 }: {
   page: PageKey;
   activeClub: Club;
+  clubs: Club[];
   squadPlayers: SquadPlayer[];
   squadLoading: boolean;
   squadError: string | null;
@@ -925,6 +928,9 @@ function PagePanel({
   if (page === 'match') return <MatchScreen />;
   if (page === 'board') {
     return <BoardRoom activeClub={activeClub} summary={summary} squadPlayers={squadPlayers} />;
+  }
+  if (page === 'mail') {
+    return <Mailbox activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} summary={summary} />;
   }
   if (page === 'squad') {
     return (
@@ -1405,6 +1411,7 @@ export default function App() {
 
             <PagePanel
               activeClub={activeClub}
+              clubs={clubs}
               page={activePage}
               squadPlayers={squadPlayers}
               squadLoading={squadLoading}
