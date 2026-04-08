@@ -147,7 +147,6 @@ export function calculateDerivedAttributes(ev: PlayerEventData): DerivedAttribut
   const aerialWinRate = safeRatio(ev.aerialDuelsWon, ev.aerialDuelsWon + ev.aerialDuelsLost) * 100;
   const dribbleSuccess = safeRatio(ev.dribbleSuccessful, ev.dribbleAttempts) * 100;
   const pressureSuccess = safeRatio(ev.pressuresSuccessful, ev.pressures) * 100;
-  const _groundDuelWinRate = safeRatio(ev.groundDuelsWon, ev.groundDuelsWon + ev.groundDuelsLost) * 100;
   const crossAccuracy = safeRatio(ev.crossesCompleted, ev.crossesAttempted) * 100;
 
   // CONTROL = pass accuracy + ball retention + dribble success
