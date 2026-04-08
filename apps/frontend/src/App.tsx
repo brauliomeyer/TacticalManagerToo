@@ -6,6 +6,18 @@ import MatchScreen from './components/MatchScreen';
 import TacticsBoard from './components/TacticsBoard';
 import ClubCrest from './components/ClubCrest';
 import { fallbackClubs } from './fallbackClubs';
+import {
+  synthesizeEventData,
+  calculateDerivedAttributes,
+  detectRoles,
+  calculateOvr,
+  calculateFormImpact,
+  calculateFatigueImpact,
+  applyVariance,
+  type DerivedAttributes,
+  type DetectedRole,
+  type PlayerProfile,
+} from './playerEngine';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
@@ -311,6 +323,42 @@ function ensureTmAttrs(players: SquadPlayer[]): SquadPlayer[] {
   });
 }
 
+function getPlayerProfile(player: SquadPlayer, role: string): PlayerProfile {
+  const seed = hashText(player.id);
+  const eventData = synthesizeEventData(player, seed);
+  const derived = calculateDerivedAttributes(eventData);
+  const variedDerived: DerivedAttributes = {} as DerivedAttributes;
+  const keys = Object.keys(derived) as (keyof DerivedAttributes)[];
+  keys.forEach((k, i) => {
+    variedDerived[k] = applyVariance(derived[k], seed + i * 7);
+  });
+  const { primary, secondary } = detectRoles(variedDerived, role);
+  const ovr = calculateOvr(variedDerived, role);
+  const formImpact = calculateFormImpact(eventData.last5Ratings);
+  const fatigueImpact = calculateFatigueImpact(player.fitness, player.freshness, eventData.minutesPlayed, eventData.appearances);
+  const effectiveOvr = Math.max(1, Math.min(99, ovr + formImpact + fatigueImpact));
+  return { primaryRole: primary, secondaryRole: secondary, derived: variedDerived, ovr, effectiveOvr, formImpact, fatigueImpact };
+}
+
+function AttrBar({ label, value, max = 100 }: { label: string; value: number; max?: number }) {
+  const pct = Math.min(100, (value / max) * 100);
+  const color = pct >= 80 ? 'bg-[#22c55e]' : pct >= 60 ? 'bg-[#eab308]' : pct >= 40 ? 'bg-[#f97316]' : 'bg-[#ef4444]';
+  return (
+    <div className="flex items-center gap-1">
+      <span className="w-24 shrink-0 text-[10px] font-semibold text-[#98ca7a] uppercase">{label}</span>
+      <div className="h-2 flex-1 bg-[#1a3a1e] rounded-sm overflow-hidden">
+        <div className={`h-full ${color} rounded-sm`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="w-7 text-right text-[10px] font-bold text-white">{value}</span>
+    </div>
+  );
+}
+
+function RoleBadge({ role, variant }: { role: string; variant: 'primary' | 'secondary' }) {
+  const bg = variant === 'primary' ? 'bg-[#1d4ed8]' : 'bg-[#6b21a8]';
+  return <span className={`${bg} px-2 py-0.5 text-[10px] font-bold text-white rounded`}>{role}</span>;
+}
+
 function PositionDropdown({ currentRole, originalRole, onChange }: {
   currentRole: string;
   originalRole: string;
@@ -537,37 +585,98 @@ function SquadPanel({
         </div>
       ) : null}
 
-      {selectedPlayer ? (
-        <div className="mt-3 border-2 border-[#efe56b] bg-[#0a3d0e] p-3 font-mono text-xs">
+      {selectedPlayer ? (() => {
+        const effectiveRole = positionOverrides[selectedPlayer.id] ?? selectedPlayer.role;
+        const profile = getPlayerProfile(selectedPlayer, effectiveRole);
+        const d = profile.derived;
+        return (
+        <div className="mt-3 border-2 border-[#efe56b] bg-[#0a3d0e] p-3 text-xs">
+          {/* ── Header: name, role badges, close button ── */}
           <div className="mb-2 flex items-center justify-between border-b border-[#2a8a2b] pb-2">
-            <span className="text-sm font-bold text-[#efe56b]">
-              {selectedPlayer.name.toUpperCase()} — {(positionOverrides[selectedPlayer.id] ?? selectedPlayer.role).replace(/_/g, ' ')}
-            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-mono text-sm font-bold text-[#efe56b]">
+                {selectedPlayer.name.toUpperCase()}
+              </span>
+              <span className="font-mono text-xs text-[#98ca7a]">— {effectiveRole.replace(/_/g, ' ')}</span>
+              <RoleBadge role={profile.primaryRole} variant="primary" />
+              {profile.secondaryRole ? <RoleBadge role={profile.secondaryRole} variant="secondary" /> : null}
+            </div>
             <button type="button" onClick={() => setSelectedPlayerId(null)} className="text-[#ff6b6b] font-bold hover:text-white">✕</button>
           </div>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-0">
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">PLAYED</span><span className="text-white">{selectedPlayer.played}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">AGE</span><span className="text-white">{selectedPlayer.age}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">SCORED</span><span className="text-white">{selectedPlayer.scored}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">CAPS</span><span className="text-white">{selectedPlayer.caps}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">SPEED</span><span className="text-white">{selectedPlayer.speed}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">EXPERIENCE</span><span className="text-white">{selectedPlayer.experience}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">CONTROL</span><span className="text-white">{selectedPlayer.control}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">STAMINA</span><span className="text-white">{selectedPlayer.stamina}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">TACKLING</span><span className="text-white">{selectedPlayer.tackling}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">FITNESS</span><span className="text-white">{selectedPlayer.fitness}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">PASSING</span><span className="text-white">{selectedPlayer.passing}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">FRESHNESS</span><span className="text-white">{selectedPlayer.freshness}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">HEADING</span><span className="text-white">{selectedPlayer.heading}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">INFLUENCE</span><span className="text-white">{selectedPlayer.influence}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">SHOOTING</span><span className="text-white">{selectedPlayer.shooting}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">ATTITUDE</span><span className="text-white">{selectedPlayer.attitude}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">MARKING</span><span className="text-white">{selectedPlayer.marking}</span></div>
-            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">RELIABILITY</span><span className="text-white">{selectedPlayer.reliability}</span></div>
-            <div className="flex justify-between py-0.5"><span className="text-[#98ca7a]">VISION</span><span className="text-white">{selectedPlayer.vision}</span></div>
-            <div className="flex justify-between py-0.5"><span className="text-[#98ca7a]">MORALE</span><span className="text-white">{selectedPlayer.morale}</span></div>
+
+          {/* ── OVR / Effective OVR / POT / Form/Fatigue ── */}
+          <div className="mb-3 flex flex-wrap items-center justify-center gap-4 border-b border-[#2a8a2b] pb-2">
+            <div className="text-center">
+              <div className="text-[10px] text-[#98ca7a]">OVR</div>
+              <div className="text-2xl font-black text-white">{profile.ovr}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] text-[#98ca7a]">EFF</div>
+              <div className={`text-2xl font-black ${profile.effectiveOvr >= profile.ovr ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>{profile.effectiveOvr}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] text-[#98ca7a]">POT</div>
+              <div className="text-2xl font-black text-[#60a5fa]">{selectedPlayer.potential}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] text-[#98ca7a]">FORM</div>
+              <div className={`text-sm font-bold ${profile.formImpact > 0 ? 'text-[#22c55e]' : profile.formImpact < 0 ? 'text-[#ef4444]' : 'text-white'}`}>{profile.formImpact > 0 ? '+' : ''}{profile.formImpact}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] text-[#98ca7a]">FATIGUE</div>
+              <div className={`text-sm font-bold ${profile.fatigueImpact < -5 ? 'text-[#ef4444]' : profile.fatigueImpact < 0 ? 'text-[#f97316]' : 'text-[#22c55e]'}`}>{profile.fatigueImpact}</div>
+            </div>
           </div>
-          <div className="mt-2 grid grid-cols-3 gap-2 border-t border-[#2a8a2b] pt-2 text-center">
+
+          {/* ── Derived Advanced Attributes (0-100 bars) ── */}
+          <div className="mb-3 grid grid-cols-2 gap-x-4 gap-y-1">
+            <AttrBar label="Control" value={d.control} />
+            <AttrBar label="Composure" value={d.composure} />
+            <AttrBar label="Vision" value={d.vision} />
+            <AttrBar label="Creativity" value={d.creativity} />
+            <AttrBar label="Tackling" value={d.tackling} />
+            <AttrBar label="Positioning" value={d.positioning} />
+            <AttrBar label="Shooting" value={d.shooting} />
+            <AttrBar label="Aerial" value={d.aerialAbility} />
+            <AttrBar label="Influence" value={d.influence} />
+            <AttrBar label="Crossing" value={d.crossing} />
+            <AttrBar label="Work Rate" value={d.workRate} />
+            <AttrBar label="Long Pass" value={d.longPassing} />
+            <AttrBar label="Attitude" value={d.attitude} />
+            <AttrBar label="Concentration" value={d.concentration} />
+            <AttrBar label="Reliability" value={d.reliability} />
+            <AttrBar label="Leadership" value={d.leadership} />
+          </div>
+
+          {/* ── Classic TM Attributes (0-20) ── */}
+          <details className="mb-2">
+            <summary className="cursor-pointer text-[10px] font-bold text-[#efe56b] uppercase hover:text-white">Classic Tactical Manager Stats</summary>
+            <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-0 font-mono">
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">PLAYED</span><span className="text-white">{selectedPlayer.played}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">AGE</span><span className="text-white">{selectedPlayer.age}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">SCORED</span><span className="text-white">{selectedPlayer.scored}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">CAPS</span><span className="text-white">{selectedPlayer.caps}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">SPEED</span><span className="text-white">{selectedPlayer.speed}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">EXPERIENCE</span><span className="text-white">{selectedPlayer.experience}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">CONTROL</span><span className="text-white">{selectedPlayer.control}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">STAMINA</span><span className="text-white">{selectedPlayer.stamina}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">TACKLING</span><span className="text-white">{selectedPlayer.tackling}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">FITNESS</span><span className="text-white">{selectedPlayer.fitness}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">PASSING</span><span className="text-white">{selectedPlayer.passing}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">FRESHNESS</span><span className="text-white">{selectedPlayer.freshness}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">HEADING</span><span className="text-white">{selectedPlayer.heading}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">INFLUENCE</span><span className="text-white">{selectedPlayer.influence}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">SHOOTING</span><span className="text-white">{selectedPlayer.shooting}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">ATTITUDE</span><span className="text-white">{selectedPlayer.attitude}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">MARKING</span><span className="text-white">{selectedPlayer.marking}</span></div>
+              <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">RELIABILITY</span><span className="text-white">{selectedPlayer.reliability}</span></div>
+              <div className="flex justify-between py-0.5"><span className="text-[#98ca7a]">VISION</span><span className="text-white">{selectedPlayer.vision}</span></div>
+              <div className="flex justify-between py-0.5"><span className="text-[#98ca7a]">MORALE</span><span className="text-white">{selectedPlayer.morale}</span></div>
+            </div>
+          </details>
+
+          {/* ── FIFA-style six-pack ── */}
+          <div className="grid grid-cols-3 gap-2 border-t border-[#2a8a2b] pt-2 text-center font-mono">
             <div><span className="text-[#efe56b]">PAC</span> <span className="text-white">{selectedPlayer.pac}</span></div>
             <div><span className="text-[#efe56b]">SHO</span> <span className="text-white">{selectedPlayer.sho}</span></div>
             <div><span className="text-[#efe56b]">PAS</span> <span className="text-white">{selectedPlayer.pas}</span></div>
@@ -575,13 +684,9 @@ function SquadPanel({
             <div><span className="text-[#efe56b]">DEF</span> <span className="text-white">{selectedPlayer.def}</span></div>
             <div><span className="text-[#efe56b]">PHY</span> <span className="text-white">{selectedPlayer.phy}</span></div>
           </div>
-          <div className="mt-2 border-t border-[#2a8a2b] pt-2 text-center">
-            <span className="text-[#efe56b]">OVR</span> <span className="text-lg font-bold text-white">{getOverall(selectedPlayer)}</span>
-            <span className="ml-4 text-[#efe56b]">POT</span> <span className="text-lg font-bold text-[#98ca7a]">{selectedPlayer.potential}</span>
-            <span className="ml-4 text-[#efe56b]">FORM</span> <span className="text-lg font-bold text-white">{selectedPlayer.form}</span>
-          </div>
         </div>
-      ) : null}
+        );
+      })() : null}
     </section>
   );
 }
