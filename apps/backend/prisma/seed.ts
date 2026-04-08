@@ -104,11 +104,13 @@ async function createSquad(clubId: string, clubName: string) {
     usedNames.add(name);
 
     const range = statRange(role);
+    const age = randBetween(18, 36);
+    const expBase = Math.min(20, Math.max(1, Math.floor((age - 16) * 0.8) + randBetween(0, 4)));
     await prisma.player.create({
       data: {
         clubId,
         name,
-        age: randBetween(18, 36),
+        age,
         pac: randBetween(range.pac[0], range.pac[1]),
         sho: randBetween(range.sho[0], range.sho[1]),
         pas: randBetween(range.pas[0], range.pas[1]),
@@ -119,6 +121,24 @@ async function createSquad(clubId: string, clubName: string) {
         stamina: randBetween(48, 92),
         form: randBetween(40, 90),
         potential: randBetween(52, 92),
+        // Original Tactical Manager attributes
+        played: 0,
+        scored: 0,
+        speed: randBetween(1, 19),
+        control: randBetween(1, 19),
+        tackling: randBetween(1, 19),
+        passing: randBetween(1, 19),
+        heading: randBetween(0, 15),
+        shooting: randBetween(0, 15),
+        marking: randBetween(1, 19),
+        vision: randBetween(1, 19),
+        caps: randBetween(0, 49),
+        experience: expBase,
+        fitness: randBetween(5, 20),
+        freshness: randBetween(10, 20),
+        influence: randBetween(1, 15),
+        attitude: randBetween(3, 19),
+        reliability: randBetween(2, 19),
         role,
         posX: randBetween(6, 94),
         posY: randBetween(6, 94)

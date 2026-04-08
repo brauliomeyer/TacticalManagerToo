@@ -283,6 +283,34 @@ function buildFallbackSquad(club: Club): SquadPlayer[] {
   });
 }
 
+function ensureTmAttrs(players: SquadPlayer[]): SquadPlayer[] {
+  return players.map((p, i) => {
+    if (p.speed !== undefined && p.speed !== null) return p;
+    const seed = hashText(p.id);
+    const expBase = Math.min(20, Math.max(1, Math.floor((p.age - 16) * 0.8) + ((seed + i * 9) % 5)));
+    return {
+      ...p,
+      played: p.played ?? 0,
+      scored: p.scored ?? 0,
+      speed: 1 + ((seed + i * 8) % 19),
+      control: 1 + ((seed + i * 12) % 19),
+      tackling: 1 + ((seed + i * 14) % 19),
+      passing: 1 + ((seed + i * 16) % 19),
+      heading: (seed + i * 18) % 16,
+      shooting: (seed + i * 20) % 16,
+      marking: 1 + ((seed + i * 22) % 19),
+      vision: 1 + ((seed + i * 24) % 19),
+      caps: p.caps ?? ((seed + i * 10) % 50),
+      experience: p.experience ?? expBase,
+      fitness: 5 + ((seed + i * 26) % 16),
+      freshness: 10 + ((seed + i * 28) % 11),
+      influence: 1 + ((seed + i * 30) % 15),
+      attitude: 3 + ((seed + i * 32) % 17),
+      reliability: 2 + ((seed + i * 34) % 18)
+    };
+  });
+}
+
 function PositionDropdown({ currentRole, originalRole, onChange }: {
   currentRole: string;
   originalRole: string;
@@ -745,7 +773,7 @@ export default function App() {
     axios
       .get<{ club: { id: string; name: string }; players: SquadPlayer[] }>(`${API_BASE}/clubs/${activeClubId}/players`)
       .then((res) => {
-        const loadedPlayers = res.data.players.length > 0 ? res.data.players : buildFallbackSquad(selectedClub);
+        const loadedPlayers = res.data.players.length > 0 ? ensureTmAttrs(res.data.players) : buildFallbackSquad(selectedClub);
         setSquadPlayers(loadedPlayers);
         const saved = loadSquadStatuses(activeClubId);
         const next: Record<string, SquadStatus> = {};
