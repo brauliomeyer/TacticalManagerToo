@@ -647,14 +647,19 @@ function SquadPanel({
             <AttrBar label="Leadership" value={d.leadership} />
           </div>
 
-          {/* ── TM Stats + FIFA six-pack combined ── */}
-          <div className="grid grid-cols-4 gap-x-3 gap-y-0 font-mono border-t border-[#2a8a2b] pt-2">
+          {/* ── TM Stats ── */}
+          <div className="grid grid-cols-2 gap-x-6 gap-y-0 font-mono border-t border-[#2a8a2b] pt-2">
             {[
-              ['SPD', selectedPlayer.speed], ['CTL', selectedPlayer.control], ['TAC', selectedPlayer.tackling], ['PAS', selectedPlayer.passing],
-              ['HEA', selectedPlayer.heading], ['SHT', selectedPlayer.shooting], ['MRK', selectedPlayer.marking], ['VIS', selectedPlayer.vision],
-              ['EXP', selectedPlayer.experience], ['CAP', selectedPlayer.caps], ['FIT', selectedPlayer.fitness], ['FRS', selectedPlayer.freshness],
-              ['INF', selectedPlayer.influence], ['ATT', selectedPlayer.attitude], ['REL', selectedPlayer.reliability], ['STA', selectedPlayer.stamina],
-              ['PLD', selectedPlayer.played], ['GLS', selectedPlayer.scored], ['AGE', selectedPlayer.age], ['MOR', selectedPlayer.morale],
+              ['Speed', selectedPlayer.speed], ['Control', selectedPlayer.control],
+              ['Tackling', selectedPlayer.tackling], ['Passing', selectedPlayer.passing],
+              ['Heading', selectedPlayer.heading], ['Shooting', selectedPlayer.shooting],
+              ['Marking', selectedPlayer.marking], ['Vision', selectedPlayer.vision],
+              ['Experience', selectedPlayer.experience], ['Caps', selectedPlayer.caps],
+              ['Fitness', selectedPlayer.fitness], ['Freshness', selectedPlayer.freshness],
+              ['Influence', selectedPlayer.influence], ['Attitude', selectedPlayer.attitude],
+              ['Reliability', selectedPlayer.reliability], ['Stamina', selectedPlayer.stamina],
+              ['Played', selectedPlayer.played], ['Scored', selectedPlayer.scored],
+              ['Age', selectedPlayer.age], ['Morale', selectedPlayer.morale],
             ].map(([label, val]) => (
               <div key={label as string} className="flex justify-between border-b border-[#1a5a1e] py-0.5">
                 <span className="text-[#98ca7a]">{label}</span>
@@ -665,12 +670,12 @@ function SquadPanel({
 
           {/* ── FIFA-style six-pack ── */}
           <div className="grid grid-cols-3 gap-2 border-t border-[#2a8a2b] pt-2 mt-2 text-center font-mono">
-            <div><span className="text-[#efe56b]">PAC</span> <span className="text-white">{selectedPlayer.pac}</span></div>
-            <div><span className="text-[#efe56b]">SHO</span> <span className="text-white">{selectedPlayer.sho}</span></div>
-            <div><span className="text-[#efe56b]">PAS</span> <span className="text-white">{selectedPlayer.pas}</span></div>
-            <div><span className="text-[#efe56b]">DRI</span> <span className="text-white">{selectedPlayer.dri}</span></div>
-            <div><span className="text-[#efe56b]">DEF</span> <span className="text-white">{selectedPlayer.def}</span></div>
-            <div><span className="text-[#efe56b]">PHY</span> <span className="text-white">{selectedPlayer.phy}</span></div>
+            <div><span className="text-[#efe56b]">Pace</span> <span className="text-white">{selectedPlayer.pac}</span></div>
+            <div><span className="text-[#efe56b]">Shooting</span> <span className="text-white">{selectedPlayer.sho}</span></div>
+            <div><span className="text-[#efe56b]">Passing</span> <span className="text-white">{selectedPlayer.pas}</span></div>
+            <div><span className="text-[#efe56b]">Dribbling</span> <span className="text-white">{selectedPlayer.dri}</span></div>
+            <div><span className="text-[#efe56b]">Defence</span> <span className="text-white">{selectedPlayer.def}</span></div>
+            <div><span className="text-[#efe56b]">Physical</span> <span className="text-white">{selectedPlayer.phy}</span></div>
           </div>
         </div>
         );
