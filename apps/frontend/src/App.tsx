@@ -15,7 +15,6 @@ import {
   calculateFatigueImpact,
   applyVariance,
   type DerivedAttributes,
-  type DetectedRole,
   type PlayerProfile,
 } from './playerEngine';
 
