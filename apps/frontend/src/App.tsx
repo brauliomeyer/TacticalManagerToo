@@ -627,8 +627,9 @@ function SquadPanel({
             </div>
           </div>
 
-          {/* ── All Attributes (0-100 derived bars + TM 0-20 inline) ── */}
+          {/* ── All Attributes ── */}
           <div className="mb-3 grid grid-cols-2 gap-x-4 gap-y-1">
+            {/* Derived (0-100) */}
             <AttrBar label="Control" value={d.control} />
             <AttrBar label="Composure" value={d.composure} />
             <AttrBar label="Vision" value={d.vision} />
@@ -645,27 +646,24 @@ function SquadPanel({
             <AttrBar label="Concentration" value={d.concentration} />
             <AttrBar label="Reliability" value={d.reliability} />
             <AttrBar label="Leadership" value={d.leadership} />
+            {/* Classic TM (0-20) */}
+            <AttrBar label="Speed" value={selectedPlayer.speed} max={20} />
+            <AttrBar label="Passing" value={selectedPlayer.passing} max={20} />
+            <AttrBar label="Heading" value={selectedPlayer.heading} max={20} />
+            <AttrBar label="Marking" value={selectedPlayer.marking} max={20} />
+            <AttrBar label="Experience" value={selectedPlayer.experience} max={20} />
+            <AttrBar label="Stamina" value={selectedPlayer.stamina} max={20} />
+            <AttrBar label="Fitness" value={selectedPlayer.fitness} max={20} />
+            <AttrBar label="Freshness" value={selectedPlayer.freshness} max={20} />
+            <AttrBar label="Caps" value={selectedPlayer.caps} max={20} />
+            <AttrBar label="Morale" value={selectedPlayer.morale} max={20} />
           </div>
 
-          {/* ── TM Stats ── */}
-          <div className="grid grid-cols-2 gap-x-6 gap-y-0 font-mono border-t border-[#2a8a2b] pt-2">
-            {[
-              ['Speed', selectedPlayer.speed], ['Control', selectedPlayer.control],
-              ['Tackling', selectedPlayer.tackling], ['Passing', selectedPlayer.passing],
-              ['Heading', selectedPlayer.heading], ['Shooting', selectedPlayer.shooting],
-              ['Marking', selectedPlayer.marking], ['Vision', selectedPlayer.vision],
-              ['Experience', selectedPlayer.experience], ['Caps', selectedPlayer.caps],
-              ['Fitness', selectedPlayer.fitness], ['Freshness', selectedPlayer.freshness],
-              ['Influence', selectedPlayer.influence], ['Attitude', selectedPlayer.attitude],
-              ['Reliability', selectedPlayer.reliability], ['Stamina', selectedPlayer.stamina],
-              ['Played', selectedPlayer.played], ['Scored', selectedPlayer.scored],
-              ['Age', selectedPlayer.age], ['Morale', selectedPlayer.morale],
-            ].map(([label, val]) => (
-              <div key={label as string} className="flex justify-between border-b border-[#1a5a1e] py-0.5">
-                <span className="text-[#98ca7a]">{label}</span>
-                <span className="text-white font-bold">{val}</span>
-              </div>
-            ))}
+          {/* ── Player Info ── */}
+          <div className="grid grid-cols-3 gap-x-4 font-mono border-t border-[#2a8a2b] pt-2 text-center">
+            <div><span className="text-[#98ca7a]">Age</span> <span className="text-white font-bold">{selectedPlayer.age}</span></div>
+            <div><span className="text-[#98ca7a]">Played</span> <span className="text-white font-bold">{selectedPlayer.played}</span></div>
+            <div><span className="text-[#98ca7a]">Scored</span> <span className="text-white font-bold">{selectedPlayer.scored}</span></div>
           </div>
 
           {/* ── FIFA-style six-pack ── */}
