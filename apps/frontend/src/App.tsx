@@ -683,6 +683,204 @@ function SquadPanel({
   );
 }
 
+/* ── Right Sidebar: Managerbook + News & Transfer Feed ── */
+
+function seededRand(seed: number) {
+  let s = seed % 2147483647;
+  if (s <= 0) s += 2147483646;
+  s = (s * 16807) % 2147483647;
+  return (s - 1) / 2147483646;
+}
+
+function hashString(str: string) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+function generateNewsFeed(clubs: Club[], activeClub: Club, squad: SquadPlayer[]) {
+  if (clubs.length === 0) return [];
+
+  const seed = hashString(activeClub.id + activeClub.name);
+  const items: { icon: string; text: string; type: 'transfer' | 'news' | 'injury' | 'morale' }[] = [];
+
+  const otherClubs = clubs.filter((c) => c.id !== activeClub.id);
+
+  // Transfer rumours about your players
+  for (let i = 0; i < Math.min(3, otherClubs.length); i++) {
+    const club = otherClubs[Math.floor(seededRand(seed + i * 7) * otherClubs.length)];
+    if (squad.length > 0) {
+      const target = squad[Math.floor(seededRand(seed + i * 13 + 1) * squad.length)];
+      const templates = [
+        `${club.name} are interested in signing ${target.name}.`,
+        `${club.name} have made enquiries about ${target.name}.`,
+        `${club.name} are monitoring ${target.name}'s situation closely.`,
+        `Scouts from ${club.name} were spotted watching ${target.name}.`
+      ];
+      items.push({
+        icon: '📋',
+        text: templates[Math.floor(seededRand(seed + i * 17) * templates.length)],
+        type: 'transfer'
+      });
+    }
+  }
+
+  // Transfer market activity between other clubs
+  for (let i = 0; i < 2; i++) {
+    const buyerIdx = Math.floor(seededRand(seed + 50 + i) * otherClubs.length);
+    const sellerIdx = Math.floor(seededRand(seed + 60 + i) * otherClubs.length);
+    if (buyerIdx !== sellerIdx && otherClubs[buyerIdx] && otherClubs[sellerIdx]) {
+      const buyer = otherClubs[buyerIdx];
+      const seller = otherClubs[sellerIdx];
+      const playerNames = ['Johnson', 'Williams', 'Thompson', 'Garcia', 'Martinez', 'Anderson', 'Thomas', 'Jackson', 'White', 'Harris', 'Martin', 'Clark'];
+      const pName = playerNames[Math.floor(seededRand(seed + 70 + i) * playerNames.length)];
+      const fee = Math.round(1 + seededRand(seed + 80 + i) * 25);
+      items.push({
+        icon: '💰',
+        text: `${buyer.name} sign ${pName} from ${seller.name} for €${fee}M.`,
+        type: 'transfer'
+      });
+    }
+  }
+
+  // Squad morale
+  if (squad.length > 0) {
+    const player = squad[Math.floor(seededRand(seed + 100) * squad.length)];
+    if (player.morale > 70) {
+      items.push({ icon: '😊', text: `${player.name} is delighted with recent form and wants to stay at the club.`, type: 'morale' });
+    } else if (player.morale < 40) {
+      items.push({ icon: '😤', text: `${player.name} is unhappy with lack of playing time and may request a transfer.`, type: 'morale' });
+    }
+
+    // Injury concern
+    const injuryPlayer = squad[Math.floor(seededRand(seed + 110) * squad.length)];
+    if (injuryPlayer.stamina < 60) {
+      items.push({ icon: '🏥', text: `${injuryPlayer.name} is carrying a minor knock and could miss the next match.`, type: 'injury' });
+    }
+  }
+
+  // General league news
+  const leagueNews = [
+    `The FA has announced fixture changes for the upcoming round.`,
+    `Attendance figures across the ${activeClub.leagueName ?? 'league'} are up 12% this season.`,
+    `Referees will crack down on simulation starting next week.`,
+    `The transfer window closes in 14 days. Clubs are expected to be busy.`,
+    `TV revenue for the ${activeClub.leagueName ?? 'league'} has increased this year.`
+  ];
+  items.push({
+    icon: '📰',
+    text: leagueNews[Math.floor(seededRand(seed + 200) * leagueNews.length)],
+    type: 'news'
+  });
+
+  return items;
+}
+
+function RightSidebar({
+  summary,
+  events,
+  clubs,
+  activeClub,
+  squadPlayers
+}: {
+  summary: ManagerSummary | null;
+  events: MatchEvent[];
+  clubs: Club[];
+  activeClub: Club;
+  squadPlayers: SquadPlayer[];
+}) {
+  const fallbackSummary: ManagerSummary = useMemo(() => ({
+    status: 'INEXPERIENCED',
+    level: 1,
+    successes: 0,
+    successiveWins: 0,
+    successiveLosses: 0,
+    totalWins: 0,
+    totalLosses: 0,
+    totalDraws: 0
+  }), []);
+
+  const mgr = summary ?? fallbackSummary;
+  const newsFeed = useMemo(() => generateNewsFeed(clubs, activeClub, squadPlayers), [clubs, activeClub, squadPlayers]);
+
+  const statusColor = mgr.status === 'ELITE' ? 'text-[#22c55e]' : mgr.status === 'PRO' ? 'text-[#eab308]' : 'text-[#f97316]';
+
+  return (
+    <aside className="border-4 border-[#6f4ca1] bg-[#0d5e13] p-3 text-sm text-[#d5f8b6] overflow-y-auto">
+      {/* Managerbook */}
+      <h2 className="mb-2 font-black uppercase text-[#efe56b]">Managerbook</h2>
+      <div className="mb-1 flex items-center justify-between border-b border-[#1a5a1e] py-1">
+        <span className="text-[#98ca7a]">Status</span>
+        <span className={`font-black ${statusColor}`}>{mgr.status}</span>
+      </div>
+      <div className="flex items-center justify-between border-b border-[#1a5a1e] py-1">
+        <span className="text-[#98ca7a]">Level</span>
+        <span className="font-bold text-white">{mgr.level}</span>
+      </div>
+      <div className="mt-1 grid grid-cols-3 gap-1 text-center">
+        <div className="border border-[#2a8a2b] bg-[#1a3a1e] py-1">
+          <p className="text-[10px] text-[#98ca7a]">Wins</p>
+          <p className="font-black text-[#22c55e]">{mgr.totalWins}</p>
+        </div>
+        <div className="border border-[#2a8a2b] bg-[#1a3a1e] py-1">
+          <p className="text-[10px] text-[#98ca7a]">Draws</p>
+          <p className="font-black text-[#eab308]">{mgr.totalDraws}</p>
+        </div>
+        <div className="border border-[#2a8a2b] bg-[#1a3a1e] py-1">
+          <p className="text-[10px] text-[#98ca7a]">Losses</p>
+          <p className="font-black text-[#ef4444]">{mgr.totalLosses}</p>
+        </div>
+      </div>
+      {mgr.successiveWins > 0 && (
+        <p className="mt-1 text-xs text-[#22c55e]">🔥 {mgr.successiveWins} successive win{mgr.successiveWins > 1 ? 's' : ''}!</p>
+      )}
+      {mgr.successiveLosses > 0 && (
+        <p className="mt-1 text-xs text-[#ef4444]">⚠ {mgr.successiveLosses} successive loss{mgr.successiveLosses > 1 ? 'es' : ''}.</p>
+      )}
+      {!summary && (
+        <p className="mt-1 text-[10px] italic text-[#6b9a5a]">Start of career stats. Play matches to update.</p>
+      )}
+
+      {/* Match Feed */}
+      <h3 className="mb-2 mt-4 font-black uppercase text-[#efe56b]">Match Feed</h3>
+      {events.length === 0 ? (
+        <p className="border-l-2 border-[#2a8a2b] pl-2 text-xs italic text-[#6b9a5a]">
+          No live match in progress. Play a match to see events here.
+        </p>
+      ) : (
+        <ul className="space-y-1 max-h-48 overflow-y-auto">
+          {events.map((event) => {
+            const isGoal = event.type === 'GOAL' || event.type === 'goal';
+            return (
+              <li
+                className={`border px-2 py-1 ${isGoal ? 'border-[#efe56b] bg-[#2a6a1b]' : 'border-[#98ca7a] bg-[#256d22]'}`}
+                key={`${event.minute}-${event.type}-${event.team ?? ''}`}
+              >
+                <span className="font-bold text-white">{event.minute}&apos;</span>{' '}
+                {isGoal && <span className="text-[#efe56b]">⚽ </span>}
+                {event.description ?? `${event.team ?? 'MATCH'} ${event.type}`}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {/* News & Transfer Feed */}
+      <h3 className="mb-2 mt-4 font-black uppercase text-[#efe56b]">News &amp; Transfers</h3>
+      <ul className="space-y-1.5">
+        {newsFeed.map((item, i) => (
+          <li key={i} className="border-l-2 border-[#2a8a2b] pl-2 text-xs leading-snug">
+            <span className="mr-1">{item.icon}</span>
+            {item.text}
+          </li>
+        ))}
+      </ul>
+    </aside>
+  );
+}
+
 function PagePanel({
   page,
   activeClub,
@@ -1229,35 +1427,7 @@ export default function App() {
             ) : null}
           </section>
 
-          <aside className="border-4 border-[#6f4ca1] bg-[#0d5e13] p-3 text-sm text-[#d5f8b6]">
-            <h2 className="mb-2 font-black uppercase text-[#efe56b]">Managerbook</h2>
-            {summary ? (
-              <ul className="space-y-1">
-                <li>Status: {summary.status}</li>
-                <li>Level: {summary.level}</li>
-                <li>Successive Wins: {summary.successiveWins}</li>
-                <li>Successive Losses: {summary.successiveLosses}</li>
-                <li>Total Wins: {summary.totalWins}</li>
-                <li>Total Losses: {summary.totalLosses}</li>
-                <li>Total Draws: {summary.totalDraws}</li>
-              </ul>
-            ) : (
-              <p>Loading manager stats...</p>
-            )}
-
-            <h3 className="mb-2 mt-4 font-black uppercase text-[#efe56b]">Match Feed</h3>
-            <ul className="space-y-1">
-              {events.length === 0 ? (
-                <li>No match events yet.</li>
-              ) : (
-                events.map((event) => (
-                  <li className="border border-[#98ca7a] bg-[#256d22] px-2 py-1" key={`${event.minute}-${event.type}`}>
-                    {event.minute}' {event.description ?? `${event.team ?? 'MATCH'} ${event.type}`}
-                  </li>
-                ))
-              )}
-            </ul>
-          </aside>
+          <RightSidebar summary={summary} events={events} clubs={clubs} activeClub={activeClub} squadPlayers={squadPlayers} />
         </div>
 
         {showStandings ? (
