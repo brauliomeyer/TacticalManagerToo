@@ -4,6 +4,7 @@ import { io } from 'socket.io-client';
 import type { ManagerSummary, MatchEvent } from '@tmt/shared';
 import MatchScreen from './components/MatchScreen';
 import TacticsBoard from './components/TacticsBoard';
+import BoardRoom from './components/BoardRoom';
 import ClubCrest from './components/ClubCrest';
 import { fallbackClubs } from './fallbackClubs';
 import {
@@ -693,6 +694,7 @@ function PagePanel({
   squadSortBy,
   squadStatuses,
   positionOverrides,
+  summary,
   onSquadSearchChange,
   onSquadRoleFilterChange,
   onSquadSortChange,
@@ -709,6 +711,7 @@ function PagePanel({
   squadSortBy: SquadSortKey;
   squadStatuses: Record<string, SquadStatus>;
   positionOverrides: Record<string, string>;
+  summary: ManagerSummary | null;
   onSquadSearchChange: (value: string) => void;
   onSquadRoleFilterChange: (value: string) => void;
   onSquadSortChange: (value: SquadSortKey) => void;
@@ -722,6 +725,9 @@ function PagePanel({
     return <TacticsBoard starters={starters} clubId={activeClub?.id} />;
   }
   if (page === 'match') return <MatchScreen />;
+  if (page === 'board') {
+    return <BoardRoom activeClub={activeClub} summary={summary} squadPlayers={squadPlayers} />;
+  }
   if (page === 'squad') {
     return (
       <SquadPanel
@@ -822,7 +828,7 @@ export default function App() {
     axios
       .get<ManagerSummary>(`${API_BASE}/manager/summary`)
       .then((res) => setSummary(res.data))
-      .catch(() => setError('Could not load manager summary.'));
+      .catch(() => { /* BoardRoom handles null summary gracefully */ });
 
     socket.connect();
     socket.on('match:update', (payload: { events: MatchEvent[] }) => {
@@ -1210,6 +1216,7 @@ export default function App() {
               squadSortBy={squadSortBy}
               squadStatuses={squadStatuses}
               positionOverrides={positionOverrides}
+              summary={summary}
               onSquadSearchChange={setSquadSearch}
               onSquadRoleFilterChange={setSquadRoleFilter}
               onSquadSortChange={setSquadSortBy}
