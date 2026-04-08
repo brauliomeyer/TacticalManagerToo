@@ -56,6 +56,24 @@ interface SquadPlayer {
   stamina: number;
   form: number;
   potential: number;
+  /* Original Tactical Manager attributes (0-20 scale) */
+  played: number;
+  scored: number;
+  speed: number;
+  control: number;
+  tackling: number;
+  passing: number;
+  heading: number;
+  shooting: number;
+  marking: number;
+  vision: number;
+  caps: number;
+  experience: number;
+  fitness: number;
+  freshness: number;
+  influence: number;
+  attitude: number;
+  reliability: number;
 }
 
 type SquadSortKey = 'overall' | 'name' | 'age' | 'morale' | 'potential';
@@ -225,10 +243,13 @@ function buildFallbackSquad(club: Club): SquadPlayer[] {
     const lastName = fallbackLastNames[(seed + index * 11) % fallbackLastNames.length];
     const base = 48 + ((seed + index * 13) % 28);
 
+    const age = 18 + ((seed + index * 5) % 17);
+    const expBase = Math.min(20, Math.max(1, Math.floor((age - 16) * 0.8) + ((seed + index * 9) % 5)));
+
     return {
       id: `${club.id || club.name}-fallback-${index + 1}`,
       name: `${firstName} ${lastName}`,
-      age: 18 + ((seed + index * 5) % 17),
+      age,
       role,
       pac: Math.min(99, base + ((seed + index * 2) % 10)),
       sho: Math.min(99, base + ((seed + index * 3) % 10)),
@@ -239,7 +260,25 @@ function buildFallbackSquad(club: Club): SquadPlayer[] {
       morale: 45 + ((seed + index * 3) % 55),
       stamina: 45 + ((seed + index * 4) % 55),
       form: 45 + ((seed + index * 5) % 55),
-      potential: 55 + ((seed + index * 6) % 40)
+      potential: 55 + ((seed + index * 6) % 40),
+      /* Original Tactical Manager attributes (0-20 scale) */
+      played: 0,
+      scored: 0,
+      speed: 1 + ((seed + index * 8) % 19),
+      control: 1 + ((seed + index * 12) % 19),
+      tackling: 1 + ((seed + index * 14) % 19),
+      passing: 1 + ((seed + index * 16) % 19),
+      heading: ((seed + index * 18) % 16),
+      shooting: ((seed + index * 20) % 16),
+      marking: 1 + ((seed + index * 22) % 19),
+      vision: 1 + ((seed + index * 24) % 19),
+      caps: ((seed + index * 10) % 50),
+      experience: expBase,
+      fitness: 5 + ((seed + index * 26) % 16),
+      freshness: 10 + ((seed + index * 28) % 11),
+      influence: 1 + ((seed + index * 30) % 15),
+      attitude: 3 + ((seed + index * 32) % 17),
+      reliability: 2 + ((seed + index * 34) % 18)
     };
   });
 }
@@ -268,14 +307,14 @@ function PositionDropdown({ currentRole, originalRole, onChange }: {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`border border-[#b78bda] px-1 py-0.5 text-xs font-semibold ${
-          isOverridden ? 'bg-[#2563eb] text-white' : 'bg-[#d5b5ec] text-[#2e1f4a]'
+        className={`border border-[#b78bda] px-1 py-0.5 text-xs font-bold ${
+          isOverridden ? 'bg-[#1d4ed8] text-white' : 'bg-[#d5b5ec] text-[#2e1f4a]'
         }`}
       >
         {currentRole.replace(/_/g, ' ')} ▾
       </button>
       {open ? (
-        <div className="absolute left-0 top-full z-50 max-h-48 overflow-auto border border-[#b78bda] bg-[#1a1e2b] shadow-lg">
+        <div className="absolute left-0 top-full z-50 max-h-48 w-56 overflow-auto border-2 border-[#b78bda] bg-[#1a1e2b] shadow-lg">
           {ALL_POSITIONS.map((pos) => {
             const isOriginal = pos === originalRole;
             const isSelected = pos === currentRole;
@@ -284,15 +323,15 @@ function PositionDropdown({ currentRole, originalRole, onChange }: {
                 key={pos}
                 type="button"
                 onClick={() => { onChange(pos); setOpen(false); }}
-                className={`block w-full whitespace-nowrap px-2 py-1 text-left text-xs font-semibold hover:bg-[#374151] ${
+                className={`block w-full whitespace-nowrap px-3 py-1.5 text-left text-xs font-bold hover:bg-[#374151] ${
                   isSelected
-                    ? 'bg-[#2563eb] text-white'
+                    ? 'bg-[#1d4ed8] text-white'
                     : isOriginal
-                      ? 'text-[#f87171]'
-                      : 'text-[#d4f6a7]'
+                      ? 'bg-[#450a0a] text-[#ff4444]'
+                      : 'text-[#d1d5db]'
                 }`}
               >
-                {pos.replace(/_/g, ' ')}{isOriginal ? ' ★' : ''}
+                {isOriginal ? '★ ' : ''}{pos.replace(/_/g, ' ')}{isSelected && !isOriginal ? ' ✓' : ''}
               </button>
             );
           })}
@@ -354,6 +393,9 @@ function SquadPanel({
   const excluded = players.filter((player: SquadPlayer) => (statuses[player.id] ?? 'EXCLUDED') === 'EXCLUDED').length;
   const startersFull = starters >= MAX_STARTERS;
   const benchFull = bench >= MAX_BENCH;
+
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const selectedPlayer = selectedPlayerId ? players.find((p) => p.id === selectedPlayerId) ?? null : null;
 
   return (
     <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
@@ -417,7 +459,7 @@ function SquadPanel({
               {visiblePlayers.map((player: SquadPlayer) => {
                 const status = statuses[player.id] ?? 'EXCLUDED';
                 return (
-                  <tr key={player.id} className="border-t border-[#2a8a2b] odd:bg-[#115d16] even:bg-[#0f5714]">
+                  <tr key={player.id} className={`border-t border-[#2a8a2b] cursor-pointer ${selectedPlayerId === player.id ? 'bg-[#0a4a0e] ring-1 ring-[#efe56b]' : 'odd:bg-[#115d16] even:bg-[#0f5714]'}`} onClick={() => setSelectedPlayerId(selectedPlayerId === player.id ? null : player.id)}>
                     <td className="px-2 py-1">{player.name}</td>
                     <td className="px-2 py-1">
                       <PositionDropdown
@@ -464,6 +506,52 @@ function SquadPanel({
               })}
             </tbody>
           </table>
+        </div>
+      ) : null}
+
+      {selectedPlayer ? (
+        <div className="mt-3 border-2 border-[#efe56b] bg-[#0a3d0e] p-3 font-mono text-xs">
+          <div className="mb-2 flex items-center justify-between border-b border-[#2a8a2b] pb-2">
+            <span className="text-sm font-bold text-[#efe56b]">
+              {selectedPlayer.name.toUpperCase()} — {(positionOverrides[selectedPlayer.id] ?? selectedPlayer.role).replace(/_/g, ' ')}
+            </span>
+            <button type="button" onClick={() => setSelectedPlayerId(null)} className="text-[#ff6b6b] font-bold hover:text-white">✕</button>
+          </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-0">
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">PLAYED</span><span className="text-white">{selectedPlayer.played}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">AGE</span><span className="text-white">{selectedPlayer.age}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">SCORED</span><span className="text-white">{selectedPlayer.scored}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">CAPS</span><span className="text-white">{selectedPlayer.caps}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">SPEED</span><span className="text-white">{selectedPlayer.speed}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">EXPERIENCE</span><span className="text-white">{selectedPlayer.experience}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">CONTROL</span><span className="text-white">{selectedPlayer.control}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">STAMINA</span><span className="text-white">{selectedPlayer.stamina}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">TACKLING</span><span className="text-white">{selectedPlayer.tackling}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">FITNESS</span><span className="text-white">{selectedPlayer.fitness}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">PASSING</span><span className="text-white">{selectedPlayer.passing}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">FRESHNESS</span><span className="text-white">{selectedPlayer.freshness}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">HEADING</span><span className="text-white">{selectedPlayer.heading}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">INFLUENCE</span><span className="text-white">{selectedPlayer.influence}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">SHOOTING</span><span className="text-white">{selectedPlayer.shooting}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">ATTITUDE</span><span className="text-white">{selectedPlayer.attitude}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">MARKING</span><span className="text-white">{selectedPlayer.marking}</span></div>
+            <div className="flex justify-between border-b border-[#1a5a1e] py-0.5"><span className="text-[#98ca7a]">RELIABILITY</span><span className="text-white">{selectedPlayer.reliability}</span></div>
+            <div className="flex justify-between py-0.5"><span className="text-[#98ca7a]">VISION</span><span className="text-white">{selectedPlayer.vision}</span></div>
+            <div className="flex justify-between py-0.5"><span className="text-[#98ca7a]">MORALE</span><span className="text-white">{selectedPlayer.morale}</span></div>
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-2 border-t border-[#2a8a2b] pt-2 text-center">
+            <div><span className="text-[#efe56b]">PAC</span> <span className="text-white">{selectedPlayer.pac}</span></div>
+            <div><span className="text-[#efe56b]">SHO</span> <span className="text-white">{selectedPlayer.sho}</span></div>
+            <div><span className="text-[#efe56b]">PAS</span> <span className="text-white">{selectedPlayer.pas}</span></div>
+            <div><span className="text-[#efe56b]">DRI</span> <span className="text-white">{selectedPlayer.dri}</span></div>
+            <div><span className="text-[#efe56b]">DEF</span> <span className="text-white">{selectedPlayer.def}</span></div>
+            <div><span className="text-[#efe56b]">PHY</span> <span className="text-white">{selectedPlayer.phy}</span></div>
+          </div>
+          <div className="mt-2 border-t border-[#2a8a2b] pt-2 text-center">
+            <span className="text-[#efe56b]">OVR</span> <span className="text-lg font-bold text-white">{getOverall(selectedPlayer)}</span>
+            <span className="ml-4 text-[#efe56b]">POT</span> <span className="text-lg font-bold text-[#98ca7a]">{selectedPlayer.potential}</span>
+            <span className="ml-4 text-[#efe56b]">FORM</span> <span className="text-lg font-bold text-white">{selectedPlayer.form}</span>
+          </div>
         </div>
       ) : null}
     </section>
