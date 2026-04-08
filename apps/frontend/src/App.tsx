@@ -6,6 +6,7 @@ import MatchScreen from './components/MatchScreen';
 import TacticsBoard from './components/TacticsBoard';
 import BoardRoom from './components/BoardRoom';
 import Mailbox from './components/Mailbox';
+import CupCenter from './components/CupCenter';
 import ClubCrest from './components/ClubCrest';
 import { fallbackClubs } from './fallbackClubs';
 import {
@@ -931,6 +932,9 @@ function PagePanel({
   }
   if (page === 'mail') {
     return <Mailbox activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} summary={summary} />;
+  }
+  if (page === 'cup') {
+    return <CupCenter activeClub={activeClub} />;
   }
   if (page === 'squad') {
     return (
