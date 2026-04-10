@@ -62,11 +62,19 @@ type CategoryKey =
   | 'cleanSheets'
   | 'appearances';
 
+type CompFilter = 'all' | 'league' | 'fa-cup' | 'league-cup' | 'european';
+
 interface Category {
   key: CategoryKey;
   title: string;
   shortTitle: string;
   unit: string;
+}
+
+interface CompetitionOption {
+  key: CompFilter;
+  label: string;
+  short: string;
 }
 
 /* ══════════════════════════════════════════════
@@ -105,6 +113,14 @@ const CATEGORIES: Category[] = [
   { key: 'appearances', title: 'Appearance Leaders', shortTitle: 'Apps', unit: 'apps' },
 ];
 
+const COMPETITIONS: CompetitionOption[] = [
+  { key: 'all', label: 'All Competitions', short: 'All' },
+  { key: 'league', label: 'League', short: 'League' },
+  { key: 'fa-cup', label: 'FA Cup', short: 'FA Cup' },
+  { key: 'league-cup', label: 'League Cup', short: 'LC' },
+  { key: 'european', label: 'European', short: 'Europe' },
+];
+
 /* ══════════════════════════════════════════════
    Famous player names pool (for non-active clubs)
    ══════════════════════════════════════════════ */
@@ -129,73 +145,81 @@ const CLUB_NAMES = [
 ];
 
 /* ══════════════════════════════════════════════
-   Generate leaderboard data
+   Generate leaderboard data — per competition
    ══════════════════════════════════════════════ */
 
-function generateLeaderboard(
+const COMP_CONFIG: Record<Exclude<CompFilter, 'all'>, { mult: number; seedOff: number }> = {
+  'league':     { mult: 1.0,  seedOff: 0 },
+  'fa-cup':     { mult: 0.3,  seedOff: 1000 },
+  'league-cup': { mult: 0.2,  seedOff: 2000 },
+  'european':   { mult: 0.55, seedOff: 3000 },
+};
+
+function generateCompEntries(
   category: CategoryKey,
+  comp: Exclude<CompFilter, 'all'>,
   activeClub: Club,
   clubs: Club[],
   squad: SquadPlayer[],
-): LeaderboardEntry[] {
-  const seed = hs(activeClub.id + category);
-  const entries: LeaderboardEntry[] = [];
+): { playerName: string; clubName: string; value: number }[] {
+  const cfg = COMP_CONFIG[comp];
+  const seed = hs(activeClub.id + category + comp) + cfg.seedOff;
+  const entries: { playerName: string; clubName: string; value: number }[] = [];
+  const m = cfg.mult;
 
-  // Add active club players with real-ish stats derived from their attributes
   for (let i = 0; i < squad.length; i++) {
     const p = squad[i];
-    const pSeed = hs(p.id + category) + seed;
+    const pSeed = hs(p.id + category + comp) + seed;
     let value = 0;
 
     switch (category) {
       case 'motm':
-        value = Math.max(0, Math.round(p.influence * 0.3 + p.form * 0.2 + sr(pSeed) * 4 - 1));
+        value = Math.max(0, Math.round((p.influence * 0.3 + p.form * 0.2 + sr(pSeed) * 4 - 1) * m));
         break;
       case 'penalties':
         value = p.role.includes('FORWARD') || p.role.includes('ATTACKING')
-          ? Math.round(sr(pSeed) * 6)
-          : Math.round(sr(pSeed) * 2);
+          ? Math.round(sr(pSeed) * 6 * m)
+          : Math.round(sr(pSeed) * 2 * m);
         break;
       case 'shooters':
-        value = p.scored > 0 ? p.scored : Math.round(p.shooting * 0.4 * sr(pSeed + 1));
+        value = p.scored > 0 ? Math.round(p.scored * m) : Math.round(p.shooting * 0.4 * sr(pSeed + 1) * m);
         break;
       case 'cupGoals':
-        value = Math.round((p.scored > 0 ? p.scored * 0.3 : p.shooting * 0.15) * sr(pSeed + 2));
+        value = Math.round((p.scored > 0 ? p.scored * 0.3 : p.shooting * 0.15) * sr(pSeed + 2) * m);
         break;
       case 'superSubs':
-        value = Math.round(sr(pSeed) * 4 * (p.attitude > 12 ? 1.5 : 1));
+        value = Math.round(sr(pSeed) * 4 * (p.attitude > 12 ? 1.5 : 1) * m);
         break;
       case 'hatTricks':
-        value = p.scored >= 8 ? Math.max(0, Math.round(sr(pSeed) * 3 - 0.5)) : 0;
+        value = p.scored >= 8 ? Math.max(0, Math.round((sr(pSeed) * 3 - 0.5) * m)) : 0;
         break;
       case 'redCards':
-        value = Math.round(sr(pSeed) * (p.tackling > 14 ? 3 : 1.5) * (p.attitude < 10 ? 1.5 : 0.8));
+        value = Math.round(sr(pSeed) * (p.tackling > 14 ? 3 : 1.5) * (p.attitude < 10 ? 1.5 : 0.8) * m);
         break;
       case 'yellowCards':
-        value = Math.round(sr(pSeed) * (p.tackling > 10 ? 8 : 4) * (p.attitude < 12 ? 1.3 : 0.7));
+        value = Math.round(sr(pSeed) * (p.tackling > 10 ? 8 : 4) * (p.attitude < 12 ? 1.3 : 0.7) * m);
         break;
       case 'capped':
-        value = p.caps > 0 ? p.caps : Math.round(sr(pSeed) * 30 * (p.influence > 12 ? 1.5 : 0.5));
+        value = p.caps > 0 ? Math.round(p.caps * m) : Math.round(sr(pSeed) * 30 * (p.influence > 12 ? 1.5 : 0.5) * m);
         break;
       case 'assists':
-        value = Math.round(p.passing * 0.35 * sr(pSeed + 3) + p.played * 0.1);
+        value = Math.round((p.passing * 0.35 * sr(pSeed + 3) + p.played * 0.1) * m);
         break;
       case 'cleanSheets':
         value = p.role === 'GOALKEEPER' || p.role.includes('BACK')
-          ? Math.round(sr(pSeed) * 12 + p.played * 0.2)
+          ? Math.round((sr(pSeed) * 12 + p.played * 0.2) * m)
           : 0;
         break;
       case 'appearances':
-        value = p.played > 0 ? p.played : Math.round(8 + sr(pSeed) * 30);
+        value = p.played > 0 ? Math.round(p.played * m) : Math.round((8 + sr(pSeed) * 30) * m);
         break;
     }
 
     if (value > 0) {
-      entries.push({ rank: 0, playerName: p.name, clubName: activeClub.name, value });
+      entries.push({ playerName: p.name, clubName: activeClub.name, value });
     }
   }
 
-  // Add players from other clubs to fill a top-20 leaderboard
   const otherClubs = clubs.length > 1
     ? clubs.filter((c) => c.id !== activeClub.id).map((c) => c.name)
     : CLUB_NAMES.filter((c) => c !== activeClub.name);
@@ -207,30 +231,64 @@ function generateLeaderboard(
     let value = 0;
 
     switch (category) {
-      case 'motm': value = Math.round(1 + sr(pSeed + 2) * 8); break;
-      case 'penalties': value = Math.round(sr(pSeed + 2) * 8); break;
-      case 'shooters': value = Math.round(1 + sr(pSeed + 2) * 25); break;
-      case 'cupGoals': value = Math.round(sr(pSeed + 2) * 10); break;
-      case 'superSubs': value = Math.round(sr(pSeed + 2) * 6); break;
-      case 'hatTricks': value = Math.round(sr(pSeed + 2) * 4); break;
-      case 'redCards': value = Math.round(sr(pSeed + 2) * 4); break;
-      case 'yellowCards': value = Math.round(1 + sr(pSeed + 2) * 12); break;
-      case 'capped': value = Math.round(10 + sr(pSeed + 2) * 80); break;
-      case 'assists': value = Math.round(1 + sr(pSeed + 2) * 15); break;
-      case 'cleanSheets': value = Math.round(sr(pSeed + 2) * 15); break;
-      case 'appearances': value = Math.round(10 + sr(pSeed + 2) * 35); break;
+      case 'motm': value = Math.round((1 + sr(pSeed + 2) * 8) * m); break;
+      case 'penalties': value = Math.round(sr(pSeed + 2) * 8 * m); break;
+      case 'shooters': value = Math.round((1 + sr(pSeed + 2) * 25) * m); break;
+      case 'cupGoals': value = Math.round(sr(pSeed + 2) * 10 * m); break;
+      case 'superSubs': value = Math.round(sr(pSeed + 2) * 6 * m); break;
+      case 'hatTricks': value = Math.round(sr(pSeed + 2) * 4 * m); break;
+      case 'redCards': value = Math.round(sr(pSeed + 2) * 4 * m); break;
+      case 'yellowCards': value = Math.round((1 + sr(pSeed + 2) * 12) * m); break;
+      case 'capped': value = Math.round((10 + sr(pSeed + 2) * 80) * m); break;
+      case 'assists': value = Math.round((1 + sr(pSeed + 2) * 15) * m); break;
+      case 'cleanSheets': value = Math.round(sr(pSeed + 2) * 15 * m); break;
+      case 'appearances': value = Math.round((10 + sr(pSeed + 2) * 35) * m); break;
     }
 
     if (value > 0) {
-      entries.push({ rank: 0, playerName: name, clubName: club, value });
+      entries.push({ playerName: name, clubName: club, value });
     }
   }
 
-  // Sort descending, take top 20, assign ranks
-  entries.sort((a, b) => b.value - a.value);
-  const top = entries.slice(0, 20);
-  top.forEach((e, idx) => { e.rank = idx + 1; });
-  return top;
+  return entries;
+}
+
+const SINGLE_COMPS: Exclude<CompFilter, 'all'>[] = ['league', 'fa-cup', 'league-cup', 'european'];
+
+function generateLeaderboard(
+  category: CategoryKey,
+  comp: CompFilter,
+  activeClub: Club,
+  clubs: Club[],
+  squad: SquadPlayer[],
+): LeaderboardEntry[] {
+  let raw: { playerName: string; clubName: string; value: number }[];
+
+  if (comp === 'all') {
+    const merged = new Map<string, { playerName: string; clubName: string; value: number }>();
+    for (const c of SINGLE_COMPS) {
+      for (const entry of generateCompEntries(category, c, activeClub, clubs, squad)) {
+        const key = `${entry.playerName}|${entry.clubName}`;
+        const existing = merged.get(key);
+        if (existing) {
+          existing.value += entry.value;
+        } else {
+          merged.set(key, { ...entry });
+        }
+      }
+    }
+    raw = Array.from(merged.values());
+  } else {
+    raw = generateCompEntries(category, comp, activeClub, clubs, squad);
+  }
+
+  raw.sort((a, b) => b.value - a.value);
+  return raw.slice(0, 20).map((e, idx) => ({
+    rank: idx + 1,
+    playerName: e.playerName,
+    clubName: e.clubName,
+    value: e.value,
+  }));
 }
 
 /* ══════════════════════════════════════════════
@@ -367,15 +425,16 @@ function ClubSummaryBar({ club, squad, allData }: {
 
 export default function PlayerFixtures({ activeClub, clubs, squadPlayers }: PlayerFixturesProps) {
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>('shooters');
+  const [selectedComp, setSelectedComp] = useState<CompFilter>('all');
 
-  // Generate all leaderboards once (memoized per club)
+  // Generate all leaderboards once (memoized per club + competition)
   const allData = useMemo(() => {
     const map = new Map<CategoryKey, LeaderboardEntry[]>();
     for (const cat of CATEGORIES) {
-      map.set(cat.key, generateLeaderboard(cat.key, activeClub, clubs, squadPlayers));
+      map.set(cat.key, generateLeaderboard(cat.key, selectedComp, activeClub, clubs, squadPlayers));
     }
     return map;
-  }, [activeClub, clubs, squadPlayers]);
+  }, [activeClub, clubs, squadPlayers, selectedComp]);
 
   const selectedCat = CATEGORIES.find((c) => c.key === selectedCategory)!;
   const entries = allData.get(selectedCategory) ?? [];
@@ -386,6 +445,28 @@ export default function PlayerFixtures({ activeClub, clubs, squadPlayers }: Play
       <h2 className="mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
         Player Fixtures &amp; Records
       </h2>
+
+      {/* Competition filter tabs */}
+      <div className="mb-3 flex flex-wrap gap-1 border-2 border-[#2a8a2b] bg-[#0d3f10] p-2">
+        {COMPETITIONS.map((comp) => (
+          <button
+            key={comp.key}
+            type="button"
+            onClick={() => setSelectedComp(comp.key)}
+            className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wide transition-colors ${
+              selectedComp === comp.key
+                ? 'bg-[#2a8a2b] text-[#efe56b] border border-[#efe56b]'
+                : 'text-[#00e5ff] hover:bg-[#1a4a1e] border border-transparent'
+            }`}
+            style={{ fontFamily: '"Press Start 2P", "Courier New", monospace' }}
+          >
+            {comp.short}
+          </button>
+        ))}
+        <span className="ml-auto self-center text-[9px] text-[#6b9a5a] italic">
+          {COMPETITIONS.find((c) => c.key === selectedComp)?.label}
+        </span>
+      </div>
 
       {/* Club summary */}
       <div className="mb-3">
