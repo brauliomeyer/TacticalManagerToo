@@ -8,6 +8,7 @@ import BoardRoom from './components/BoardRoom';
 import Mailbox from './components/Mailbox';
 import CupCenter from './components/CupCenter';
 import PlayerFixtures from './components/PlayerFixtures';
+import TransferMarket from './components/TransferMarket';
 import ClubCrest from './components/ClubCrest';
 import { fallbackClubs } from './fallbackClubs';
 import {
@@ -939,6 +940,9 @@ function PagePanel({
   }
   if (page === 'human') {
     return <PlayerFixtures activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} />;
+  }
+  if (page === 'transfers') {
+    return <TransferMarket activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} />;
   }
   if (page === 'squad') {
     return (
