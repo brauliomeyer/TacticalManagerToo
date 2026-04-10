@@ -9,6 +9,7 @@ import Mailbox from './components/Mailbox';
 import CupCenter from './components/CupCenter';
 import PlayerFixtures from './components/PlayerFixtures';
 import TransferMarket from './components/TransferMarket';
+import TrainingGround from './components/TrainingGround';
 import ClubCrest from './components/ClubCrest';
 import { fallbackClubs } from './fallbackClubs';
 import {
@@ -943,6 +944,9 @@ function PagePanel({
   }
   if (page === 'transfers') {
     return <TransferMarket activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} />;
+  }
+  if (page === 'training') {
+    return <TrainingGround activeClub={activeClub} squadPlayers={squadPlayers} />;
   }
   if (page === 'squad') {
     return (
