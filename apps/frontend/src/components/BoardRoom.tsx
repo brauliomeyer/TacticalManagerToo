@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import type { ManagerSummary } from '@tmt/shared';
 
 /* ── Interfaces ── */
@@ -161,19 +161,13 @@ function deriveBoardData(club: Club, summary: ManagerSummary | null, squad: Squa
   const facilityLevel = Math.min(5, Math.max(1, Math.round(1 + (club.reputation / 25))));
   const facilityLabels: Record<number, string> = { 1: 'Basic', 2: 'Adequate', 3: 'Good', 4: 'Excellent', 5: 'World-Class' };
 
-  // Matchday revenue
+  // Matchday revenue (base values — user can override prices)
   const avgAttendance = Math.round(stadiumCapacity * (0.6 + seededRandom(seed + 52) * 0.35));
-  const ticketPrice = Math.round(18 + seededRandom(seed + 53) * 62);
+  const defaultTicketPrice = Math.round(18 + seededRandom(seed + 53) * 62);
   const seasonTicketHolders = Math.round(avgAttendance * (0.35 + seededRandom(seed + 54) * 0.3));
-  const seasonTicketPrice = ticketPrice * 19;
-  const matchdayHospitality = Math.round(5000 + seededRandom(seed + 55) * 45000);
-  const matchdayCatering = Math.round(avgAttendance * (2 + seededRandom(seed + 56) * 6));
+  const defaultHospitalityPrice = Math.round(5000 + seededRandom(seed + 55) * 45000);
+  const defaultCateringPrice = Math.round(avgAttendance * (2 + seededRandom(seed + 56) * 6));
   const matchesPlayed = Math.max(totalPlayed, Math.round(8 + seededRandom(seed + 57) * 20));
-  const totalMatchdayRevenue =
-    avgAttendance * ticketPrice * matchesPlayed +
-    seasonTicketHolders * seasonTicketPrice +
-    matchdayHospitality * matchesPlayed +
-    matchdayCatering * matchesPlayed;
 
   // Sponsors
   const sponsorTiers = [
@@ -185,28 +179,23 @@ function deriveBoardData(club: Club, summary: ManagerSummary | null, squad: Squa
   ];
   const totalSponsorIncome = sponsorTiers.reduce((s, t) => s + t.value, 0);
 
-  // Merchandise
-  const kitSales = Math.round(4000 + seededRandom(seed + 70) * 96000);
-  const kitPrice = Math.round(50 + seededRandom(seed + 71) * 40);
-  const scarfSales = Math.round(kitSales * (0.3 + seededRandom(seed + 72) * 0.4));
-  const scarfPrice = Math.round(12 + seededRandom(seed + 73) * 10);
-  const programmesSold = Math.round(avgAttendance * 0.15 * matchesPlayed);
-  const programmePrice = Math.round(3 + seededRandom(seed + 74) * 4);
-  const onlineMerchRevenue = Math.round(kitSales * kitPrice * (0.1 + seededRandom(seed + 75) * 0.2));
-  const totalMerchRevenue = kitSales * kitPrice + scarfSales * scarfPrice + programmesSold * programmePrice + onlineMerchRevenue;
+  // Merchandise (base values — user can override prices)
+  const kitSalesVolume = Math.round(4000 + seededRandom(seed + 70) * 96000);
+  const defaultKitPrice = Math.round(50 + seededRandom(seed + 71) * 40);
+  const scarfSalesVolume = Math.round(kitSalesVolume * (0.3 + seededRandom(seed + 72) * 0.4));
+  const defaultScarfPrice = Math.round(12 + seededRandom(seed + 73) * 10);
+  const defaultProgrammePrice = Math.round(3 + seededRandom(seed + 74) * 4);
+  const defaultOnlineMarkup = Math.round(10 + seededRandom(seed + 75) * 15); // percentage
 
-  // Facilities
-  const facilities = [
-    { name: 'Training Ground', level: Math.min(5, facilityLevel + Math.round(seededRandom(seed + 80) * 1.5 - 0.5)), upgradeCost: Math.round(transferBudget * (0.15 + seededRandom(seed + 81) * 0.1)) },
-    { name: 'Youth Academy', level: Math.min(5, facilityLevel + Math.round(seededRandom(seed + 82) * 1 - 0.5)), upgradeCost: Math.round(transferBudget * (0.1 + seededRandom(seed + 83) * 0.1)) },
-    { name: 'Medical Centre', level: Math.min(5, facilityLevel + Math.round(seededRandom(seed + 84) * 1 - 0.5)), upgradeCost: Math.round(transferBudget * (0.08 + seededRandom(seed + 85) * 0.08)) },
-    { name: 'Stadium Expansion', level: facilityLevel, upgradeCost: Math.round(transferBudget * (0.3 + seededRandom(seed + 86) * 0.4)) },
-    { name: 'Corporate Hospitality', level: Math.min(5, Math.max(1, facilityLevel - 1 + Math.round(seededRandom(seed + 87) * 2))), upgradeCost: Math.round(transferBudget * (0.05 + seededRandom(seed + 88) * 0.1)) },
-    { name: 'Fan Zone & Club Shop', level: Math.min(5, Math.max(1, facilityLevel - 1 + Math.round(seededRandom(seed + 89) * 2))), upgradeCost: Math.round(transferBudget * (0.03 + seededRandom(seed + 90) * 0.05)) },
+  // Facilities (base levels — user can upgrade)
+  const defaultFacilities = [
+    { name: 'Training Ground', baseLevel: Math.min(5, facilityLevel + Math.round(seededRandom(seed + 80) * 1.5 - 0.5)), upgradeCost: Math.round(transferBudget * (0.15 + seededRandom(seed + 81) * 0.1)) },
+    { name: 'Youth Academy', baseLevel: Math.min(5, facilityLevel + Math.round(seededRandom(seed + 82) * 1 - 0.5)), upgradeCost: Math.round(transferBudget * (0.1 + seededRandom(seed + 83) * 0.1)) },
+    { name: 'Medical Centre', baseLevel: Math.min(5, facilityLevel + Math.round(seededRandom(seed + 84) * 1 - 0.5)), upgradeCost: Math.round(transferBudget * (0.08 + seededRandom(seed + 85) * 0.08)) },
+    { name: 'Stadium Expansion', baseLevel: facilityLevel, upgradeCost: Math.round(transferBudget * (0.3 + seededRandom(seed + 86) * 0.4)) },
+    { name: 'Corporate Hospitality', baseLevel: Math.min(5, Math.max(1, facilityLevel - 1 + Math.round(seededRandom(seed + 87) * 2))), upgradeCost: Math.round(transferBudget * (0.05 + seededRandom(seed + 88) * 0.1)) },
+    { name: 'Fan Zone & Club Shop', baseLevel: Math.min(5, Math.max(1, facilityLevel - 1 + Math.round(seededRandom(seed + 89) * 2))), upgradeCost: Math.round(transferBudget * (0.03 + seededRandom(seed + 90) * 0.05)) },
   ];
-
-  // Total revenue
-  const totalSeasonRevenue = totalMatchdayRevenue + totalSponsorIncome + totalMerchRevenue;
 
   return {
     division,
@@ -227,31 +216,26 @@ function deriveBoardData(club: Club, summary: ManagerSummary | null, squad: Squa
     financeObjective,
     youthObjective,
     boardMessages,
-    // Revenue streams
+    // Revenue base data
     stadiumName,
     stadiumCapacity,
     avgAttendance,
-    ticketPrice,
+    defaultTicketPrice,
     seasonTicketHolders,
-    seasonTicketPrice,
-    matchdayHospitality,
-    matchdayCatering,
+    defaultHospitalityPrice,
+    defaultCateringPrice,
     matchesPlayed,
-    totalMatchdayRevenue,
     sponsorTiers,
     totalSponsorIncome,
-    kitSales,
-    kitPrice,
-    scarfSales,
-    scarfPrice,
-    programmesSold,
-    programmePrice,
-    onlineMerchRevenue,
-    totalMerchRevenue,
-    facilities,
+    kitSalesVolume,
+    defaultKitPrice,
+    scarfSalesVolume,
+    defaultScarfPrice,
+    defaultProgrammePrice,
+    defaultOnlineMarkup,
+    defaultFacilities,
     facilityLabels,
     facilityLevel,
-    totalSeasonRevenue,
   };
 }
 
@@ -332,6 +316,52 @@ function FormDisplay({ form }: { form: string[] }) {
   );
 }
 
+function PriceControl({ label, value, min, max, step, unit, onChange }: {
+  label: string; value: number; min: number; max: number; step: number; unit: string;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="border-b border-[#1a5a1e] py-1.5 last:border-0">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[#98ca7a] text-xs">{label}</span>
+        <span className="font-black text-[#efe56b] text-xs">{unit}{value.toLocaleString()}</span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full h-2 appearance-none rounded bg-[#1a3a1e] accent-[#22c55e] cursor-pointer [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#efe56b] [&::-webkit-slider-thumb]:appearance-none"
+      />
+      <div className="flex justify-between text-[9px] text-[#6b9a5a]">
+        <span>{unit}{min.toLocaleString()}</span>
+        <span>{unit}{max.toLocaleString()}</span>
+      </div>
+    </div>
+  );
+}
+
+function ActionButton({ label, cost, disabled, onClick }: {
+  label: string; cost: string; disabled: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`w-full border px-2 py-1 text-[10px] font-bold transition-colors ${
+        disabled
+          ? 'border-[#1a3a1e] bg-[#0a2e0d] text-[#3a5a3e] cursor-not-allowed'
+          : 'border-[#efe56b] bg-[#2a8a2b] text-[#efe56b] hover:bg-[#22c55e] hover:text-[#0a2e0d]'
+      }`}
+    >
+      {label} — {cost}
+    </button>
+  );
+}
+
 /* ── Main component ── */
 
 export default function BoardRoom({ activeClub, summary, squadPlayers }: BoardRoomProps) {
@@ -339,6 +369,58 @@ export default function BoardRoom({ activeClub, summary, squadPlayers }: BoardRo
     () => deriveBoardData(activeClub, summary, squadPlayers),
     [activeClub, summary, squadPlayers]
   );
+
+  // ── Interactive state: Matchday pricing ──
+  const [ticketPrice, setTicketPrice] = useState(data.defaultTicketPrice);
+  const [hospitalityPrice, setHospitalityPrice] = useState(data.defaultHospitalityPrice);
+  const [cateringPrice, setCateringPrice] = useState(data.defaultCateringPrice);
+
+  // ── Interactive state: Merchandise pricing ──
+  const [kitPrice, setKitPrice] = useState(data.defaultKitPrice);
+  const [scarfPrice, setScarfPrice] = useState(data.defaultScarfPrice);
+  const [programmePrice, setProgrammePrice] = useState(data.defaultProgrammePrice);
+  const [onlineMarkup, setOnlineMarkup] = useState(data.defaultOnlineMarkup);
+
+  // ── Interactive state: Facility upgrades ──
+  const [facilityLevels, setFacilityLevels] = useState<Record<string, number>>(() => {
+    const lvls: Record<string, number> = {};
+    data.defaultFacilities.forEach((f) => { lvls[f.name] = f.baseLevel; });
+    return lvls;
+  });
+  const [totalUpgradeSpent, setTotalUpgradeSpent] = useState(0);
+  const [upgradeLog, setUpgradeLog] = useState<string[]>([]);
+
+  // ── Derived calculations (reactive to user changes) ──
+
+  // Attendance impact: higher ticket prices reduce attendance slightly
+  const priceRatio = ticketPrice / data.defaultTicketPrice;
+  const attendanceMultiplier = Math.max(0.5, Math.min(1.1, 1.15 - 0.15 * priceRatio));
+  const effectiveAttendance = Math.round(data.avgAttendance * attendanceMultiplier);
+  const seasonTicketPrice = ticketPrice * 19;
+
+  const totalMatchdayRevenue =
+    effectiveAttendance * ticketPrice * data.matchesPlayed +
+    data.seasonTicketHolders * seasonTicketPrice +
+    hospitalityPrice * data.matchesPlayed +
+    cateringPrice * data.matchesPlayed;
+
+  // Merchandise: price affects demand
+  const kitDemandMultiplier = Math.max(0.4, Math.min(1.2, 1.2 - 0.004 * (kitPrice - 40)));
+  const effectiveKitSales = Math.round(data.kitSalesVolume * kitDemandMultiplier);
+  const scarfDemandMultiplier = Math.max(0.5, Math.min(1.2, 1.15 - 0.01 * (scarfPrice - 10)));
+  const effectiveScarfSales = Math.round(data.scarfSalesVolume * scarfDemandMultiplier);
+  const programmesSold = Math.round(effectiveAttendance * 0.15 * data.matchesPlayed);
+  const onlineMerchRevenue = Math.round(effectiveKitSales * kitPrice * (onlineMarkup / 100));
+  const totalMerchRevenue = effectiveKitSales * kitPrice + effectiveScarfSales * scarfPrice + programmesSold * programmePrice + onlineMerchRevenue;
+
+  const totalSeasonRevenue = totalMatchdayRevenue + data.totalSponsorIncome + totalMerchRevenue;
+
+  // Facility upgrade handler
+  const handleUpgrade = useCallback((facilityName: string, cost: number) => {
+    setFacilityLevels((prev) => ({ ...prev, [facilityName]: Math.min(5, (prev[facilityName] ?? 1) + 1) }));
+    setTotalUpgradeSpent((prev) => prev + cost);
+    setUpgradeLog((prev) => [...prev, `Upgraded ${facilityName} — €${cost.toLocaleString()}`]);
+  }, []);
 
   // Determine objective statuses from board data
   const leagueStatus: 'on-track' | 'at-risk' | 'behind' =
@@ -441,12 +523,15 @@ export default function BoardRoom({ activeClub, summary, squadPlayers }: BoardRo
       {/* Revenue total bar */}
       <div className="mb-3 border-2 border-[#efe56b] bg-[#1a3a1e] px-3 py-2 text-center">
         <span className="text-xs text-[#98ca7a]">Estimated Season Revenue</span>
-        <p className="text-lg font-black text-[#efe56b]">€{data.totalSeasonRevenue.toLocaleString()}</p>
+        <p className="text-lg font-black text-[#efe56b]">€{totalSeasonRevenue.toLocaleString()}</p>
         <div className="mt-1 flex justify-center gap-4 text-[10px] text-[#d5f8b6]">
-          <span>Matchday: <strong className="text-white">€{data.totalMatchdayRevenue.toLocaleString()}</strong></span>
+          <span>Matchday: <strong className="text-white">€{totalMatchdayRevenue.toLocaleString()}</strong></span>
           <span>Sponsors: <strong className="text-white">€{data.totalSponsorIncome.toLocaleString()}</strong></span>
-          <span>Merchandise: <strong className="text-white">€{data.totalMerchRevenue.toLocaleString()}</strong></span>
+          <span>Merchandise: <strong className="text-white">€{totalMerchRevenue.toLocaleString()}</strong></span>
         </div>
+        {totalUpgradeSpent > 0 && (
+          <p className="mt-1 text-[10px] text-[#ef4444]">Facility investments: −€{totalUpgradeSpent.toLocaleString()}</p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -468,23 +553,33 @@ export default function BoardRoom({ activeClub, summary, squadPlayers }: BoardRo
           </div>
         </Card>
 
-        {/* 6. Matchday Revenue */}
-        <Card title="Matchday Revenue">
+        {/* 6. Matchday Revenue — INTERACTIVE */}
+        <Card title="⚙ Matchday Revenue — Set Prices">
           <p className="mb-2 text-[10px] text-[#98ca7a]">{data.stadiumName} — Capacity: <strong className="text-white">{data.stadiumCapacity.toLocaleString()}</strong></p>
-          <StatRow label="Avg. Attendance" value={`${data.avgAttendance.toLocaleString()} (${Math.round((data.avgAttendance / data.stadiumCapacity) * 100)}%)`} />
-          <StatRow label="Ticket Price" value={`€${data.ticketPrice}`} />
-          <StatRow label="Season Ticket Holders" value={data.seasonTicketHolders.toLocaleString()} />
-          <StatRow label="Season Ticket Price" value={`€${data.seasonTicketPrice.toLocaleString()}`} />
-          <StatRow label="Hospitality (per match)" value={`€${data.matchdayHospitality.toLocaleString()}`} />
-          <StatRow label="Catering (per match)" value={`€${data.matchdayCatering.toLocaleString()}`} />
-          <StatRow label="Home Matches Played" value={data.matchesPlayed} />
+
+          <PriceControl label="Ticket Price" value={ticketPrice} min={10} max={150} step={1} unit="€" onChange={setTicketPrice} />
+          <PriceControl label="Hospitality (per match)" value={hospitalityPrice} min={1000} max={100000} step={500} unit="€" onChange={setHospitalityPrice} />
+          <PriceControl label="Catering Budget (per match)" value={cateringPrice} min={500} max={80000} step={500} unit="€" onChange={setCateringPrice} />
+
+          <div className="mt-2 border-t border-[#2a8a2b] pt-2 space-y-0.5">
+            <StatRow label="Effective Attendance" value={`${effectiveAttendance.toLocaleString()} (${Math.round((effectiveAttendance / data.stadiumCapacity) * 100)}%)`} />
+            {attendanceMultiplier < 0.95 && (
+              <p className="text-[9px] text-[#eab308]">⚠ High ticket prices are reducing attendance by {Math.round((1 - attendanceMultiplier) * 100)}%</p>
+            )}
+            {attendanceMultiplier > 1.0 && (
+              <p className="text-[9px] text-[#22c55e]">✓ Affordable tickets boosting attendance by {Math.round((attendanceMultiplier - 1) * 100)}%</p>
+            )}
+            <StatRow label="Season Ticket Holders" value={data.seasonTicketHolders.toLocaleString()} />
+            <StatRow label="Season Ticket Price" value={`€${seasonTicketPrice.toLocaleString()}`} />
+            <StatRow label="Home Matches Played" value={data.matchesPlayed} />
+          </div>
           <div className="mt-2 border-t-2 border-[#2a8a2b] pt-2">
-            <StatRow label="Total Matchday Revenue" value={`€${data.totalMatchdayRevenue.toLocaleString()}`} highlight />
+            <StatRow label="Total Matchday Revenue" value={`€${totalMatchdayRevenue.toLocaleString()}`} highlight />
           </div>
         </Card>
 
-        {/* 7. Stadium & Facilities */}
-        <Card title="Stadium &amp; Facilities">
+        {/* 7. Stadium & Facilities — INTERACTIVE UPGRADES */}
+        <Card title="⚙ Stadium &amp; Facilities — Manage">
           <div className="mb-2">
             <div className="flex items-center justify-between">
               <span className="text-xs text-[#98ca7a]">Overall Facility Rating</span>
@@ -496,37 +591,72 @@ export default function BoardRoom({ activeClub, summary, squadPlayers }: BoardRo
               ))}
             </div>
           </div>
-          {data.facilities.map((fac) => (
-            <div key={fac.name} className="flex items-center justify-between border-b border-[#1a5a1e] py-1.5 last:border-0">
-              <div className="flex-1">
-                <span className="text-xs text-[#d5f8b6]">{fac.name}</span>
-                <div className="mt-0.5 flex gap-0.5">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <div key={i} className={`h-1.5 w-4 ${i < fac.level ? 'bg-[#22c55e]' : 'bg-[#1a3a1e]'}`} />
-                  ))}
+          {data.defaultFacilities.map((fac) => {
+            const currentLevel = facilityLevels[fac.name] ?? fac.baseLevel;
+            const canUpgrade = currentLevel < 5;
+            const nextCost = Math.round(fac.upgradeCost * (1 + (currentLevel - fac.baseLevel) * 0.5));
+            return (
+              <div key={fac.name} className="border-b border-[#1a5a1e] py-2 last:border-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <span className="text-xs text-[#d5f8b6]">{fac.name}</span>
+                    <div className="mt-0.5 flex gap-0.5">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <div key={i} className={`h-1.5 w-4 ${i < currentLevel ? 'bg-[#22c55e]' : 'bg-[#1a3a1e]'}`} />
+                      ))}
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-[#98ca7a] mr-2">Lv. {currentLevel}</span>
                 </div>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] text-[#98ca7a]">Lv. {fac.level}</span>
-                {fac.level < 5 && (
-                  <p className="text-[9px] text-[#6b9a5a]">Upgrade: €{fac.upgradeCost.toLocaleString()}</p>
+                {canUpgrade && (
+                  <div className="mt-1">
+                    <ActionButton
+                      label={`Upgrade to Lv. ${currentLevel + 1}`}
+                      cost={`€${nextCost.toLocaleString()}`}
+                      disabled={false}
+                      onClick={() => handleUpgrade(fac.name, nextCost)}
+                    />
+                  </div>
+                )}
+                {!canUpgrade && (
+                  <p className="mt-1 text-[9px] text-[#22c55e]">✓ Maximum level reached</p>
                 )}
               </div>
+            );
+          })}
+          {totalUpgradeSpent > 0 && (
+            <div className="mt-2 border-t-2 border-[#2a8a2b] pt-2">
+              <StatRow label="Total Invested" value={`€${totalUpgradeSpent.toLocaleString()}`} highlight />
+              <div className="mt-1 max-h-20 overflow-y-auto">
+                {upgradeLog.map((msg, i) => (
+                  <p key={i} className="text-[9px] text-[#98ca7a]">✓ {msg}</p>
+                ))}
+              </div>
             </div>
-          ))}
+          )}
         </Card>
 
-        {/* 8. Merchandise & Supporter Products */}
-        <Card title="Merchandise &amp; Supporter Products">
-          <StatRow label="Replica Kits Sold" value={data.kitSales.toLocaleString()} />
-          <StatRow label="Kit Price" value={`€${data.kitPrice}`} />
-          <StatRow label="Scarves Sold" value={data.scarfSales.toLocaleString()} />
-          <StatRow label="Scarf Price" value={`€${data.scarfPrice}`} />
-          <StatRow label="Matchday Programmes" value={data.programmesSold.toLocaleString()} />
-          <StatRow label="Programme Price" value={`€${data.programmePrice}`} />
-          <StatRow label="Online Shop Revenue" value={`€${data.onlineMerchRevenue.toLocaleString()}`} />
+        {/* 8. Merchandise & Supporter Products — INTERACTIVE */}
+        <Card title="⚙ Merchandise &amp; Products — Set Prices">
+          <PriceControl label="Kit Price" value={kitPrice} min={30} max={120} step={1} unit="€" onChange={setKitPrice} />
+          <PriceControl label="Scarf Price" value={scarfPrice} min={5} max={35} step={1} unit="€" onChange={setScarfPrice} />
+          <PriceControl label="Programme Price" value={programmePrice} min={1} max={12} step={1} unit="€" onChange={setProgrammePrice} />
+          <PriceControl label="Online Shop Markup" value={onlineMarkup} min={5} max={40} step={1} unit="" onChange={setOnlineMarkup} />
+          {onlineMarkup > 0 && (
+            <p className="text-[9px] text-[#6b9a5a] -mt-1 mb-1">Online adds {onlineMarkup}% on top of kit revenue</p>
+          )}
+
+          <div className="mt-2 border-t border-[#2a8a2b] pt-2 space-y-0.5">
+            <StatRow label="Kits Sold" value={effectiveKitSales.toLocaleString()} />
+            {kitDemandMultiplier < 0.9 && (
+              <p className="text-[9px] text-[#eab308]">⚠ High kit price reducing demand by {Math.round((1 - kitDemandMultiplier) * 100)}%</p>
+            )}
+            <StatRow label="Scarves Sold" value={effectiveScarfSales.toLocaleString()} />
+            <StatRow label="Programmes Sold" value={programmesSold.toLocaleString()} />
+            <StatRow label="Online Shop Revenue" value={`€${onlineMerchRevenue.toLocaleString()}`} />
+          </div>
           <div className="mt-2 border-t-2 border-[#2a8a2b] pt-2">
-            <StatRow label="Total Merchandise Revenue" value={`€${data.totalMerchRevenue.toLocaleString()}`} highlight />
+            <StatRow label="Total Merchandise Revenue" value={`€${totalMerchRevenue.toLocaleString()}`} highlight />
           </div>
         </Card>
       </div>
