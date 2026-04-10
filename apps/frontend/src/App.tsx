@@ -10,6 +10,7 @@ import CupCenter from './components/CupCenter';
 import PlayerFixtures from './components/PlayerFixtures';
 import TransferMarket from './components/TransferMarket';
 import TrainingGround from './components/TrainingGround';
+import ClubManagement from './components/ClubManagement';
 import ClubCrest from './components/ClubCrest';
 import { fallbackClubs } from './fallbackClubs';
 import {
@@ -211,7 +212,7 @@ function savePositionOverrides(clubId: string, overrides: Record<string, string>
 const socket = io(API_BASE, { autoConnect: false });
 
 const sideMenu: { key: PageKey; label: string }[] = [
-  { key: 'human', label: 'Player Records' },
+  { key: 'human', label: 'Player Fixtures' },
   { key: 'manager', label: 'Computer Manager' },
   { key: 'manage', label: 'Manage' },
   { key: 'transfers', label: 'Transfers' },
@@ -947,6 +948,9 @@ function PagePanel({
   }
   if (page === 'training') {
     return <TrainingGround activeClub={activeClub} squadPlayers={squadPlayers} />;
+  }
+  if (page === 'manage') {
+    return <ClubManagement activeClub={activeClub} squadPlayers={squadPlayers} />;
   }
   if (page === 'squad') {
     return (
