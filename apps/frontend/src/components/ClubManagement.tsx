@@ -399,7 +399,7 @@ function OverviewTab({ clubStatus, squad, tasks, events, strategy, setTab }: {
             onClick={() => k.tab && setTab(k.tab)}
             className={`text-left border-2 border-[#2a8a2b] bg-[#0d3f10] p-2 transition-colors ${k.tab ? 'hover:bg-[#1a4a1e] cursor-pointer' : 'cursor-default'}`}
           >
-            <div className="text-[8px] uppercase text-[#6b9a5a] mb-0.5" style={{ fontFamily: MONO }}>{k.label}</div>
+            <div className="text-[10px] uppercase text-[#6b9a5a] mb-0.5" style={{ fontFamily: MONO }}>{k.label}</div>
             <div className="flex items-center gap-1">
               <StatusBadge value={k.value} thresholds={k.thresholds} />
               <BarMini value={k.value} />
@@ -435,17 +435,17 @@ function OverviewTab({ clubStatus, squad, tasks, events, strategy, setTab }: {
             <div key={t.id} className="border-b border-[#1a5a1e] py-1.5 last:border-b-0">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase text-[#d5f8b6]" style={{ fontFamily: MONO }}>{t.title}</span>
-                <span className={`text-[8px] font-bold uppercase ${t.priority === 'high' ? 'text-[#ff4444]' : t.priority === 'medium' ? 'text-[#efe56b]' : 'text-[#6b9a5a]'}`}>{t.priority}</span>
+                <span className={`text-[10px] font-bold uppercase ${t.priority === 'high' ? 'text-[#ff4444]' : t.priority === 'medium' ? 'text-[#efe56b]' : 'text-[#6b9a5a]'}`}>{t.priority}</span>
               </div>
               <div className="flex items-center gap-2 mt-0.5">
                 <div className="flex-1 h-1.5 bg-[#0a2e0d] border border-[#1a5a1e]">
                   <div className="h-full bg-[#2a8a2b]" style={{ width: `${t.progress}%` }} />
                 </div>
-                <span className="text-[8px] text-white font-mono">{t.progress}%</span>
+                <span className="text-[10px] text-white font-mono">{t.progress}%</span>
               </div>
             </div>
           ))}
-          <button type="button" onClick={() => setTab('tasks')} className="mt-2 text-[8px] text-[#00e5ff] underline hover:text-white">View all tasks →</button>
+          <button type="button" onClick={() => setTab('tasks')} className="mt-2 text-[10px] text-[#00e5ff] underline hover:text-white">View all tasks →</button>
         </Panel>
 
         {/* Strategy summary */}
@@ -469,7 +469,7 @@ function OverviewTab({ clubStatus, squad, tasks, events, strategy, setTab }: {
               <span className="text-[#00e5ff] font-bold uppercase">{strategy.financialStrategy}</span>
             </div>
           </div>
-          <button type="button" onClick={() => setTab('strategy')} className="mt-2 text-[8px] text-[#00e5ff] underline hover:text-white">Adjust strategy →</button>
+          <button type="button" onClick={() => setTab('strategy')} className="mt-2 text-[10px] text-[#00e5ff] underline hover:text-white">Adjust strategy →</button>
         </Panel>
       </div>
 
@@ -481,7 +481,7 @@ function OverviewTab({ clubStatus, squad, tasks, events, strategy, setTab }: {
             {unresolvedEvents.slice(0, 4).map((e) => (
               <div key={e.id} className={`flex items-center justify-between px-2 py-1 border ${e.urgent ? 'border-[#8a2a2a] bg-[#2a1010]' : 'border-[#1a5a1e] bg-[#0a2e0d]'} cursor-pointer hover:bg-[#1a4a1e]`} onClick={() => setTab('events')}>
                 <span className="text-[10px] text-[#d5f8b6] font-bold uppercase" style={{ fontFamily: MONO }}>{e.title}</span>
-                {e.urgent && <span className="text-[8px] text-[#ff4444] font-bold">URGENT</span>}
+                {e.urgent && <span className="text-[10px] text-[#ff4444] font-bold">URGENT</span>}
               </div>
             ))}
           </div>
@@ -531,30 +531,30 @@ function TasksTab({ tasks, staff, onUpdateTask, onDelegate }: {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold uppercase text-[#d5f8b6]" style={{ fontFamily: MONO }}>{t.title}</span>
-                  <span className={`text-[8px] font-bold uppercase ${priorityColor(t.priority)}`}>[{t.priority}]</span>
-                  <span className="text-[8px] text-[#6b9a5a] uppercase">{t.module}</span>
+                  <span className={`text-[10px] font-bold uppercase ${priorityColor(t.priority)}`}>[{t.priority}]</span>
+                  <span className="text-[10px] text-[#6b9a5a] uppercase">{t.module}</span>
                 </div>
                 <p className="text-[9px] text-[#98ca7a] mt-0.5">{t.description}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="flex-1 max-w-[200px] h-1.5 bg-[#0a2e0d] border border-[#1a5a1e]">
                     <div className={`h-full ${t.status === 'completed' ? 'bg-[#2a8a2b]' : t.status === 'failed' ? 'bg-[#8a2a2a]' : 'bg-[#2a8a2b]'}`} style={{ width: `${t.progress}%` }} />
                   </div>
-                  <span className="text-[8px] text-white font-mono">{t.progress}%</span>
-                  <span className="text-[8px] text-[#6b9a5a]">Deadline: {t.deadline}</span>
-                  {t.delegatedTo && <span className="text-[8px] text-[#00e5ff]">Assigned: {staff.find((s) => s.id === t.delegatedTo)?.name ?? 'Staff'}</span>}
+                  <span className="text-[10px] text-white font-mono">{t.progress}%</span>
+                  <span className="text-[10px] text-[#6b9a5a]">Deadline: {t.deadline}</span>
+                  {t.delegatedTo && <span className="text-[10px] text-[#00e5ff]">Assigned: {staff.find((s) => s.id === t.delegatedTo)?.name ?? 'Staff'}</span>}
                 </div>
               </div>
               {t.status === 'active' && (
                 <div className="flex flex-col gap-1 items-end">
                   <div className="flex gap-1">
                     {priorities.map((p) => (
-                      <Btn key={p} active={t.priority === p} onClick={() => onUpdateTask(t.id, { priority: p })} className="text-[7px] px-1 py-0.5">{p[0]}</Btn>
+                      <Btn key={p} active={t.priority === p} onClick={() => onUpdateTask(t.id, { priority: p })} className="text-[10px] px-1 py-0.5">{p[0]}</Btn>
                     ))}
                   </div>
                   <select
                     value={t.delegatedTo ?? ''}
                     onChange={(e) => e.target.value && onDelegate(t.id, e.target.value)}
-                    className="bg-[#0a2e0d] border border-[#2a8a2b] text-[#d5f8b6] text-[8px] px-1 py-0.5"
+                    className="bg-[#0a2e0d] border border-[#2a8a2b] text-[#d5f8b6] text-[10px] px-1 py-0.5"
                   >
                     <option value="">Delegate to...</option>
                     {staff.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.role})</option>)}
@@ -621,7 +621,7 @@ function StaffTab({ staff, onFire, onExtend, onAssign, addLog }: {
         <SectionTitle>Club Staff ({staff.length})</SectionTitle>
         {Array.from(roleGroups).map(([role, members]) => (
           <div key={role} className="mb-2">
-            <div className="text-[8px] uppercase text-[#efe56b] mb-0.5 font-bold">{role}</div>
+            <div className="text-[10px] uppercase text-[#efe56b] mb-0.5 font-bold">{role}</div>
             {members.map((s) => (
               <button
                 key={s.id}
@@ -631,8 +631,8 @@ function StaffTab({ staff, onFire, onExtend, onAssign, addLog }: {
                 style={{ fontFamily: MONO }}
               >
                 <span className="font-bold uppercase">{s.name}</span>
-                <span className="ml-1 text-[8px] text-[#6b9a5a]">{s.rating}</span>
-                {s.assignment && <span className="ml-1 text-[8px] text-[#00e5ff]">● {s.assignment}</span>}
+                <span className="ml-1 text-[10px] text-[#6b9a5a]">{s.rating}</span>
+                {s.assignment && <span className="ml-1 text-[10px] text-[#00e5ff]">● {s.assignment}</span>}
               </button>
             ))}
           </div>
@@ -659,7 +659,7 @@ function StaffTab({ staff, onFire, onExtend, onAssign, addLog }: {
             {/* Assign */}
             {assignments[sel.role] && (
               <div>
-                <label className="block text-[8px] uppercase text-[#6b9a5a] mb-0.5">Assign to:</label>
+                <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Assign to:</label>
                 <div className="flex flex-wrap gap-1">
                   {assignments[sel.role].map((a) => (
                     <ActionBtn key={a} onClick={() => { onAssign(sel.id, a); addLog(`${sel.name} assigned to ${a}.`); }} variant={sel.assignment === a ? 'yellow' : 'blue'}>{a}</ActionBtn>
@@ -722,8 +722,8 @@ function PlayerInteractionTab({ squad, relations, onInteract, addLog }: {
               style={{ fontFamily: MONO }}
             >
               <span className="font-bold uppercase">{p.name}</span>
-              <span className="ml-1 text-[8px] text-[#6b9a5a]">{p.role}</span>
-              <span className={`ml-1 text-[8px] font-bold ${morColor}`}>{p.morale}</span>
+              <span className="ml-1 text-[10px] text-[#6b9a5a]">{p.role}</span>
+              <span className={`ml-1 text-[10px] font-bold ${morColor}`}>{p.morale}</span>
               <span className="ml-1 text-[10px]">{statusIcon}</span>
             </button>
           );
@@ -753,11 +753,11 @@ function PlayerInteractionTab({ squad, relations, onInteract, addLog }: {
               </div>
 
               {rel?.lastInteraction && (
-                <div className="text-[8px] text-[#6b9a5a] italic">Last interaction: {rel.lastInteraction}</div>
+                <div className="text-[10px] text-[#6b9a5a] italic">Last interaction: {rel.lastInteraction}</div>
               )}
 
               <div className="border-t border-[#1a5a1e] pt-2">
-                <label className="block text-[8px] uppercase text-[#6b9a5a] mb-1">Player Interactions</label>
+                <label className="block text-[10px] uppercase text-[#6b9a5a] mb-1">Player Interactions</label>
                 <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
                   {actions.map((a) => (
                     <div key={a.label} className="flex flex-col">
@@ -765,7 +765,7 @@ function PlayerInteractionTab({ squad, relations, onInteract, addLog }: {
                         onInteract(sel.id, a.label, a.impact);
                         addLog(`${sel.name}: ${a.label}. ${a.effect}.`);
                       }} variant={a.variant}>{a.label}</ActionBtn>
-                      <span className="text-[7px] text-[#5a8a4a] mt-0.5">{a.effect}</span>
+                      <span className="text-[10px] text-[#5a8a4a] mt-0.5">{a.effect}</span>
                     </div>
                   ))}
                 </div>
@@ -845,11 +845,11 @@ function BoardTab({ clubStatus, onBoardAction, addLog }: {
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
                 <h5 className="text-[10px] font-bold uppercase text-[#d5f8b6]" style={{ fontFamily: MONO }}>{a.label}</h5>
-                <p className="text-[8px] text-[#98ca7a] mt-0.5">{a.description}</p>
+                <p className="text-[10px] text-[#98ca7a] mt-0.5">{a.description}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[8px] text-[#6b9a5a]">Success chance:</span>
+                  <span className="text-[10px] text-[#6b9a5a]">Success chance:</span>
                   <BarMini value={a.successChance} />
-                  <span className="text-[8px] text-white font-mono">{Math.round(a.successChance)}%</span>
+                  <span className="text-[10px] text-white font-mono">{Math.round(a.successChance)}%</span>
                 </div>
               </div>
               <ActionBtn onClick={() => handleAction(a.label, a.successChance)} variant={a.variant}>Submit</ActionBtn>
@@ -904,7 +904,7 @@ function ExternalTab({ clubStatus, onMediaAction, onSponsorAction, addLog }: {
               <div key={a.label} className="flex items-center justify-between border border-[#1a5a1e] bg-[#0a2e0d] px-2 py-1.5">
                 <div>
                   <div className="text-[10px] font-bold uppercase text-[#d5f8b6]" style={{ fontFamily: MONO }}>{a.label}</div>
-                  <div className="text-[8px] text-[#98ca7a]">{a.description}</div>
+                  <div className="text-[10px] text-[#98ca7a]">{a.description}</div>
                 </div>
                 <ActionBtn onClick={() => { onMediaAction(a.label); addLog(`Media: ${a.label}.`); }} variant={a.variant}>Act</ActionBtn>
               </div>
@@ -923,7 +923,7 @@ function ExternalTab({ clubStatus, onMediaAction, onSponsorAction, addLog }: {
                   <div className="flex items-start justify-between">
                     <div>
                       <span className="text-[10px] font-bold uppercase text-[#d5f8b6]" style={{ fontFamily: MONO }}>{s.name}</span>
-                      <div className="text-[8px] text-[#98ca7a]">{s.description}</div>
+                      <div className="text-[10px] text-[#98ca7a]">{s.description}</div>
                       <div className="text-[9px] mt-0.5" style={{ fontFamily: MONO }}>
                         <span className="text-[#efe56b]">€{s.value.toLocaleString()}/yr</span>
                         <span className="ml-2 text-[#6b9a5a]">Reputation impact: </span>
@@ -1011,7 +1011,7 @@ function StrategyTab({ strategy, onChange, addLog }: {
       {sections.map((sec) => (
         <Panel key={sec.key}>
           <SectionTitle>{sec.title}</SectionTitle>
-          <p className="text-[8px] text-[#98ca7a] mb-2">{sec.description}</p>
+          <p className="text-[10px] text-[#98ca7a] mb-2">{sec.description}</p>
           <div className="grid grid-cols-1 gap-1 sm:grid-cols-3">
             {sec.options.map((opt) => {
               const isActive = strategy[sec.key] === opt.value;
@@ -1026,7 +1026,7 @@ function StrategyTab({ strategy, onChange, addLog }: {
                   className={`text-left p-2 border transition-colors ${isActive ? 'border-[#efe56b] bg-[#2a8a2b]' : 'border-[#1a5a1e] bg-[#0a2e0d] hover:bg-[#1a4a1e]'}`}
                 >
                   <div className={`text-[10px] font-bold uppercase ${isActive ? 'text-[#efe56b]' : 'text-[#d5f8b6]'}`} style={{ fontFamily: MONO }}>{opt.label}</div>
-                  <div className={`text-[8px] mt-0.5 ${isActive ? 'text-[#d5f8b6]' : 'text-[#6b9a5a]'}`}>{opt.desc}</div>
+                  <div className={`text-[10px] mt-0.5 ${isActive ? 'text-[#d5f8b6]' : 'text-[#6b9a5a]'}`}>{opt.desc}</div>
                 </button>
               );
             })}
@@ -1068,8 +1068,8 @@ function EventsTab({ events, onResolve, addLog }: {
           <div className="flex items-center justify-between mb-1">
             <h4 className="text-xs font-black uppercase text-[#00e5ff]" style={{ fontFamily: RETRO }}>{evt.title}</h4>
             <div className="flex gap-2">
-              <span className="text-[8px] text-[#6b9a5a] uppercase">{evt.type}</span>
-              {evt.urgent && <span className="text-[8px] text-[#ff4444] font-bold uppercase animate-pulse">Urgent</span>}
+              <span className="text-[10px] text-[#6b9a5a] uppercase">{evt.type}</span>
+              {evt.urgent && <span className="text-[10px] text-[#ff4444] font-bold uppercase animate-pulse">Urgent</span>}
             </div>
           </div>
           <p className="text-[10px] text-[#d5f8b6] mb-2" style={{ fontFamily: MONO }}>{evt.message}</p>
@@ -1085,7 +1085,7 @@ function EventsTab({ events, onResolve, addLog }: {
                 className="text-left border border-[#2a8a2b] bg-[#0a2e0d] p-2 hover:bg-[#1a4a1e] transition-colors"
               >
                 <div className="text-[10px] font-bold uppercase text-[#efe56b]" style={{ fontFamily: MONO }}>{opt.label}</div>
-                <div className="text-[8px] text-[#98ca7a] mt-0.5">{opt.effect}</div>
+                <div className="text-[10px] text-[#98ca7a] mt-0.5">{opt.effect}</div>
               </button>
             ))}
           </div>
@@ -1099,7 +1099,7 @@ function EventsTab({ events, onResolve, addLog }: {
             {resolved.map((evt) => (
               <div key={evt.id} className="border border-[#1a5a1e] bg-[#0a2e0d] px-2 py-1 opacity-50">
                 <span className="text-[9px] text-[#6b9a5a] uppercase" style={{ fontFamily: MONO }}>{evt.title}</span>
-                <span className="ml-2 text-[8px] text-[#2a8a2b]">Resolved</span>
+                <span className="ml-2 text-[10px] text-[#2a8a2b]">Resolved</span>
               </div>
             ))}
           </div>
@@ -1308,7 +1308,7 @@ export default function ClubManagement({ activeClub, squadPlayers }: ClubManagem
           <Btn key={t.key} active={tab === t.key} onClick={() => setTab(t.key)}>
             {t.label}
             {t.key === 'events' && unresolvedCount > 0 && (
-              <span className="ml-1 text-[8px] text-[#ff4444]">({unresolvedCount})</span>
+              <span className="ml-1 text-[10px] text-[#ff4444]">({unresolvedCount})</span>
             )}
           </Btn>
         ))}

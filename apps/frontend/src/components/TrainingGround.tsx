@@ -417,7 +417,7 @@ function OverviewTab({ squad, trainingStates, teamIntensity, teamFocus, onSetInt
               <Btn key={i} active={teamIntensity === i} onClick={() => onSetIntensity(i)}>{i}</Btn>
             ))}
           </div>
-          <p className="mt-2 text-[8px] text-[#5a8a4a]">
+          <p className="mt-2 text-[10px] text-[#5a8a4a]">
             {teamIntensity === 'high' ? 'Faster growth, higher injury risk and fatigue.' :
              teamIntensity === 'medium' ? 'Balanced growth and risk. Recommended default.' :
              'Slow growth, minimal fatigue. Good for recovery periods.'}
@@ -430,7 +430,7 @@ function OverviewTab({ squad, trainingStates, teamIntensity, teamFocus, onSetInt
               <Btn key={f.key} active={teamFocus === f.key} onClick={() => onSetFocus(f.key)}>{f.label}</Btn>
             ))}
           </div>
-          <p className="mt-2 text-[8px] text-[#5a8a4a]">
+          <p className="mt-2 text-[10px] text-[#5a8a4a]">
             {teamFocus === 'attacking' ? 'Emphasis on shooting, passing and movement.' :
              teamFocus === 'defensive' ? 'Focus on tackling, positioning and marking.' :
              teamFocus === 'fitness' ? 'Conditioning, speed and stamina priority.' :
@@ -449,7 +449,7 @@ function OverviewTab({ squad, trainingStates, teamIntensity, teamFocus, onSetInt
             onClick={() => c.tab && setTab(c.tab)}
             className={`text-left border-2 border-[#2a8a2b] bg-[#0d3f10] p-2 transition-colors ${c.tab ? 'hover:bg-[#1a4a1e] cursor-pointer' : 'cursor-default'}`}
           >
-            <div className="text-[8px] uppercase text-[#6b9a5a] mb-0.5" style={{ fontFamily: MONO }}>{c.label}</div>
+            <div className="text-[10px] uppercase text-[#6b9a5a] mb-0.5" style={{ fontFamily: MONO }}>{c.label}</div>
             <div className={`text-sm font-black ${c.color ?? 'text-white'}`} style={{ fontFamily: MONO }}>{c.value}</div>
           </button>
         ))}
@@ -555,8 +555,8 @@ function SquadTrainingTab({ squad, trainingStates, teamIntensity, onSetFocus, on
                   <td className="py-1 px-1">
                     <span className="text-xs font-bold uppercase text-[#d5f8b6]" style={{ fontFamily: MONO }}>
                       {p.name}
-                      {ts?.resting && <span className="ml-1 text-[8px] text-[#00e5ff]">[REST]</span>}
-                      {ts?.recovering && <span className="ml-1 text-[8px] text-[#efe56b]">[RECOV]</span>}
+                      {ts?.resting && <span className="ml-1 text-[10px] text-[#00e5ff]">[REST]</span>}
+                      {ts?.recovering && <span className="ml-1 text-[10px] text-[#efe56b]">[RECOV]</span>}
                     </span>
                   </td>
                   <td className="py-1 px-1 text-[10px] text-[#00e5ff] uppercase font-mono">{p.role}</td>
@@ -652,8 +652,8 @@ function IndividualTab({ squad, trainingStates, teamIntensity, selectedPlayer, o
                 style={{ fontFamily: MONO }}
               >
                 <span className="font-bold uppercase">{p.name}</span>
-                <span className="ml-1 text-[8px] text-[#6b9a5a]">{p.role} {overall(p)}</span>
-                {ts?.resting && <span className="ml-1 text-[8px] text-[#00e5ff]">[R]</span>}
+                <span className="ml-1 text-[10px] text-[#6b9a5a]">{p.role} {overall(p)}</span>
+                {ts?.resting && <span className="ml-1 text-[10px] text-[#00e5ff]">[R]</span>}
               </button>
             );
           })}
@@ -731,7 +731,7 @@ function PlayerTrainingDetail({ player, ts, teamIntensity, onSetFocus, onSetInte
           <div key={a.label} className="flex items-center gap-1">
             <SkillBar label={a.label} value={a.value} />
             {(a.gain ?? 0) > 0 && (
-              <span className="text-[8px] text-[#2a8a2b] font-bold">+{a.gain}</span>
+              <span className="text-[10px] text-[#2a8a2b] font-bold">+{a.gain}</span>
             )}
           </div>
         ))}
@@ -779,7 +779,7 @@ function PlayerTrainingDetail({ player, ts, teamIntensity, onSetFocus, onSetInte
       <div className="border-t border-[#1a5a1e] pt-2 space-y-2">
         <div className="flex flex-wrap gap-3 items-end">
           <div>
-            <label className="block text-[8px] uppercase text-[#6b9a5a] mb-0.5">Training Focus</label>
+            <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Training Focus</label>
             <select
               value={ts?.focus ?? 'balanced'}
               onChange={(e) => onSetFocus(player.id, e.target.value as TrainingFocus)}
@@ -789,7 +789,7 @@ function PlayerTrainingDetail({ player, ts, teamIntensity, onSetFocus, onSetInte
             </select>
           </div>
           <div>
-            <label className="block text-[8px] uppercase text-[#6b9a5a] mb-0.5">Intensity</label>
+            <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Intensity</label>
             <div className="flex gap-1">
               {(['low', 'medium', 'high'] as Intensity[]).map((i) => (
                 <Btn key={i} active={(ts?.intensity ?? 'medium') === i} onClick={() => onSetIntensity(player.id, i)}>{i}</Btn>
@@ -836,7 +836,7 @@ function ScheduleTab({ schedule, onChange, onApplyPreset }: {
       {/* Color legend */}
       <div className="flex flex-wrap gap-2 mb-2">
         {DAY_TYPES.map((d) => (
-          <span key={d.key} className={`${d.color} px-2 py-0.5 text-[8px] text-white uppercase font-bold border border-[#333]`}>
+          <span key={d.key} className={`${d.color} px-2 py-0.5 text-[10px] text-white uppercase font-bold border border-[#333]`}>
             {d.label}
           </span>
         ))}
@@ -865,7 +865,7 @@ function ScheduleTab({ schedule, onChange, onApplyPreset }: {
                       <select
                         value={current}
                         onChange={(e) => onChange(day, e.target.value as DayType)}
-                        className="w-full bg-[#0a2e0d] border border-[#2a8a2b] text-[#d5f8b6] text-[8px] px-1 py-0.5"
+                        className="w-full bg-[#0a2e0d] border border-[#2a8a2b] text-[#d5f8b6] text-[10px] px-1 py-0.5"
                       >
                         {DAY_TYPES.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}
                       </select>

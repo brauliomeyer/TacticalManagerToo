@@ -409,7 +409,7 @@ function OverviewTab({ club, squad, offers, marketPlayers, shortlist, youthPlaye
           >
             <div className="text-[9px] uppercase text-[#6b9a5a] mb-0.5" style={{ fontFamily: MONO }}>{c.label}</div>
             <div className={`text-sm font-black ${c.color ?? 'text-white'}`} style={{ fontFamily: MONO }}>{c.value}</div>
-            {c.sub && <div className="text-[8px] text-[#5a8a4a] mt-0.5">{c.sub}</div>}
+            {c.sub && <div className="text-[10px] text-[#5a8a4a] mt-0.5">{c.sub}</div>}
           </button>
         ))}
       </div>
@@ -659,7 +659,7 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
         <h4 className="text-[10px] font-black uppercase text-[#00e5ff]" style={{ fontFamily: RETRO }}>Filters</h4>
 
         <div>
-          <label className="block text-[8px] uppercase text-[#6b9a5a] mb-0.5">Position</label>
+          <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Position</label>
           <select value={posFilter} onChange={(e) => setPosFilter(e.target.value)} className="w-full bg-[#0a2e0d] border border-[#2a8a2b] text-[#d5f8b6] text-[10px] px-1 py-0.5">
             <option value="ALL">All Positions</option>
             {POSITIONS.map((p) => <option key={p} value={p}>{p}</option>)}
@@ -667,7 +667,7 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
         </div>
 
         <div>
-          <label className="block text-[8px] uppercase text-[#6b9a5a] mb-0.5">Nationality</label>
+          <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Nationality</label>
           <select value={natFilter} onChange={(e) => setNatFilter(e.target.value)} className="w-full bg-[#0a2e0d] border border-[#2a8a2b] text-[#d5f8b6] text-[10px] px-1 py-0.5">
             <option value="ALL">All Nationalities</option>
             {NATIONALITIES.map((n) => <option key={n} value={n}>{n}</option>)}
@@ -675,7 +675,7 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
         </div>
 
         <div>
-          <label className="block text-[8px] uppercase text-[#6b9a5a] mb-0.5">League</label>
+          <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">League</label>
           <select value={leagueFilter} onChange={(e) => setLeagueFilter(e.target.value)} className="w-full bg-[#0a2e0d] border border-[#2a8a2b] text-[#d5f8b6] text-[10px] px-1 py-0.5">
             <option value="ALL">All Leagues</option>
             {LEAGUES.map((l) => <option key={l} value={l}>{l}</option>)}
@@ -683,7 +683,7 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
         </div>
 
         <div>
-          <label className="block text-[8px] uppercase text-[#6b9a5a] mb-0.5">Contract</label>
+          <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Contract</label>
           <select value={contractFilter} onChange={(e) => setContractFilter(e.target.value)} className="w-full bg-[#0a2e0d] border border-[#2a8a2b] text-[#d5f8b6] text-[10px] px-1 py-0.5">
             <option value="ALL">Any Contract</option>
             <option value="expiring">Expiring (1 year)</option>
@@ -692,7 +692,7 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
         </div>
 
         <div>
-          <label className="block text-[8px] uppercase text-[#6b9a5a] mb-0.5">Age: {minAge} – {maxAge}</label>
+          <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Age: {minAge} – {maxAge}</label>
           <div className="flex gap-1">
             <input type="range" min={15} max={40} value={minAge} onChange={(e) => setMinAge(Number(e.target.value))} className="flex-1 accent-[#2a8a2b]" />
             <input type="range" min={15} max={40} value={maxAge} onChange={(e) => setMaxAge(Number(e.target.value))} className="flex-1 accent-[#2a8a2b]" />
@@ -700,17 +700,17 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
         </div>
 
         <div>
-          <label className="block text-[8px] uppercase text-[#6b9a5a] mb-0.5">Minimum Rating: {minRating}</label>
+          <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Minimum Rating: {minRating}</label>
           <input type="range" min={40} max={95} value={minRating} onChange={(e) => setMinRating(Number(e.target.value))} className="w-full accent-[#2a8a2b]" />
         </div>
 
         <div>
-          <label className="block text-[8px] uppercase text-[#6b9a5a] mb-0.5">Max Price: {fmtMoney(maxPrice)}</label>
+          <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Max Price: {fmtMoney(maxPrice)}</label>
           <input type="range" min={0} max={200_000_000} step={1_000_000} value={maxPrice} onChange={(e) => setMaxPrice(Number(e.target.value))} className="w-full accent-[#2a8a2b]" />
         </div>
 
         <div>
-          <label className="block text-[8px] uppercase text-[#6b9a5a] mb-0.5">Sort By</label>
+          <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Sort By</label>
           <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full bg-[#0a2e0d] border border-[#2a8a2b] text-[#d5f8b6] text-[10px] px-1 py-0.5">
             <option value="rating">Rating</option>
             <option value="potential">Potential</option>
@@ -1193,9 +1193,9 @@ function NegotiationDialog({ player, type, onSubmit, onCancel }: {
         {type === 'buy' ? (
           <div className="space-y-2">
             <div>
-              <label className="block text-[8px] uppercase text-[#6b9a5a] mb-0.5">Bid Amount: {fmtMoney(amount)}</label>
+              <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Bid Amount: {fmtMoney(amount)}</label>
               <input type="range" min={0} max={player.value * 3} step={100000} value={amount} onChange={(e) => setAmount(Number(e.target.value))} className="w-full accent-[#2a8a2b]" />
-              <div className="flex justify-between text-[8px] text-[#5a8a4a]">
+              <div className="flex justify-between text-[10px] text-[#5a8a4a]">
                 <span>£0</span>
                 <span className="text-[#efe56b]">Value: {fmtMoney(player.value)}</span>
                 <span>{fmtMoney(player.value * 3)}</span>
@@ -1205,15 +1205,15 @@ function NegotiationDialog({ player, type, onSubmit, onCancel }: {
         ) : (
           <div className="space-y-2">
             <div>
-              <label className="block text-[8px] uppercase text-[#6b9a5a] mb-0.5">Loan Duration: {loanDuration} months</label>
+              <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Loan Duration: {loanDuration} months</label>
               <input type="range" min={1} max={24} value={loanDuration} onChange={(e) => setLoanDuration(Number(e.target.value))} className="w-full accent-[#2a8a2b]" />
             </div>
             <div>
-              <label className="block text-[8px] uppercase text-[#6b9a5a] mb-0.5">Wage Split: {wageSplit}% your club</label>
+              <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Wage Split: {wageSplit}% your club</label>
               <input type="range" min={0} max={100} step={5} value={wageSplit} onChange={(e) => setWageSplit(Number(e.target.value))} className="w-full accent-[#2a8a2b]" />
             </div>
             <div>
-              <label className="block text-[8px] uppercase text-[#6b9a5a] mb-0.5">Optional Buy Clause: {buyClause > 0 ? fmtMoney(buyClause) : 'None'}</label>
+              <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Optional Buy Clause: {buyClause > 0 ? fmtMoney(buyClause) : 'None'}</label>
               <input type="range" min={0} max={player.value * 2} step={500000} value={buyClause} onChange={(e) => setBuyClause(Number(e.target.value))} className="w-full accent-[#2a8a2b]" />
             </div>
           </div>
@@ -1461,12 +1461,12 @@ export default function TransferMarket({ activeClub, clubs, squadPlayers }: Tran
           <Btn key={t.key} active={tab === t.key} onClick={() => setTab(t.key)}>
             {t.label}
             {t.key === 'offers' && offers.filter((o) => o.status === 'pending').length > 0 && (
-              <span className="ml-1 inline-block px-1 py-0.5 text-[8px] bg-[#8a2a2a] text-white rounded">
+              <span className="ml-1 inline-block px-1 py-0.5 text-[10px] bg-[#8a2a2a] text-white rounded">
                 {offers.filter((o) => o.status === 'pending').length}
               </span>
             )}
             {t.key === 'shortlist' && shortlist.length > 0 && (
-              <span className="ml-1 inline-block px-1 py-0.5 text-[8px] bg-[#4a3a0a] text-[#efe56b] rounded">
+              <span className="ml-1 inline-block px-1 py-0.5 text-[10px] bg-[#4a3a0a] text-[#efe56b] rounded">
                 {shortlist.length}
               </span>
             )}
