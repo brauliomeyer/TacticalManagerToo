@@ -62,7 +62,7 @@ type CategoryKey =
   | 'cleanSheets'
   | 'appearances';
 
-type CompFilter = 'all' | 'league' | 'fa-cup' | 'league-cup' | 'european';
+type CompFilter = 'all' | 'league' | 'fa-cup' | 'league-cup' | 'champions-league' | 'europa-league' | 'conference-league';
 
 interface Category {
   key: CategoryKey;
@@ -99,26 +99,28 @@ function hs(str: string) {
    ══════════════════════════════════════════════ */
 
 const CATEGORIES: Category[] = [
-  { key: 'motm', title: 'Men of the Matches', shortTitle: 'MOTM', unit: 'awards' },
+  { key: 'motm', title: 'Men of the Matches', shortTitle: 'Men of the Matches', unit: 'awards' },
   { key: 'penalties', title: 'Penalty Princes', shortTitle: 'Penalties', unit: 'scored' },
   { key: 'shooters', title: 'Super Shooters', shortTitle: 'Goals', unit: 'goals' },
   { key: 'cupGoals', title: 'Cup Scoring Kings', shortTitle: 'Cup Goals', unit: 'goals' },
   { key: 'superSubs', title: 'Super Subs', shortTitle: 'Sub Goals', unit: 'goals' },
   { key: 'hatTricks', title: 'Hat Trick Heroes', shortTitle: 'Hat-tricks', unit: 'hat-tricks' },
-  { key: 'redCards', title: 'Red Card Rogues', shortTitle: 'Reds', unit: 'cards' },
-  { key: 'yellowCards', title: 'Yellow Perils', shortTitle: 'Yellows', unit: 'cards' },
-  { key: 'capped', title: 'Capped Counts', shortTitle: 'Caps', unit: 'caps' },
+  { key: 'redCards', title: 'Red Card Rogues', shortTitle: 'Red Cards', unit: 'cards' },
+  { key: 'yellowCards', title: 'Yellow Perils', shortTitle: 'Yellow Cards', unit: 'cards' },
+  { key: 'capped', title: 'Capped Counts', shortTitle: 'International Caps', unit: 'caps' },
   { key: 'assists', title: 'Assist Kings', shortTitle: 'Assists', unit: 'assists' },
   { key: 'cleanSheets', title: 'Clean Sheet Masters', shortTitle: 'Clean Sheets', unit: 'sheets' },
-  { key: 'appearances', title: 'Appearance Leaders', shortTitle: 'Apps', unit: 'apps' },
+  { key: 'appearances', title: 'Appearance Leaders', shortTitle: 'Appearances', unit: 'appearances' },
 ];
 
 const COMPETITIONS: CompetitionOption[] = [
-  { key: 'all', label: 'All Competitions', short: 'All' },
+  { key: 'all', label: 'All Competitions', short: 'All Competitions' },
   { key: 'league', label: 'League', short: 'League' },
   { key: 'fa-cup', label: 'FA Cup', short: 'FA Cup' },
-  { key: 'league-cup', label: 'League Cup', short: 'LC' },
-  { key: 'european', label: 'European', short: 'Europe' },
+  { key: 'league-cup', label: 'League Cup', short: 'League Cup' },
+  { key: 'champions-league', label: 'Champions League', short: 'Champions League' },
+  { key: 'europa-league', label: 'Europa League', short: 'Europa League' },
+  { key: 'conference-league', label: 'Conference League', short: 'Conference League' },
 ];
 
 /* ══════════════════════════════════════════════
@@ -149,10 +151,12 @@ const CLUB_NAMES = [
    ══════════════════════════════════════════════ */
 
 const COMP_CONFIG: Record<Exclude<CompFilter, 'all'>, { mult: number; seedOff: number }> = {
-  'league':     { mult: 1.0,  seedOff: 0 },
-  'fa-cup':     { mult: 0.3,  seedOff: 1000 },
-  'league-cup': { mult: 0.2,  seedOff: 2000 },
-  'european':   { mult: 0.55, seedOff: 3000 },
+  'league':            { mult: 1.0,  seedOff: 0 },
+  'fa-cup':            { mult: 0.3,  seedOff: 1000 },
+  'league-cup':        { mult: 0.2,  seedOff: 2000 },
+  'champions-league':  { mult: 0.45, seedOff: 3000 },
+  'europa-league':     { mult: 0.35, seedOff: 4000 },
+  'conference-league': { mult: 0.2,  seedOff: 5000 },
 };
 
 function generateCompEntries(
@@ -253,7 +257,7 @@ function generateCompEntries(
   return entries;
 }
 
-const SINGLE_COMPS: Exclude<CompFilter, 'all'>[] = ['league', 'fa-cup', 'league-cup', 'european'];
+const SINGLE_COMPS: Exclude<CompFilter, 'all'>[] = ['league', 'fa-cup', 'league-cup', 'champions-league', 'europa-league', 'conference-league'];
 
 function generateLeaderboard(
   category: CategoryKey,
