@@ -1,0 +1,446 @@
+import { useMemo, useState } from 'react';
+
+/* ══════════════════════════════════════════════
+   Types
+   ══════════════════════════════════════════════ */
+
+interface Club {
+  id: string;
+  name: string;
+  country: string;
+  budget: number;
+  reputation: number;
+  leagueId?: string | null;
+  leagueName?: string | null;
+}
+
+interface SquadPlayer {
+  id: string;
+  name: string;
+  age: number;
+  role: string;
+  played: number;
+  scored: number;
+  caps: number;
+  morale: number;
+  stamina: number;
+  form: number;
+  potential: number;
+  shooting: number;
+  passing: number;
+  tackling: number;
+  heading: number;
+  influence: number;
+  attitude: number;
+  reliability: number;
+}
+
+interface PlayerFixturesProps {
+  activeClub: Club;
+  clubs: Club[];
+  squadPlayers: SquadPlayer[];
+}
+
+interface LeaderboardEntry {
+  rank: number;
+  playerName: string;
+  clubName: string;
+  value: number;
+}
+
+type CategoryKey =
+  | 'motm'
+  | 'penalties'
+  | 'shooters'
+  | 'cupGoals'
+  | 'superSubs'
+  | 'hatTricks'
+  | 'redCards'
+  | 'yellowCards'
+  | 'capped'
+  | 'assists'
+  | 'cleanSheets'
+  | 'appearances';
+
+interface Category {
+  key: CategoryKey;
+  title: string;
+  shortTitle: string;
+  unit: string;
+}
+
+/* ══════════════════════════════════════════════
+   Seeded random
+   ══════════════════════════════════════════════ */
+
+function sr(seed: number) {
+  let s = seed % 2147483647;
+  if (s <= 0) s += 2147483646;
+  s = (s * 16807) % 2147483647;
+  return (s - 1) / 2147483646;
+}
+
+function hs(str: string) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+/* ══════════════════════════════════════════════
+   Categories
+   ══════════════════════════════════════════════ */
+
+const CATEGORIES: Category[] = [
+  { key: 'motm', title: 'Men of the Matches', shortTitle: 'MOTM', unit: 'awards' },
+  { key: 'penalties', title: 'Penalty Princes', shortTitle: 'Penalties', unit: 'scored' },
+  { key: 'shooters', title: 'Super Shooters', shortTitle: 'Goals', unit: 'goals' },
+  { key: 'cupGoals', title: 'Cup Scoring Kings', shortTitle: 'Cup Goals', unit: 'goals' },
+  { key: 'superSubs', title: 'Super Subs', shortTitle: 'Sub Goals', unit: 'goals' },
+  { key: 'hatTricks', title: 'Hat Trick Heroes', shortTitle: 'Hat-tricks', unit: 'hat-tricks' },
+  { key: 'redCards', title: 'Red Card Rogues', shortTitle: 'Reds', unit: 'cards' },
+  { key: 'yellowCards', title: 'Yellow Perils', shortTitle: 'Yellows', unit: 'cards' },
+  { key: 'capped', title: 'Capped Counts', shortTitle: 'Caps', unit: 'caps' },
+  { key: 'assists', title: 'Assist Kings', shortTitle: 'Assists', unit: 'assists' },
+  { key: 'cleanSheets', title: 'Clean Sheet Masters', shortTitle: 'Clean Sheets', unit: 'sheets' },
+  { key: 'appearances', title: 'Appearance Leaders', shortTitle: 'Apps', unit: 'apps' },
+];
+
+/* ══════════════════════════════════════════════
+   Famous player names pool (for non-active clubs)
+   ══════════════════════════════════════════════ */
+
+const PLAYER_POOL = [
+  'Robson', 'Wilkins', 'Donaghy', 'Thorstvedt', 'Barnes', 'Southall', 'O Leary', 'Moran',
+  'Waddle', 'McGrath', 'Rush', 'Walker', 'Aldridge', 'Pearce', 'Houghton', 'Schmeichel',
+  'Hoddle', 'Strachan', 'Hughes', 'Beardsley', 'Shearer', 'Le Tissier', 'Cantona', 'Bergkamp',
+  'Zola', 'Vieira', 'Keane', 'Giggs', 'Scholes', 'Beckham', 'Gerrard', 'Lampard',
+  'Ferdinand', 'Terry', 'Cole', 'Henry', 'Rooney', 'Drogba', 'Torres', 'Aguero',
+  'Silva', 'Hazard', 'De Bruyne', 'Salah', 'Kane', 'Son', 'Vardy', 'Mahrez',
+  'Sterling', 'Saka', 'Foden', 'Mount', 'Rice', 'Bellingham', 'Palmer', 'Watkins',
+  'Lineker', 'Gascoigne', 'Platt', 'Adams', 'Seaman', 'Campbell', 'Owen', 'Fowler',
+];
+
+const CLUB_NAMES = [
+  'Man United', 'Arsenal', 'Chelsea', 'Liverpool', 'Man City', 'Tottenham', 'Newcastle',
+  'West Ham', 'Aston Villa', 'Everton', 'Leeds United', 'Sheffield W', 'Nott Forest',
+  'Blackburn R', 'QPR', 'Crystal Palace', 'Brighton', 'Wolves', 'Leicester', 'Southampton',
+  'Fulham', 'Brentford', 'Bournemouth', 'Burnley', 'Sheffield Utd', 'Sunderland',
+  'Middlesbrough', 'Norwich', 'Derby County', 'Stoke City', 'Coventry', 'Ipswich Town',
+];
+
+/* ══════════════════════════════════════════════
+   Generate leaderboard data
+   ══════════════════════════════════════════════ */
+
+function generateLeaderboard(
+  category: CategoryKey,
+  activeClub: Club,
+  clubs: Club[],
+  squad: SquadPlayer[],
+): LeaderboardEntry[] {
+  const seed = hs(activeClub.id + category);
+  const entries: LeaderboardEntry[] = [];
+
+  // Add active club players with real-ish stats derived from their attributes
+  for (let i = 0; i < squad.length; i++) {
+    const p = squad[i];
+    const pSeed = hs(p.id + category) + seed;
+    let value = 0;
+
+    switch (category) {
+      case 'motm':
+        value = Math.max(0, Math.round(p.influence * 0.3 + p.form * 0.2 + sr(pSeed) * 4 - 1));
+        break;
+      case 'penalties':
+        value = p.role.includes('FORWARD') || p.role.includes('ATTACKING')
+          ? Math.round(sr(pSeed) * 6)
+          : Math.round(sr(pSeed) * 2);
+        break;
+      case 'shooters':
+        value = p.scored > 0 ? p.scored : Math.round(p.shooting * 0.4 * sr(pSeed + 1));
+        break;
+      case 'cupGoals':
+        value = Math.round((p.scored > 0 ? p.scored * 0.3 : p.shooting * 0.15) * sr(pSeed + 2));
+        break;
+      case 'superSubs':
+        value = Math.round(sr(pSeed) * 4 * (p.attitude > 12 ? 1.5 : 1));
+        break;
+      case 'hatTricks':
+        value = p.scored >= 8 ? Math.max(0, Math.round(sr(pSeed) * 3 - 0.5)) : 0;
+        break;
+      case 'redCards':
+        value = Math.round(sr(pSeed) * (p.tackling > 14 ? 3 : 1.5) * (p.attitude < 10 ? 1.5 : 0.8));
+        break;
+      case 'yellowCards':
+        value = Math.round(sr(pSeed) * (p.tackling > 10 ? 8 : 4) * (p.attitude < 12 ? 1.3 : 0.7));
+        break;
+      case 'capped':
+        value = p.caps > 0 ? p.caps : Math.round(sr(pSeed) * 30 * (p.influence > 12 ? 1.5 : 0.5));
+        break;
+      case 'assists':
+        value = Math.round(p.passing * 0.35 * sr(pSeed + 3) + p.played * 0.1);
+        break;
+      case 'cleanSheets':
+        value = p.role === 'GOALKEEPER' || p.role.includes('BACK')
+          ? Math.round(sr(pSeed) * 12 + p.played * 0.2)
+          : 0;
+        break;
+      case 'appearances':
+        value = p.played > 0 ? p.played : Math.round(8 + sr(pSeed) * 30);
+        break;
+    }
+
+    if (value > 0) {
+      entries.push({ rank: 0, playerName: p.name, clubName: activeClub.name, value });
+    }
+  }
+
+  // Add players from other clubs to fill a top-20 leaderboard
+  const otherClubs = clubs.length > 1
+    ? clubs.filter((c) => c.id !== activeClub.id).map((c) => c.name)
+    : CLUB_NAMES.filter((c) => c !== activeClub.name);
+
+  for (let i = 0; i < 35; i++) {
+    const pSeed = seed + i * 97 + 500;
+    const name = PLAYER_POOL[Math.floor(sr(pSeed) * PLAYER_POOL.length)];
+    const club = otherClubs[Math.floor(sr(pSeed + 1) * otherClubs.length)];
+    let value = 0;
+
+    switch (category) {
+      case 'motm': value = Math.round(1 + sr(pSeed + 2) * 8); break;
+      case 'penalties': value = Math.round(sr(pSeed + 2) * 8); break;
+      case 'shooters': value = Math.round(1 + sr(pSeed + 2) * 25); break;
+      case 'cupGoals': value = Math.round(sr(pSeed + 2) * 10); break;
+      case 'superSubs': value = Math.round(sr(pSeed + 2) * 6); break;
+      case 'hatTricks': value = Math.round(sr(pSeed + 2) * 4); break;
+      case 'redCards': value = Math.round(sr(pSeed + 2) * 4); break;
+      case 'yellowCards': value = Math.round(1 + sr(pSeed + 2) * 12); break;
+      case 'capped': value = Math.round(10 + sr(pSeed + 2) * 80); break;
+      case 'assists': value = Math.round(1 + sr(pSeed + 2) * 15); break;
+      case 'cleanSheets': value = Math.round(sr(pSeed + 2) * 15); break;
+      case 'appearances': value = Math.round(10 + sr(pSeed + 2) * 35); break;
+    }
+
+    if (value > 0) {
+      entries.push({ rank: 0, playerName: name, clubName: club, value });
+    }
+  }
+
+  // Sort descending, take top 20, assign ranks
+  entries.sort((a, b) => b.value - a.value);
+  const top = entries.slice(0, 20);
+  top.forEach((e, idx) => { e.rank = idx + 1; });
+  return top;
+}
+
+/* ══════════════════════════════════════════════
+   Sub-components
+   ══════════════════════════════════════════════ */
+
+function CategoryMenu({ categories, selected, onSelect }: {
+  categories: Category[];
+  selected: CategoryKey;
+  onSelect: (key: CategoryKey) => void;
+}) {
+  return (
+    <div className="border-2 border-[#2a8a2b] bg-[#0d3f10] p-2">
+      <div className="space-y-0.5">
+        {categories.map((cat) => (
+          <button
+            key={cat.key}
+            type="button"
+            onClick={() => onSelect(cat.key)}
+            className={`block w-full text-left px-3 py-1.5 text-sm font-black uppercase tracking-wide transition-colors ${
+              selected === cat.key
+                ? 'bg-[#2a8a2b] text-[#00e5ff]'
+                : 'text-[#00e5ff] hover:bg-[#1a4a1e]'
+            }`}
+            style={{ fontFamily: '"Press Start 2P", "Courier New", monospace' }}
+          >
+            {cat.title}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LeaderboardTable({ category, entries, clubName }: {
+  category: Category;
+  entries: LeaderboardEntry[];
+  clubName: string;
+}) {
+  return (
+    <div className="border-2 border-[#2a8a2b] bg-[#0d3f10]">
+      {/* Title */}
+      <h3
+        className="border-b-2 border-[#2a8a2b] bg-[#0a2e0d] px-4 py-3 text-lg font-black uppercase text-[#00e5ff]"
+        style={{ fontFamily: '"Press Start 2P", "Courier New", monospace' }}
+      >
+        {category.title}
+      </h3>
+
+      {/* Table */}
+      <div className="p-2">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b-2 border-[#2a8a2b]">
+              <th className="py-1 text-left text-[10px] font-bold uppercase text-[#efe56b] w-8">#</th>
+              <th className="py-1 text-left text-[10px] font-bold uppercase text-[#efe56b]">Player</th>
+              <th className="py-1 text-left text-[10px] font-bold uppercase text-[#efe56b]">Club</th>
+              <th className="py-1 text-right text-[10px] font-bold uppercase text-[#efe56b] w-16">{category.unit}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((entry) => {
+              const isOwnClub = entry.clubName === clubName;
+              return (
+                <tr
+                  key={`${entry.rank}-${entry.playerName}`}
+                  className={`border-b border-[#1a5a1e] ${isOwnClub ? 'bg-[#1a4a1e]' : ''}`}
+                >
+                  <td className="py-1 px-1 text-xs text-[#6b9a5a] font-mono">{entry.rank}</td>
+                  <td className="py-1 px-1">
+                    <span
+                      className={`text-xs font-bold uppercase ${isOwnClub ? 'text-[#efe56b]' : 'text-[#d5f8b6]'}`}
+                      style={{ fontFamily: '"Courier New", monospace', letterSpacing: '0.05em' }}
+                    >
+                      {entry.playerName}
+                    </span>
+                  </td>
+                  <td className="py-1 px-1">
+                    <span
+                      className={`text-xs uppercase ${isOwnClub ? 'text-[#efe56b]' : 'text-[#98ca7a]'}`}
+                      style={{ fontFamily: '"Courier New", monospace', letterSpacing: '0.05em' }}
+                    >
+                      {entry.clubName}
+                    </span>
+                  </td>
+                  <td className="py-1 px-1 text-right">
+                    <span className="text-xs font-black text-white font-mono">{entry.value}</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ClubSummaryBar({ club, squad, allData }: {
+  club: Club;
+  squad: SquadPlayer[];
+  allData: Map<CategoryKey, LeaderboardEntry[]>;
+}) {
+  // Count how many club players appear in each leaderboard
+  const clubInTop = CATEGORIES.map((cat) => {
+    const data = allData.get(cat.key) ?? [];
+    return { title: cat.shortTitle, count: data.filter((e) => e.clubName === club.name).length };
+  }).filter((c) => c.count > 0);
+
+  const totalGoals = squad.reduce((s, p) => s + p.scored, 0);
+  const totalPlayed = Math.max(...squad.map((p) => p.played), 0);
+  const totalCaps = squad.reduce((s, p) => s + p.caps, 0);
+
+  return (
+    <div className="border-2 border-[#efe56b] bg-[#1a3a1e] px-3 py-2">
+      <div className="flex flex-wrap items-center gap-3 text-xs">
+        <span className="text-[#98ca7a]">Squad goals: <strong className="text-white">{totalGoals}</strong></span>
+        <span className="text-[#98ca7a]">Max apps: <strong className="text-white">{totalPlayed}</strong></span>
+        <span className="text-[#98ca7a]">Total caps: <strong className="text-white">{totalCaps}</strong></span>
+        <span className="text-[#6b9a5a]">|</span>
+        {clubInTop.map((c) => (
+          <span key={c.title} className="border border-[#2a8a2b] bg-[#0d3f10] px-1.5 py-0.5 text-[10px] text-[#d5f8b6]">
+            {c.title}: <strong className="text-[#efe56b]">{c.count}</strong> in top 20
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   Main Component
+   ══════════════════════════════════════════════ */
+
+export default function PlayerFixtures({ activeClub, clubs, squadPlayers }: PlayerFixturesProps) {
+  const [selectedCategory, setSelectedCategory] = useState<CategoryKey>('shooters');
+
+  // Generate all leaderboards once (memoized per club)
+  const allData = useMemo(() => {
+    const map = new Map<CategoryKey, LeaderboardEntry[]>();
+    for (const cat of CATEGORIES) {
+      map.set(cat.key, generateLeaderboard(cat.key, activeClub, clubs, squadPlayers));
+    }
+    return map;
+  }, [activeClub, clubs, squadPlayers]);
+
+  const selectedCat = CATEGORIES.find((c) => c.key === selectedCategory)!;
+  const entries = allData.get(selectedCategory) ?? [];
+
+  return (
+    <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
+      {/* Title */}
+      <h2 className="mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
+        Player Fixtures &amp; Records
+      </h2>
+
+      {/* Club summary */}
+      <div className="mb-3">
+        <ClubSummaryBar club={activeClub} squad={squadPlayers} allData={allData} />
+      </div>
+
+      {/* Layout: menu + leaderboard */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[240px_1fr]">
+        {/* Category menu */}
+        <CategoryMenu categories={CATEGORIES} selected={selectedCategory} onSelect={setSelectedCategory} />
+
+        {/* Leaderboard */}
+        <LeaderboardTable category={selectedCat} entries={entries} clubName={activeClub.name} />
+      </div>
+
+      {/* Quick overview: all categories compact */}
+      <h2 className="mt-4 mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
+        All Categories — Top 3
+      </h2>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {CATEGORIES.map((cat) => {
+          const catEntries = allData.get(cat.key) ?? [];
+          const top3 = catEntries.slice(0, 3);
+          return (
+            <button
+              key={cat.key}
+              type="button"
+              onClick={() => setSelectedCategory(cat.key)}
+              className={`w-full text-left border-2 p-2 transition-colors ${
+                selectedCategory === cat.key
+                  ? 'border-[#efe56b] bg-[#1a4a1e]'
+                  : 'border-[#2a8a2b] bg-[#0d3f10] hover:bg-[#1a4a1e]'
+              }`}
+            >
+              <h4
+                className="text-[10px] font-black uppercase text-[#00e5ff] mb-1"
+                style={{ fontFamily: '"Press Start 2P", "Courier New", monospace' }}
+              >
+                {cat.title}
+              </h4>
+              {top3.map((e) => (
+                <div key={`${e.rank}-${e.playerName}`} className="flex justify-between text-[10px]">
+                  <span className={e.clubName === activeClub.name ? 'text-[#efe56b] font-bold' : 'text-[#d5f8b6]'}>
+                    {e.rank}. {e.playerName}
+                  </span>
+                  <span className="text-white font-mono font-bold">{e.value}</span>
+                </div>
+              ))}
+              {top3.length === 0 && (
+                <p className="text-[9px] italic text-[#6b9a5a]">No data yet</p>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}

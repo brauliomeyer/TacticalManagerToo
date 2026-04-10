@@ -7,6 +7,7 @@ import TacticsBoard from './components/TacticsBoard';
 import BoardRoom from './components/BoardRoom';
 import Mailbox from './components/Mailbox';
 import CupCenter from './components/CupCenter';
+import PlayerFixtures from './components/PlayerFixtures';
 import ClubCrest from './components/ClubCrest';
 import { fallbackClubs } from './fallbackClubs';
 import {
@@ -208,7 +209,7 @@ function savePositionOverrides(clubId: string, overrides: Record<string, string>
 const socket = io(API_BASE, { autoConnect: false });
 
 const sideMenu: { key: PageKey; label: string }[] = [
-  { key: 'human', label: 'Human' },
+  { key: 'human', label: 'Player Records' },
   { key: 'manager', label: 'Computer Manager' },
   { key: 'manage', label: 'Manage' },
   { key: 'transfers', label: 'Transfers' },
@@ -228,7 +229,7 @@ const pageDescriptions: Record<PageKey, { title: string; text: string }> = {
   board: { title: 'Board Room', text: 'Bestuursdoelen, budget en verwachtingen voor het seizoen.' },
   squad: { title: 'Squad Hub', text: 'Overzicht van selectie, vorm, conditie en rollen.' },
   cup: { title: 'Cup Overview', text: 'Bekerloting, uitslagen en route naar de finale.' },
-  human: { title: 'Human Manager', text: 'Profiel van de menselijke manager en persoonlijke statistieken.' },
+  human: { title: 'Player Fixtures & Records', text: 'Alle speler prestaties, doelpunten, assists en records van het seizoen.' },
   manager: { title: 'AI Manager', text: 'Overzicht van de computer manager keuzes en tegenstandersanalyse.' },
   manage: { title: 'Club Management', text: 'Staf, faciliteiten en langetermijnplanning voor de club.' },
   transfers: { title: 'Transfer Market', text: 'Scoutrapporten, biedingen en contractonderhandelingen.' },
@@ -935,6 +936,9 @@ function PagePanel({
   }
   if (page === 'cup') {
     return <CupCenter activeClub={activeClub} />;
+  }
+  if (page === 'human') {
+    return <PlayerFixtures activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} />;
   }
   if (page === 'squad') {
     return (
