@@ -150,6 +150,64 @@ function deriveBoardData(club: Club, summary: ManagerSummary | null, squad: Squa
     ], seed + 30));
   }
 
+  /* ── Revenue streams ── */
+
+  // Stadium
+  const stadiumCapacity = Math.round(8000 + seededRandom(seed + 50) * 52000);
+  const stadiumName = pickSeeded(
+    [`${club.name} Stadium`, `The ${club.name} Arena`, `${club.name} Park`, `${club.name} Ground`],
+    seed + 51
+  );
+  const facilityLevel = Math.min(5, Math.max(1, Math.round(1 + (club.reputation / 25))));
+  const facilityLabels: Record<number, string> = { 1: 'Basic', 2: 'Adequate', 3: 'Good', 4: 'Excellent', 5: 'World-Class' };
+
+  // Matchday revenue
+  const avgAttendance = Math.round(stadiumCapacity * (0.6 + seededRandom(seed + 52) * 0.35));
+  const ticketPrice = Math.round(18 + seededRandom(seed + 53) * 62);
+  const seasonTicketHolders = Math.round(avgAttendance * (0.35 + seededRandom(seed + 54) * 0.3));
+  const seasonTicketPrice = ticketPrice * 19;
+  const matchdayHospitality = Math.round(5000 + seededRandom(seed + 55) * 45000);
+  const matchdayCatering = Math.round(avgAttendance * (2 + seededRandom(seed + 56) * 6));
+  const matchesPlayed = Math.max(totalPlayed, Math.round(8 + seededRandom(seed + 57) * 20));
+  const totalMatchdayRevenue =
+    avgAttendance * ticketPrice * matchesPlayed +
+    seasonTicketHolders * seasonTicketPrice +
+    matchdayHospitality * matchesPlayed +
+    matchdayCatering * matchesPlayed;
+
+  // Sponsors
+  const sponsorTiers = [
+    { tier: 'Main Shirt Sponsor', company: pickSeeded(['Emirates', 'Etihad Airways', 'AIA', 'Three', 'TeamViewer', 'Stake.com', 'Spotify', 'Jeep', 'Rakuten', 'Standard Chartered', 'Vodafone', 'Fly Better'], seed + 60), value: Math.round(transferBudget * (0.08 + seededRandom(seed + 61) * 0.12)) },
+    { tier: 'Sleeve Sponsor', company: pickSeeded(['Visit Rwanda', 'Cinch', 'Konami', 'CoinJar', 'Travelodge', 'Cadbury', 'Cazoo'], seed + 62), value: Math.round(transferBudget * (0.02 + seededRandom(seed + 63) * 0.04)) },
+    { tier: 'Training Kit Sponsor', company: pickSeeded(['SAP', 'Trivago', 'Castore', 'BetVictor', 'Iqoniq', 'Cinch'], seed + 64), value: Math.round(transferBudget * (0.01 + seededRandom(seed + 65) * 0.03)) },
+    { tier: 'Stadium Naming Rights', company: pickSeeded(['Emirates', 'Etihad', 'Amex', 'Tottenham Hotspur', 'St. James\' Park', 'Gtech Community', 'Vitality'], seed + 66), value: Math.round(transferBudget * (0.03 + seededRandom(seed + 67) * 0.07)) },
+    { tier: 'Official Kit Manufacturer', company: pickSeeded(['Nike', 'Adidas', 'Puma', 'New Balance', 'Umbro', 'Under Armour', 'Castore', 'Macron', 'Joma'], seed + 68), value: Math.round(transferBudget * (0.04 + seededRandom(seed + 69) * 0.08)) },
+  ];
+  const totalSponsorIncome = sponsorTiers.reduce((s, t) => s + t.value, 0);
+
+  // Merchandise
+  const kitSales = Math.round(4000 + seededRandom(seed + 70) * 96000);
+  const kitPrice = Math.round(50 + seededRandom(seed + 71) * 40);
+  const scarfSales = Math.round(kitSales * (0.3 + seededRandom(seed + 72) * 0.4));
+  const scarfPrice = Math.round(12 + seededRandom(seed + 73) * 10);
+  const programmesSold = Math.round(avgAttendance * 0.15 * matchesPlayed);
+  const programmePrice = Math.round(3 + seededRandom(seed + 74) * 4);
+  const onlineMerchRevenue = Math.round(kitSales * kitPrice * (0.1 + seededRandom(seed + 75) * 0.2));
+  const totalMerchRevenue = kitSales * kitPrice + scarfSales * scarfPrice + programmesSold * programmePrice + onlineMerchRevenue;
+
+  // Facilities
+  const facilities = [
+    { name: 'Training Ground', level: Math.min(5, facilityLevel + Math.round(seededRandom(seed + 80) * 1.5 - 0.5)), upgradeCost: Math.round(transferBudget * (0.15 + seededRandom(seed + 81) * 0.1)) },
+    { name: 'Youth Academy', level: Math.min(5, facilityLevel + Math.round(seededRandom(seed + 82) * 1 - 0.5)), upgradeCost: Math.round(transferBudget * (0.1 + seededRandom(seed + 83) * 0.1)) },
+    { name: 'Medical Centre', level: Math.min(5, facilityLevel + Math.round(seededRandom(seed + 84) * 1 - 0.5)), upgradeCost: Math.round(transferBudget * (0.08 + seededRandom(seed + 85) * 0.08)) },
+    { name: 'Stadium Expansion', level: facilityLevel, upgradeCost: Math.round(transferBudget * (0.3 + seededRandom(seed + 86) * 0.4)) },
+    { name: 'Corporate Hospitality', level: Math.min(5, Math.max(1, facilityLevel - 1 + Math.round(seededRandom(seed + 87) * 2))), upgradeCost: Math.round(transferBudget * (0.05 + seededRandom(seed + 88) * 0.1)) },
+    { name: 'Fan Zone & Club Shop', level: Math.min(5, Math.max(1, facilityLevel - 1 + Math.round(seededRandom(seed + 89) * 2))), upgradeCost: Math.round(transferBudget * (0.03 + seededRandom(seed + 90) * 0.05)) },
+  ];
+
+  // Total revenue
+  const totalSeasonRevenue = totalMatchdayRevenue + totalSponsorIncome + totalMerchRevenue;
+
   return {
     division,
     leaguePosition,
@@ -168,7 +226,32 @@ function deriveBoardData(club: Club, summary: ManagerSummary | null, squad: Squa
     cupObjective,
     financeObjective,
     youthObjective,
-    boardMessages
+    boardMessages,
+    // Revenue streams
+    stadiumName,
+    stadiumCapacity,
+    avgAttendance,
+    ticketPrice,
+    seasonTicketHolders,
+    seasonTicketPrice,
+    matchdayHospitality,
+    matchdayCatering,
+    matchesPlayed,
+    totalMatchdayRevenue,
+    sponsorTiers,
+    totalSponsorIncome,
+    kitSales,
+    kitPrice,
+    scarfSales,
+    scarfPrice,
+    programmesSold,
+    programmePrice,
+    onlineMerchRevenue,
+    totalMerchRevenue,
+    facilities,
+    facilityLabels,
+    facilityLevel,
+    totalSeasonRevenue,
   };
 }
 
@@ -347,6 +430,104 @@ export default function BoardRoom({ activeClub, summary, squadPlayers }: BoardRo
               </p>
             </div>
           )}
+        </Card>
+      </div>
+
+      {/* Revenue Streams Header */}
+      <h2 className="mt-4 mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
+        Revenue &amp; Club Income
+      </h2>
+
+      {/* Revenue total bar */}
+      <div className="mb-3 border-2 border-[#efe56b] bg-[#1a3a1e] px-3 py-2 text-center">
+        <span className="text-xs text-[#98ca7a]">Estimated Season Revenue</span>
+        <p className="text-lg font-black text-[#efe56b]">€{data.totalSeasonRevenue.toLocaleString()}</p>
+        <div className="mt-1 flex justify-center gap-4 text-[10px] text-[#d5f8b6]">
+          <span>Matchday: <strong className="text-white">€{data.totalMatchdayRevenue.toLocaleString()}</strong></span>
+          <span>Sponsors: <strong className="text-white">€{data.totalSponsorIncome.toLocaleString()}</strong></span>
+          <span>Merchandise: <strong className="text-white">€{data.totalMerchRevenue.toLocaleString()}</strong></span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {/* 5. Sponsor Deals */}
+        <Card title="Sponsor Deals">
+          <div className="space-y-0">
+            {data.sponsorTiers.map((sp) => (
+              <div key={sp.tier} className="flex items-center justify-between border-b border-[#1a5a1e] py-1.5 last:border-0">
+                <div>
+                  <span className="text-xs font-bold text-[#efe56b]">{sp.tier}</span>
+                  <p className="text-xs text-[#d5f8b6]">{sp.company}</p>
+                </div>
+                <span className="shrink-0 font-bold text-white text-xs">€{sp.value.toLocaleString()}<span className="text-[9px] text-[#6b9a5a]">/yr</span></span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 border-t-2 border-[#2a8a2b] pt-2">
+            <StatRow label="Total Sponsor Income" value={`€${data.totalSponsorIncome.toLocaleString()}`} highlight />
+          </div>
+        </Card>
+
+        {/* 6. Matchday Revenue */}
+        <Card title="Matchday Revenue">
+          <p className="mb-2 text-[10px] text-[#98ca7a]">{data.stadiumName} — Capacity: <strong className="text-white">{data.stadiumCapacity.toLocaleString()}</strong></p>
+          <StatRow label="Avg. Attendance" value={`${data.avgAttendance.toLocaleString()} (${Math.round((data.avgAttendance / data.stadiumCapacity) * 100)}%)`} />
+          <StatRow label="Ticket Price" value={`€${data.ticketPrice}`} />
+          <StatRow label="Season Ticket Holders" value={data.seasonTicketHolders.toLocaleString()} />
+          <StatRow label="Season Ticket Price" value={`€${data.seasonTicketPrice.toLocaleString()}`} />
+          <StatRow label="Hospitality (per match)" value={`€${data.matchdayHospitality.toLocaleString()}`} />
+          <StatRow label="Catering (per match)" value={`€${data.matchdayCatering.toLocaleString()}`} />
+          <StatRow label="Home Matches Played" value={data.matchesPlayed} />
+          <div className="mt-2 border-t-2 border-[#2a8a2b] pt-2">
+            <StatRow label="Total Matchday Revenue" value={`€${data.totalMatchdayRevenue.toLocaleString()}`} highlight />
+          </div>
+        </Card>
+
+        {/* 7. Stadium & Facilities */}
+        <Card title="Stadium &amp; Facilities">
+          <div className="mb-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[#98ca7a]">Overall Facility Rating</span>
+              <span className="text-xs font-black text-[#efe56b]">{data.facilityLabels[data.facilityLevel]}</span>
+            </div>
+            <div className="mt-1 flex gap-0.5">
+              {Array.from({ length: 5 }, (_, i) => (
+                <div key={i} className={`h-2 flex-1 ${i < data.facilityLevel ? 'bg-[#22c55e]' : 'bg-[#1a3a1e]'}`} />
+              ))}
+            </div>
+          </div>
+          {data.facilities.map((fac) => (
+            <div key={fac.name} className="flex items-center justify-between border-b border-[#1a5a1e] py-1.5 last:border-0">
+              <div className="flex-1">
+                <span className="text-xs text-[#d5f8b6]">{fac.name}</span>
+                <div className="mt-0.5 flex gap-0.5">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <div key={i} className={`h-1.5 w-4 ${i < fac.level ? 'bg-[#22c55e]' : 'bg-[#1a3a1e]'}`} />
+                  ))}
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] text-[#98ca7a]">Lv. {fac.level}</span>
+                {fac.level < 5 && (
+                  <p className="text-[9px] text-[#6b9a5a]">Upgrade: €{fac.upgradeCost.toLocaleString()}</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </Card>
+
+        {/* 8. Merchandise & Supporter Products */}
+        <Card title="Merchandise &amp; Supporter Products">
+          <StatRow label="Replica Kits Sold" value={data.kitSales.toLocaleString()} />
+          <StatRow label="Kit Price" value={`€${data.kitPrice}`} />
+          <StatRow label="Scarves Sold" value={data.scarfSales.toLocaleString()} />
+          <StatRow label="Scarf Price" value={`€${data.scarfPrice}`} />
+          <StatRow label="Matchday Programmes" value={data.programmesSold.toLocaleString()} />
+          <StatRow label="Programme Price" value={`€${data.programmePrice}`} />
+          <StatRow label="Online Shop Revenue" value={`€${data.onlineMerchRevenue.toLocaleString()}`} />
+          <div className="mt-2 border-t-2 border-[#2a8a2b] pt-2">
+            <StatRow label="Total Merchandise Revenue" value={`€${data.totalMerchRevenue.toLocaleString()}`} highlight />
+          </div>
         </Card>
       </div>
 
