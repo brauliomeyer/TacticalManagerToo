@@ -477,20 +477,11 @@ export default function PlayerFixtures({ activeClub, clubs, squadPlayers }: Play
         <ClubSummaryBar club={activeClub} squad={squadPlayers} allData={allData} />
       </div>
 
-      {/* Layout: menu + leaderboard */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-[240px_1fr]">
-        {/* Category menu */}
-        <CategoryMenu categories={CATEGORIES} selected={selectedCategory} onSelect={setSelectedCategory} />
-
-        {/* Leaderboard */}
-        <LeaderboardTable category={selectedCat} entries={entries} clubName={activeClub.name} />
-      </div>
-
       {/* Quick overview: all categories compact */}
-      <h2 className="mt-4 mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
+      <h2 className="mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
         All Categories — Top 3
       </h2>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {CATEGORIES.map((cat) => {
           const catEntries = allData.get(cat.key) ?? [];
           const top3 = catEntries.slice(0, 3);
@@ -525,6 +516,15 @@ export default function PlayerFixtures({ activeClub, clubs, squadPlayers }: Play
             </button>
           );
         })}
+      </div>
+
+      {/* Layout: menu + leaderboard */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[240px_1fr]">
+        {/* Category menu */}
+        <CategoryMenu categories={CATEGORIES} selected={selectedCategory} onSelect={setSelectedCategory} />
+
+        {/* Leaderboard */}
+        <LeaderboardTable category={selectedCat} entries={entries} clubName={activeClub.name} />
       </div>
     </section>
   );
