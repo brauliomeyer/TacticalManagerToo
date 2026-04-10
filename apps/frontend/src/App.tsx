@@ -12,6 +12,7 @@ import TransferMarket from './components/TransferMarket';
 import TrainingGround from './components/TrainingGround';
 import ClubManagement from './components/ClubManagement';
 import ClubCrest from './components/ClubCrest';
+import { realSquads } from './realSquads';
 import { fallbackClubs } from './fallbackClubs';
 import {
   synthesizeEventData,
@@ -255,18 +256,20 @@ function hashText(value: string) {
 
 function buildFallbackSquad(club: Club): SquadPlayer[] {
   const seed = hashText(club.id || club.name || 'fallback-club');
+  const squad = realSquads[club.name];
 
   return fallbackSquadRoles.map((role, index) => {
-    const firstName = fallbackFirstNames[(seed + index * 7) % fallbackFirstNames.length];
-    const lastName = fallbackLastNames[(seed + index * 11) % fallbackLastNames.length];
+    const real = squad?.[index];
+    const firstName = real ? real.name.split(' ')[0] : fallbackFirstNames[(seed + index * 7) % fallbackFirstNames.length];
+    const lastName = real ? real.name.split(' ').slice(1).join(' ') : fallbackLastNames[(seed + index * 11) % fallbackLastNames.length];
     const base = 48 + ((seed + index * 13) % 28);
 
-    const age = 18 + ((seed + index * 5) % 17);
+    const age = real ? real.age : 18 + ((seed + index * 5) % 17);
     const expBase = Math.min(20, Math.max(1, Math.floor((age - 16) * 0.8) + ((seed + index * 9) % 5)));
 
     return {
       id: `${club.id || club.name}-fallback-${index + 1}`,
-      name: `${firstName} ${lastName}`,
+      name: real ? real.name : `${firstName} ${lastName}`,
       age,
       role,
       pac: Math.min(99, base + ((seed + index * 2) % 10)),

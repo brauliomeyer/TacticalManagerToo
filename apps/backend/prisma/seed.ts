@@ -2,6 +2,7 @@ import { PlayerRole, PrismaClient } from '@prisma/client';
 import axios from 'axios';
 import csv from 'csv-parser';
 import { Readable } from 'stream';
+import { realSquads } from '../../frontend/src/realSquads';
 
 const prisma = new PrismaClient();
 
@@ -36,6 +37,19 @@ const lastNames = [
   'Walker', 'Johnson', 'Brown', 'Davies', 'Taylor', 'Wilson', 'Evans', 'Roberts', 'Lewis', 'Cooper',
   'Hall', 'Baker', 'Morris', 'Murphy', 'King', 'Turner', 'Price', 'Parker', 'Collins', 'Scott'
 ];
+
+// Build name-lookup map for real squads
+const squadLookup = new Map<string, { name: string; age: number }[]>();
+for (const [key, players] of Object.entries(realSquads)) {
+  squadLookup.set(key.toLowerCase(), players);
+  const stripped = key.replace(/\s+(FC|AFC)$/i, '').trim();
+  if (stripped.toLowerCase() !== key.toLowerCase()) squadLookup.set(stripped.toLowerCase(), players);
+}
+
+function findRealSquad(clubName: string): { name: string; age: number }[] | undefined {
+  const lower = clubName.toLowerCase();
+  return squadLookup.get(lower) || squadLookup.get(lower.replace(/\s+(fc|afc)$/i, '').trim());
+}
 
 function statRange(role: PlayerRole) {
   if (role === 'GOALKEEPER') {
@@ -96,15 +110,25 @@ async function resetExistingData() {
 
 async function createSquad(clubId: string, clubName: string) {
   const usedNames = new Set<string>();
-  for (const role of squadRoles) {
-    let name = randomName();
-    while (usedNames.has(name)) {
+  const realSquad = findRealSquad(clubName);
+  for (let i = 0; i < squadRoles.length; i++) {
+    const role = squadRoles[i];
+    let name: string;
+    let age: number;
+    if (realSquad && realSquad[i]) {
+      name = realSquad[i].name;
+      age = realSquad[i].age;
+    } else {
       name = randomName();
+      while (usedNames.has(name)) {
+        name = randomName();
+      }
+      age = randBetween(18, 36);
     }
     usedNames.add(name);
 
     const range = statRange(role);
-    const age = randBetween(18, 36);
+
     const expBase = Math.min(20, Math.max(1, Math.floor((age - 16) * 0.8) + randBetween(0, 4)));
     await prisma.player.create({
       data: {
