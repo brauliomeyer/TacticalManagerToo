@@ -930,129 +930,175 @@ function InteractiveMatchView({
     return () => clearInterval(interval);
   }, [matchState.isRunning, matchState.isFinished, matchState.speed, onTick]);
 
-  // Player position offsets — formation-centroid shift: whole shape moves with ball
+  // Player position offsets — attack/defend phase system
+  // attackPhase [0,1]: ball deep in opponent half → home players push high
+  // defendPhase [0,1]: ball deep in own half → home players drop deep
   const homePosOffset = useMemo(() => {
     const ft = matchState.homeFullTactic;
     const basePosArr = ft ? formationToHomePitch(getFormationPositions(ft).positions) : HOME_POSITIONS;
     const n = basePosArr.length;
+
     const ballY = matchState.ballPos[1];
     const ballX = matchState.ballPos[0];
-
-    // Centroid of outfield players (skip GK)
-    const outfield = basePosArr.slice(1);
-    const centX = outfield.reduce((s, [x]) => s + x, 0) / outfield.length;
-    const centY = outfield.reduce((s, [, y]) => s + y, 0) / outfield.length;
-
-    // How far ball has moved from the formation centroid
-    const shiftX = ballX - centX;
-    const shiftY = ballY - centY; // negative = ball in opponent half (home attacking)
-
     const mentality = matchState.homeTactics.mentality;
-    const mentalityY = mentality === 'Attacking' ? -10 : mentality === 'Defensive' ? 8 : 0;
+    const width    = (matchState.homeTactics.width    ?? 60) / 100;
+    const pressing = (matchState.homeTactics.pressing ?? 60) / 100;
 
-    // Only 1 player goes to the exact ball position (closest outfield player)
-    let minDist = Infinity, ballIdx = 1;
+    // Ball in away half (y<75) → home attacks. Ball in own half (y>75) → home defends.
+    const attackPhase = Math.max(0, (75 - ballY) / 65); // 0 at centre → 1 at y=10 (opponent goal)
+    const defendPhase = Math.max(0, (ballY - 75) / 65); // 0 at centre → 1 at y=140 (own goal)
+
+    // Mentality overall line-height push (negative = higher up the pitch for home)
+    const mentalityPush = mentality === 'Attacking' ? -7 : mentality === 'Defensive' ? 6 : 0;
+
+    // Ball carrier: closest outfield player goes to ball
+    let minD = Infinity, ballCarrier = 1;
     for (let i = 1; i < n; i++) {
       const d = Math.hypot(basePosArr[i][0] - ballX, basePosArr[i][1] - ballY);
-      if (d < minDist) { minDist = d; ballIdx = i; }
+      if (d < minD) { minD = d; ballCarrier = i; }
     }
 
     return basePosArr.map(([bx, by], i) => {
-      const seed = hashStr(`${matchState.minute}-home-${i}`);
-      const jx = ((seed % 9) - 4) * 0.8;  // small jitter ±3.2 units
-      const jy = ((seed % 7) - 3) * 0.7;  // small jitter ±2.1 units
+      // Smooth oscillation jitter — no teleporting between minutes
+      const jx = Math.sin(matchState.minute * 0.97 + i * 1.73) * 1.6;
+      const jy = Math.cos(matchState.minute * 0.83 + i * 2.09) * 1.3;
 
       if (i === 0) {
-        // GK: stays in goal, tiny horizontal drift, mentality shifts line slightly
+        // GK: anchored to goal line, tiny lateral drift
         return [
-          Math.max(36, Math.min(64, bx + shiftX * 0.06 + jx * 0.4)),
-          Math.max(130, Math.min(145, by + mentalityY * 0.15 + jy * 0.3)),
+          Math.max(40, Math.min(60, bx + jx * 0.3)),
+          Math.max(130, Math.min(145, by - attackPhase * 7 + jy * 0.2)),
         ] as [number, number];
       }
 
-      if (i === ballIdx) {
-        // Ball carrier: moves to ball position
+      if (i === ballCarrier) {
+        // Ball carrier: appears at ball location
         return [
-          Math.max(4, Math.min(96, ballX + jx * 0.3)),
-          Math.max(8, Math.min(145, ballY + jy * 0.3)),
+          Math.max(4, Math.min(96, ballX + jx * 0.4)),
+          Math.max(8, Math.min(145, ballY + jy * 0.4)),
         ] as [number, number];
       }
 
-      // Role from base Y — home: GK@140, DEF@108-125, MID@75-98, FWD@50-72
-      const isForward = by < 72;
-      const isDefender = by > 108;
-      // Shift factors: how much each role tracks the ball shift
-      const fxr = isForward ? 0.30 : isDefender ? 0.10 : 0.20;
-      const fyr = isForward ? 0.42 : isDefender ? 0.16 : 0.30;
-      const mentY = isForward ? mentalityY * 0.6 : isDefender ? mentalityY * 0.2 : mentalityY * 0.4;
+      // HOME pitch: GK=140, DEF≈118-122, MID≈85, FWD≈52
+      const isFwd = by < 70;    // striker/winger
+      const isDef = by > 108;   // centre-back/full-back
+      // midfielders = everything in between
+
+      // Attack push: negative Y moves player toward opponent goal (y=0)
+      // Defend push: positive Y moves player toward own goal (y=150)
+      let pushAttack: number, pushDefend: number, xTrack: number;
+      if (isFwd) {
+        pushAttack = -38; // 52-38=14 → near opponent box
+        pushDefend = +16; // 52+16=68 → withdrawn to midfield
+        xTrack = attackPhase * 0.45;
+      } else if (isDef) {
+        pushAttack = -15; // 120-15=105 → high line when attacking
+        pushDefend = +10; // 120+10=130 → very deep when defending
+        xTrack = defendPhase * pressing * 0.12; // step toward ball when pressing
+      } else {
+        // Midfielder
+        pushAttack = -27; // 85-27=58 → past halfway, in opponent half
+        pushDefend = +14; // 85+14=99 → in own half, tracking back
+        xTrack = attackPhase * 0.22 + defendPhase * 0.16;
+      }
+
+      const pressY = attackPhase * pushAttack + defendPhase * pushDefend;
+      const pressX = (ballX - bx) * xTrack;
+      const mPush  = isFwd ? mentalityPush * 0.8 : isDef ? mentalityPush * 0.25 : mentalityPush * 0.5;
+
+      // Width: spread wider when attacking, compress inward when pressing on defense
+      const distFromCentre = bx - 50;
+      const widthMod = attackPhase * width * distFromCentre * 0.18
+                     - defendPhase * pressing * distFromCentre * 0.12;
 
       return [
-        Math.max(4, Math.min(96, bx + shiftX * fxr + jx)),
-        Math.max(6, Math.min(144, by + shiftY * fyr + mentY + jy)),
+        Math.max(4, Math.min(96, bx + pressX + widthMod + jx)),
+        Math.max(6, Math.min(144, by + pressY + mPush + jy)),
       ] as [number, number];
     });
-  }, [matchState.minute, matchState.homeTactics.mentality, matchState.homeFullTactic, matchState.ballPos]);
+  }, [matchState.minute, matchState.homeTactics, matchState.homeFullTactic, matchState.ballPos]);
 
   const awayPosOffset = useMemo(() => {
     const ft = matchState.awayFullTactic;
     const basePosArr = ft ? formationToAwayPitch(getFormationPositions(ft).positions) : AWAY_POSITIONS;
     const n = basePosArr.length;
+
     const ballY = matchState.ballPos[1];
     const ballX = matchState.ballPos[0];
-
-    // Centroid of away outfield players
-    const outfield = basePosArr.slice(1);
-    const centX = outfield.reduce((s, [x]) => s + x, 0) / outfield.length;
-    const centY = outfield.reduce((s, [, y]) => s + y, 0) / outfield.length;
-
-    // Ball displacement from formation centroid
-    const shiftX = ballX - centX;
-    const shiftY = ballY - centY; // positive = ball in home half (away attacking)
-
     const mentality = matchState.awayTactics.mentality;
-    const mentalityY = mentality === 'Attacking' ? 10 : mentality === 'Defensive' ? -8 : 0;
+    const width    = (matchState.awayTactics.width    ?? 60) / 100;
+    const pressing = (matchState.awayTactics.pressing ?? 60) / 100;
 
-    // Only closest outfield player goes to ball
-    let minDist = Infinity, ballIdx = 1;
+    // AWAY plays top→bottom (GK at y=10, FWD at y=98, home goal at y=140)
+    // Ball in home half (y>75) → away attacks. Ball in away half (y<75) → away defends.
+    const attackPhase = Math.max(0, (ballY - 75) / 65); // 0 at centre → 1 at y=140 (home goal)
+    const defendPhase = Math.max(0, (75 - ballY) / 65); // 0 at centre → 1 at y=10 (own goal)
+
+    // Mentality overall line height (positive Y = push toward home goal)
+    const mentalityPush = mentality === 'Attacking' ? 7 : mentality === 'Defensive' ? -6 : 0;
+
+    // Ball carrier: closest outfield away player
+    let minD = Infinity, ballCarrier = 1;
     for (let i = 1; i < n; i++) {
       const d = Math.hypot(basePosArr[i][0] - ballX, basePosArr[i][1] - ballY);
-      if (d < minDist) { minDist = d; ballIdx = i; }
+      if (d < minD) { minD = d; ballCarrier = i; }
     }
 
     return basePosArr.map(([bx, by], i) => {
-      const seed = hashStr(`${matchState.minute}-away-${i}`);
-      const jx = ((seed % 9) - 4) * 0.8;
-      const jy = ((seed % 7) - 3) * 0.7;
+      const jx = Math.sin(matchState.minute * 0.97 + (i + 11) * 1.73) * 1.6;
+      const jy = Math.cos(matchState.minute * 0.83 + (i + 11) * 2.09) * 1.3;
 
       if (i === 0) {
-        // Away GK: stays near own goal, tiny horizontal drift
+        // Away GK: top of pitch, tiny drift
         return [
-          Math.max(36, Math.min(64, bx + shiftX * 0.06 + jx * 0.4)),
-          Math.max(5, Math.min(20, by + mentalityY * 0.15 + jy * 0.3)),
+          Math.max(40, Math.min(60, bx + jx * 0.3)),
+          Math.max(5, Math.min(20, by + attackPhase * 7 + jy * 0.2)),
         ] as [number, number];
       }
 
-      if (i === ballIdx) {
-        // Ball carrier: goes to ball
+      if (i === ballCarrier) {
         return [
-          Math.max(4, Math.min(96, ballX + jx * 0.3)),
-          Math.max(5, Math.min(142, ballY + jy * 0.3)),
+          Math.max(4, Math.min(96, ballX + jx * 0.4)),
+          Math.max(5, Math.min(142, ballY + jy * 0.4)),
         ] as [number, number];
       }
 
-      // Role from base Y — away: GK@10, DEF@25-42, MID@55-75, FWD@78-110
-      const isForward = by > 78;
-      const isDefender = by < 42;
-      const fxr = isForward ? 0.30 : isDefender ? 0.10 : 0.20;
-      const fyr = isForward ? 0.42 : isDefender ? 0.16 : 0.30;
-      const mentY = isForward ? mentalityY * 0.6 : isDefender ? mentalityY * 0.2 : mentalityY * 0.4;
+      // AWAY pitch: GK=10, DEF≈28-32, MID≈65, FWD≈98
+      const isFwd = by > 80;   // away striker/winger (high Y = deep in home half)
+      const isDef = by < 42;   // away centre-back/full-back (low Y = near own goal)
+
+      // Attack push: positive Y toward home goal (y=150)
+      // Defend push: negative Y toward own goal (y=0)
+      let pushAttack: number, pushDefend: number, xTrack: number;
+      if (isFwd) {
+        pushAttack = +38; // 98+38=136 → near home box
+        pushDefend = -16; // 98-16=82  → withdrawn to midfield
+        xTrack = attackPhase * 0.45;
+      } else if (isDef) {
+        pushAttack = +15; // 30+15=45  → pushed up when attacking
+        pushDefend = -10; // 30-10=20  → very deep when defending
+        xTrack = defendPhase * pressing * 0.12;
+      } else {
+        // Midfielder
+        pushAttack = +27; // 65+27=92  → past halfway in home half
+        pushDefend = -14; // 65-14=51  → in own half, tracking back
+        xTrack = attackPhase * 0.22 + defendPhase * 0.16;
+      }
+
+      const pressY = attackPhase * pushAttack + defendPhase * pushDefend;
+      const pressX = (ballX - bx) * xTrack;
+      const mPush  = isFwd ? mentalityPush * 0.8 : isDef ? mentalityPush * 0.25 : mentalityPush * 0.5;
+
+      const distFromCentre = bx - 50;
+      const widthMod = attackPhase * width * distFromCentre * 0.18
+                     - defendPhase * pressing * distFromCentre * 0.12;
 
       return [
-        Math.max(4, Math.min(96, bx + shiftX * fxr + jx)),
-        Math.max(6, Math.min(144, by + shiftY * fyr + mentY + jy)),
+        Math.max(4, Math.min(96, bx + pressX + widthMod + jx)),
+        Math.max(6, Math.min(144, by + pressY + mPush + jy)),
       ] as [number, number];
     });
-  }, [matchState.minute, matchState.awayTactics.mentality, matchState.awayFullTactic, matchState.ballPos]);
+  }, [matchState.minute, matchState.awayTactics, matchState.awayFullTactic, matchState.ballPos]);
 
   const homeLabels = matchState.homeFullTactic ? getFormationPositions(matchState.homeFullTactic).labels : POSITION_LABELS;
   const awayLabels = matchState.awayFullTactic ? getFormationPositions(matchState.awayFullTactic).labels : POSITION_LABELS;
