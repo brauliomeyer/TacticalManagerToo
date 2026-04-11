@@ -669,7 +669,7 @@ function SquadTrainingTab({ squad, trainingStates, teamIntensity, onSetFocus, on
    Individual Training Tab
    ══════════════════════════════════════════════ */
 
-function IndividualTab({ squad, trainingStates, teamIntensity, teamFocus, selectedPlayer, onSelect, onSetFocus, onSetIntensity, onRest, onRecover, onTrain, onAutoPlan }: {
+function IndividualTab({ squad, trainingStates, teamIntensity, teamFocus, selectedPlayer, onSelect, onSetFocus, onSetIntensity, onRest, onRecover, onTrain, onAutoPlan, onAutoSelectAll }: {
   squad: SquadPlayer[];
   trainingStates: Map<string, PlayerTrainingState>;
   teamIntensity: Intensity;
@@ -682,12 +682,16 @@ function IndividualTab({ squad, trainingStates, teamIntensity, teamFocus, select
   onRecover: (id: string) => void;
   onTrain: (id: string) => void;
   onAutoPlan: (id: string) => void;
+  onAutoSelectAll: () => void;
 }) {
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-[220px_1fr]">
       {/* Player list */}
       <div className="border-2 border-[#2a8a2b] bg-[#0d3f10] p-2 max-h-[600px] overflow-y-auto">
-        <h4 className="text-[10px] font-black uppercase text-[#00e5ff] mb-2" style={{ fontFamily: RETRO }}>Select Player</h4>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h4 className="text-[10px] font-black uppercase text-[#00e5ff]" style={{ fontFamily: RETRO }}>Select Player</h4>
+          <ActionBtn onClick={onAutoSelectAll} variant="yellow">Auto Select All</ActionBtn>
+        </div>
         <div className="space-y-0.5">
           {squad.map((p) => {
             const ts = trainingStates.get(p.id);
@@ -1506,6 +1510,7 @@ export default function TrainingGround({ activeClub, squadPlayers }: TrainingGro
           onSetFocus={handleSetPlayerFocus} onSetIntensity={handleSetPlayerIntensity}
           onRest={handleRest} onRecover={handleRecover} onTrain={handleTrain}
           onAutoPlan={handleAutoPlanForPlayer}
+          onAutoSelectAll={handleAutoSelectTraining}
         />
       )}
       {tab === 'schedule' && (
