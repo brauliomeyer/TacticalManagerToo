@@ -15,6 +15,7 @@ import ClubCrest from './components/ClubCrest';
 import ManagerPage from './components/ManagerPage';
 import GameDashboard from './components/GameDashboard';
 import { loadActiveTactic } from './engine/tacticsSystem';
+import { loadGameState } from './engine/footballEngine';
 import { realSquads } from './realSquads';
 import { fallbackClubs } from './fallbackClubs';
 import {
@@ -1251,6 +1252,34 @@ export default function App() {
     setActiveClubId(targetClub.id);
   };
 
+  /** Build standings from the local game state saved in localStorage */
+  const buildGameStateStandings = (): { rows: StandingRow[]; leagueName: string } | null => {
+    const gs = loadGameState();
+    if (!gs) return null;
+    // Find the league that contains the active club
+    const league = activeClub?.leagueId
+      ? gs.leagues[activeClub.leagueId]
+      : Object.values(gs.leagues).find((l) =>
+          l.standings.some((s) => s.teamId === activeClub?.id || s.teamName === activeClub?.name)
+        );
+    if (!league?.standings?.length) return null;
+    const rows: StandingRow[] = league.standings.map((s, i) => ({
+      position: i + 1,
+      clubId: s.teamId,
+      clubName: s.teamName,
+      played: s.played,
+      won: s.won,
+      drawn: s.drawn,
+      lost: s.lost,
+      goalsFor: s.gf,
+      goalsAgainst: s.ga,
+      goalDiff: s.gd,
+      points: s.points,
+      updatedAt: null,
+    }));
+    return { rows, leagueName: league.name };
+  };
+
   const buildFallbackStandings = (division: DivisionGroup | null): StandingRow[] => {
     if (!division) return [];
     return division.clubs.map((club: Club, index: number) => ({
@@ -1276,6 +1305,15 @@ export default function App() {
     setStandingsDivisionName(activeDivision.name);
     setStandingsError(null);
     setStandingsLoading(true);
+
+    // Always try local game state first — it has the real up-to-date results
+    const gsResult = buildGameStateStandings();
+    if (gsResult) {
+      setStandingsDivisionName(gsResult.leagueName);
+      setStandingsRows(gsResult.rows);
+      setStandingsLoading(false);
+      return;
+    }
 
     if (!activeClub.leagueId) {
       setStandingsRows(buildFallbackStandings(activeDivision));

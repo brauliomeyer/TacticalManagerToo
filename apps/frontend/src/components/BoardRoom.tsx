@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback } from 'react';
 import type { ManagerSummary } from '@tmt/shared';
+import { loadGameState } from '../engine/footballEngine';
 
 /* ── Interfaces ── */
 
@@ -59,14 +60,35 @@ function pickSeeded<T>(arr: T[], seed: number): T {
 function deriveBoardData(club: Club, summary: ManagerSummary | null, squad: SquadPlayer[]) {
   const seed = hashStr(club.id + club.name);
 
+  // ── Read real game state data ──
+  const gameState = loadGameState();
+  let myStanding: { played: number; won: number; drawn: number; lost: number; gf: number; points: number; form: string } | null = null;
+  let myLeaguePosition = 0;
+  let myLeagueSize = 0;
+  if (gameState) {
+    // Find the league containing this club
+    const leagues = Object.values(gameState.leagues);
+    for (const league of leagues) {
+      const idx = league.standings.findIndex((s) => s.teamId === club.id || s.teamName === club.name);
+      if (idx >= 0) {
+        myStanding = league.standings[idx];
+        myLeaguePosition = idx + 1; // already sorted by points
+        myLeagueSize = league.standings.length;
+        break;
+      }
+    }
+  }
+
   // League info
   const division = club.leagueName ?? club.country ?? '1st Division';
 
-  // Squad derived stats
+  // Squad derived stats (still from squad props)
   const avgAge = squad.length > 0 ? Math.round(squad.reduce((s, p) => s + p.age, 0) / squad.length) : 0;
   const avgMorale = squad.length > 0 ? Math.round(squad.reduce((s, p) => s + p.morale, 0) / squad.length) : 0;
-  const totalGoals = squad.reduce((s, p) => s + (p.scored ?? 0), 0);
-  const totalPlayed = Math.max(...squad.map((p) => p.played ?? 0), 0);
+
+  // Real match stats from game state, fall back to squad props
+  const totalGoals = myStanding ? myStanding.gf : squad.reduce((s, p) => s + (p.scored ?? 0), 0);
+  const totalPlayed = myStanding ? myStanding.played : Math.max(...squad.map((p) => p.played ?? 0), 0);
 
   // Budget / finance estimates
   const transferBudget = club.budget;
@@ -74,17 +96,39 @@ function deriveBoardData(club: Club, summary: ManagerSummary | null, squad: Squa
   const currentWageSpend = Math.round(wageBudget * (0.55 + seededRandom(seed + 7) * 0.35));
   const remainingTransfer = Math.round(transferBudget - transferBudget * (0.05 + seededRandom(seed + 3) * 0.25));
 
-  // Board confidence
-  const baseConfidence = summary
-    ? Math.min(95, Math.max(25, 50 + summary.totalWins * 3 - summary.totalLosses * 2 + summary.successiveWins * 5 - summary.successiveLosses * 4))
-    : Math.round(40 + seededRandom(seed + 1) * 40);
+  // Board confidence — prefer real game state results
+  const baseConfidence = (() => {
+    const st = myStanding;
+    if (st && st.played > 0) {
+      // Win rate drives confidence: 50% base, wins push up, losses push down
+      const winRate = st.won / st.played;
+      const lossRate = st.lost / st.played;
+      return Math.min(95, Math.max(25, Math.round(50 + winRate * 40 - lossRate * 25)));
+    }
+    if (summary) {
+      return Math.min(95, Math.max(25,
+        50 + summary.totalWins * 3 - summary.totalLosses * 2 + summary.successiveWins * 5 - summary.successiveLosses * 4
+      ));
+    }
+    return Math.round(40 + seededRandom(seed + 1) * 40);
+  })();
 
-  // Position — seeded from club data
-  const leaguePosition = Math.max(1, Math.round(1 + seededRandom(seed + 2) * 23));
+  // League position — from real game state
+  const leaguePosition = myLeaguePosition > 0
+    ? myLeaguePosition
+    : Math.max(1, Math.round(1 + seededRandom(seed + 2) * Math.max(23, myLeagueSize - 1)));
 
-  // Form
-  const formOptions = ['W', 'D', 'L'];
-  const form = Array.from({ length: 5 }, (_, i) => pickSeeded(formOptions, seed + 10 + i));
+  // Form — from real game state (string "WWDLL" → array)
+  const form = (() => {
+    if (myStanding?.form && myStanding.form.length > 0) {
+      // Pad to 5 if fewer than 5 matches played, most recent last
+      const chars = myStanding.form.split('');
+      while (chars.length < 5) chars.unshift('-');
+      return chars.slice(-5);
+    }
+    const formOptions = ['W', 'D', 'L'];
+    return Array.from({ length: 5 }, (_, i) => pickSeeded(formOptions, seed + 10 + i));
+  })();
 
   // Morale text
   const moraleText = avgMorale >= 75 ? 'High' : avgMorale >= 50 ? 'Medium' : avgMorale >= 30 ? 'Low' : 'Very Low';
@@ -116,10 +160,34 @@ function deriveBoardData(club: Club, summary: ManagerSummary | null, squad: Squa
     seed + 23
   );
 
-  // Board messages
+  // Board messages — prefer real game state data
   const boardMessages: string[] = [];
 
-  if (summary) {
+  // Use real standing data if available
+  const recentForm = myStanding?.form ?? '';
+  const recentWins = [...recentForm].filter((c) => c === 'W').length;
+  const recentLosses = [...recentForm].filter((c) => c === 'L').length;
+
+  if (myStanding && myStanding.played > 0) {
+    if (recentWins >= 3) {
+      boardMessages.push('The board is delighted with the current winning run. Keep it up!');
+    } else if (recentLosses >= 3) {
+      boardMessages.push('The board is concerned about the recent string of defeats. Improvement is expected.');
+    } else if (myStanding.won > myStanding.lost) {
+      boardMessages.push('The board is generally satisfied with performances this season.');
+    } else {
+      boardMessages.push('The board expects better results going forward.');
+    }
+    // Position context
+    if (myLeaguePosition > 0 && myLeagueSize > 0) {
+      const relPos = myLeaguePosition / myLeagueSize;
+      if (relPos <= 0.25) {
+        boardMessages.push(`${myLeaguePosition}th place — you are in excellent form. The board is very pleased.`);
+      } else if (relPos > 0.75) {
+        boardMessages.push(`${myLeaguePosition}th place — the board expects improvement in league position.`);
+      }
+    }
+  } else if (summary) {
     if (summary.successiveWins >= 3) {
       boardMessages.push('The board is delighted with the current winning run. Keep it up!');
     } else if (summary.successiveLosses >= 3) {
@@ -305,7 +373,7 @@ function FormDisplay({ form }: { form: string[] }) {
   return (
     <div className="flex gap-1">
       {form.map((r, i) => {
-        const bg = r === 'W' ? 'bg-[#22c55e]' : r === 'D' ? 'bg-[#eab308]' : 'bg-[#ef4444]';
+        const bg = r === 'W' ? 'bg-[#22c55e]' : r === 'D' ? 'bg-[#eab308]' : r === 'L' ? 'bg-[#ef4444]' : 'bg-[#3a5a3e]';
         return (
           <span key={i} className={`inline-flex h-6 w-6 items-center justify-center rounded-sm text-[10px] font-black text-white ${bg}`}>
             {r}
