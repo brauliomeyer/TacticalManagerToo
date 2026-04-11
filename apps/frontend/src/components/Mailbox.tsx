@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { ManagerSummary } from '@tmt/shared';
 
 /* ── Types ── */
@@ -52,6 +52,7 @@ interface MailboxProps {
   clubs: Club[];
   squadPlayers: SquadPlayer[];
   summary: ManagerSummary | null;
+  refreshToken: number;
 }
 
 /* ── Helpers ── */
@@ -485,23 +486,32 @@ function MailDetail({
 
 /* ── Main Component ── */
 
-export default function Mailbox({ activeClub, clubs, squadPlayers, summary }: MailboxProps) {
-  const initialMails = useMemo(
-    () => generateMails(activeClub, clubs, squadPlayers, summary),
-    [activeClub, clubs, squadPlayers, summary]
-  );
-
-  const [mails, setMails] = useState<Mail[]>(initialMails);
+export default function Mailbox({ activeClub, clubs, squadPlayers, summary, refreshToken }: MailboxProps) {
+  const [mails, setMails] = useState<Mail[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<MailType | 'all'>('all');
 
-  // Resync when club changes
-  const [lastClubId, setLastClubId] = useState(activeClub.id);
-  if (activeClub.id !== lastClubId) {
-    setMails(initialMails);
-    setSelectedId(null);
-    setLastClubId(activeClub.id);
-  }
+  useEffect(() => {
+    const generated = generateMails(activeClub, clubs, squadPlayers, summary);
+
+    setMails((prev) => {
+      const prevByKey = new Map(prev.map((mail) => [`${mail.type}:${mail.subject}`, mail]));
+      return generated.map((mail) => {
+        const existing = prevByKey.get(`${mail.type}:${mail.subject}`);
+        if (!existing) return mail;
+        return {
+          ...mail,
+          read: existing.read,
+          response: existing.response,
+        };
+      });
+    });
+
+    setSelectedId((current) => {
+      if (!current) return null;
+      return generated.some((mail) => mail.id === current) ? current : null;
+    });
+  }, [activeClub, clubs, squadPlayers, summary, refreshToken]);
 
   const selectedMail = mails.find((m) => m.id === selectedId) ?? null;
 

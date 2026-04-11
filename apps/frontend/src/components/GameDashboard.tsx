@@ -66,6 +66,7 @@ interface GameDashboardProps {
   activeTactic?: FullTactic | null;
   onMatchResult?: (homeGoals: number, awayGoals: number, isHome: boolean) => void;
   onMatchEvents?: (events: MatchEvent[]) => void;
+  onWeekAdvance?: () => void;
 }
 
 /* ── Helpers ── */
@@ -1391,7 +1392,7 @@ function EndOfSeasonView({
    MAIN COMPONENT
    ══════════════════════════════════════════════ */
 
-export default function GameDashboard({ clubs, activeClub, squadPlayers, activeTactic, onMatchResult, onMatchEvents }: GameDashboardProps) {
+export default function GameDashboard({ clubs, activeClub, squadPlayers, activeTactic, onMatchResult, onMatchEvents, onWeekAdvance }: GameDashboardProps) {
   // ── Game State ──
   const [gameState, setGameState] = useState<GameState | null>(() => {
     const saved = loadGameState();
@@ -1606,9 +1607,11 @@ export default function GameDashboard({ clubs, activeClub, squadPlayers, activeT
     let state = processCupRounds(gameState);
     // Advance week
     state = advanceWeek(state);
+    saveGameState(state);
     setGameState(state);
     setSimulatedResultIds([]);
-  }, [gameState]);
+    onWeekAdvance?.();
+  }, [gameState, onWeekAdvance]);
 
   const handleResetSeason = useCallback(() => {
     clearGameState();

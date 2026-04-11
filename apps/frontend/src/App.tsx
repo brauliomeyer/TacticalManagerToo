@@ -1036,7 +1036,9 @@ function PagePanel({
   onClubChange,
   onMatchResult,
   onMatchEvents,
+  onGameWeekAdvance,
   gameResetKey,
+  mailboxRefreshToken,
   uiFontSizePt,
   onUiFontSizeChange,
 }: {
@@ -1062,7 +1064,9 @@ function PagePanel({
   onClubChange: (clubId: string) => void;
   onMatchResult: (homeGoals: number, awayGoals: number, isHome: boolean) => void;
   onMatchEvents: (events: MatchEvent[]) => void;
+  onGameWeekAdvance: () => void;
   gameResetKey: number;
+  mailboxRefreshToken: number;
   uiFontSizePt: number;
   onUiFontSizeChange: (value: number) => void;
 }) {
@@ -1077,6 +1081,7 @@ function PagePanel({
         activeTactic={loadActiveTactic(activeClub?.id)}
         onMatchResult={onMatchResult}
         onMatchEvents={onMatchEvents}
+        onWeekAdvance={onGameWeekAdvance}
       />
     );
   }
@@ -1110,7 +1115,7 @@ function PagePanel({
         <BoardRoom activeClub={activeClub} summary={summary} squadPlayers={squadPlayers} />
       </div>
       <div style={show('mail')}>
-        <Mailbox activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} summary={summary} />
+        <Mailbox activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} summary={summary} refreshToken={mailboxRefreshToken} />
       </div>
       <div style={show('cup')}>
         <CupCenter activeClub={activeClub} />
@@ -1491,6 +1496,7 @@ export default function App() {
   const [showSaveLoad, setShowSaveLoad] = useState(false);
   const [saveLoadMode, setSaveLoadMode] = useState<'save' | 'load'>('save');
   const [gameResetKey, setGameResetKey] = useState(0);
+  const [mailboxRefreshToken, setMailboxRefreshToken] = useState(0);
   const [uiFontSizePt, setUiFontSizePt] = useState<number>(() => loadUiFontSizePt());
 
   // Called by GameDashboard when an interactive match finishes
@@ -1500,6 +1506,11 @@ export default function App() {
       saveManagerSummary(next);
       return next;
     });
+    setMailboxRefreshToken((v) => v + 1);
+  }, []);
+
+  const handleGameWeekAdvance = useCallback(() => {
+    setMailboxRefreshToken((v) => v + 1);
   }, []);
 
   // Called by GameDashboard when live match events change
@@ -1559,6 +1570,7 @@ export default function App() {
     setActiveClubId(data.activeClubId);
     // 8. Force GameDashboard remount so it re-reads localStorage
     setGameResetKey((k) => k + 1);
+    setMailboxRefreshToken((v) => v + 1);
     // 9. Close modal + go to game
     setShowSaveLoad(false);
     setActivePage('game');
@@ -1573,6 +1585,7 @@ export default function App() {
     saveStoredMatchFeed([]);
     setEvents([]);
     setGameResetKey((k) => k + 1);
+    setMailboxRefreshToken((v) => v + 1);
     setShowSaveLoad(false);
     setActivePage('game');
   }, []);
@@ -2115,7 +2128,9 @@ export default function App() {
               onClubChange={(id) => setActiveClubId(id)}
               onMatchResult={handleMatchResult}
               onMatchEvents={handleMatchEvents}
+              onGameWeekAdvance={handleGameWeekAdvance}
               gameResetKey={gameResetKey}
+              mailboxRefreshToken={mailboxRefreshToken}
               uiFontSizePt={uiFontSizePt}
               onUiFontSizeChange={handleUiFontSizeChange}
             />
