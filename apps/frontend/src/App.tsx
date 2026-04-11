@@ -390,18 +390,18 @@ function AttrBar({ label, value, max = 100 }: { label: string; value: number; ma
   const color = pct >= 80 ? 'bg-[#22c55e]' : pct >= 60 ? 'bg-[#eab308]' : pct >= 40 ? 'bg-[#f97316]' : 'bg-[#ef4444]';
   return (
     <div className="flex items-center gap-1">
-      <span className="w-24 shrink-0 text-[10px] font-semibold text-[#98ca7a] uppercase">{label}</span>
+      <span className="w-24 shrink-0 text-xs font-semibold text-[#98ca7a] uppercase">{label}</span>
       <div className="h-2 flex-1 bg-[#1a3a1e] rounded-sm overflow-hidden">
         <div className={`h-full ${color} rounded-sm`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="w-7 text-right text-[10px] font-bold text-white">{value}</span>
+      <span className="w-7 text-right text-xs font-bold text-white">{value}</span>
     </div>
   );
 }
 
 function RoleBadge({ role, variant }: { role: string; variant: 'primary' | 'secondary' }) {
   const bg = variant === 'primary' ? 'bg-[#1d4ed8]' : 'bg-[#6b21a8]';
-  return <span className={`${bg} px-2 py-0.5 text-[10px] font-bold text-white rounded`}>{role}</span>;
+  return <span className={`${bg} px-2 py-0.5 text-xs font-bold text-white rounded`}>{role}</span>;
 }
 
 function PositionDropdown({ currentRole, originalRole, onChange }: {
@@ -714,23 +714,23 @@ function SquadPanel({
           {/* ── OVR / Effective OVR / POT / Form/Fatigue ── */}
           <div className="mb-3 flex flex-wrap items-center justify-center gap-4 border-b border-[#2a8a2b] pb-2">
             <div className="text-center">
-              <div className="text-[10px] text-[#98ca7a]">OVR</div>
+              <div className="text-xs text-[#98ca7a]">OVR</div>
               <div className="text-2xl font-black text-white">{profile.ovr}</div>
             </div>
             <div className="text-center">
-              <div className="text-[10px] text-[#98ca7a]">EFF</div>
+              <div className="text-xs text-[#98ca7a]">EFF</div>
               <div className={`text-2xl font-black ${profile.effectiveOvr >= profile.ovr ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>{profile.effectiveOvr}</div>
             </div>
             <div className="text-center">
-              <div className="text-[10px] text-[#98ca7a]">POT</div>
+              <div className="text-xs text-[#98ca7a]">POT</div>
               <div className="text-2xl font-black text-[#60a5fa]">{selectedPlayer.potential}</div>
             </div>
             <div className="text-center">
-              <div className="text-[10px] text-[#98ca7a]">FORM</div>
+              <div className="text-xs text-[#98ca7a]">FORM</div>
               <div className={`text-sm font-bold ${profile.formImpact > 0 ? 'text-[#22c55e]' : profile.formImpact < 0 ? 'text-[#ef4444]' : 'text-white'}`}>{profile.formImpact > 0 ? '+' : ''}{profile.formImpact}</div>
             </div>
             <div className="text-center">
-              <div className="text-[10px] text-[#98ca7a]">FATIGUE</div>
+              <div className="text-xs text-[#98ca7a]">FATIGUE</div>
               <div className={`text-sm font-bold ${profile.fatigueImpact < -5 ? 'text-[#ef4444]' : profile.fatigueImpact < 0 ? 'text-[#f97316]' : 'text-[#22c55e]'}`}>{profile.fatigueImpact}</div>
             </div>
           </div>
@@ -928,15 +928,15 @@ function RightSidebar({
       </div>
       <div className="mt-1 grid grid-cols-3 gap-1 text-center">
         <div className="border border-[#2a8a2b] bg-[#1a3a1e] py-1">
-          <p className="text-[10px] text-[#98ca7a]">Wins</p>
+          <p className="text-xs text-[#98ca7a]">Wins</p>
           <p className="font-black text-[#22c55e]">{mgr.totalWins}</p>
         </div>
         <div className="border border-[#2a8a2b] bg-[#1a3a1e] py-1">
-          <p className="text-[10px] text-[#98ca7a]">Draws</p>
+          <p className="text-xs text-[#98ca7a]">Draws</p>
           <p className="font-black text-[#eab308]">{mgr.totalDraws}</p>
         </div>
         <div className="border border-[#2a8a2b] bg-[#1a3a1e] py-1">
-          <p className="text-[10px] text-[#98ca7a]">Losses</p>
+          <p className="text-xs text-[#98ca7a]">Losses</p>
           <p className="font-black text-[#ef4444]">{mgr.totalLosses}</p>
         </div>
       </div>
@@ -947,7 +947,7 @@ function RightSidebar({
         <p className="mt-1 text-xs text-[#ef4444]">⚠ {mgr.successiveLosses} successive loss{mgr.successiveLosses > 1 ? 'es' : ''}.</p>
       )}
       {!summary && (
-        <p className="mt-1 text-[10px] italic text-[#6b9a5a]">Start of career stats. Play matches to update.</p>
+        <p className="mt-1 text-xs italic text-[#6b9a5a]">Start of career stats. Play matches to update.</p>
       )}
 
       {/* Match Feed */}
@@ -1296,39 +1296,39 @@ function SaveLoadModal({
               <div className="flex items-center justify-between mb-1">
                 <span className="font-black text-[#efe56b] text-xs uppercase">Slot {i + 1}</span>
                 {slot && confirmDelete !== i && (
-                  <button onClick={() => setConfirmDelete(i)} className="text-[9px] border border-[#ef4444] px-1 py-0.5 text-[#ef4444] hover:bg-[#7f1d1d]">🗑</button>
+                  <button onClick={() => setConfirmDelete(i)} className="text-[11px] border border-[#ef4444] px-1 py-0.5 text-[#ef4444] hover:bg-[#7f1d1d]">🗑</button>
                 )}
               </div>
 
               {confirmDelete === i ? (
                 <div className="space-y-1">
-                  <p className="text-[10px] text-[#ef4444] font-bold">Verwijderen?</p>
+                  <p className="text-xs text-[#ef4444] font-bold">Verwijderen?</p>
                   <div className="flex gap-1">
-                    <button onClick={() => handleDelete(i)} className="flex-1 border border-[#ef4444] bg-[#7f1d1d] text-[#ef4444] text-[10px] py-0.5 font-bold">Ja</button>
-                    <button onClick={() => setConfirmDelete(null)} className="flex-1 border border-[#2a8a2b] bg-[#0a3d0e] text-[#98ca7a] text-[10px] py-0.5">Nee</button>
+                    <button onClick={() => handleDelete(i)} className="flex-1 border border-[#ef4444] bg-[#7f1d1d] text-[#ef4444] text-xs py-0.5 font-bold">Ja</button>
+                    <button onClick={() => setConfirmDelete(null)} className="flex-1 border border-[#2a8a2b] bg-[#0a3d0e] text-[#98ca7a] text-xs py-0.5">Nee</button>
                   </div>
                 </div>
               ) : slot ? (
                 <div className="space-y-0.5">
                   <p className="font-bold text-white text-xs truncate">{slot.clubName}</p>
-                  <p className="text-[10px] text-[#98ca7a]">Seizoen {slot.season} — Week {slot.week}</p>
-                  <p className="text-[10px] text-[#6b9a5a]">{fmt(slot.savedAt)}</p>
+                  <p className="text-xs text-[#98ca7a]">Seizoen {slot.season} — Week {slot.week}</p>
+                  <p className="text-xs text-[#6b9a5a]">{fmt(slot.savedAt)}</p>
                   {slot.summary && (
-                    <p className="text-[10px] text-[#efe56b]">W:{slot.summary.totalWins} D:{slot.summary.totalDraws} V:{slot.summary.totalLosses}</p>
+                    <p className="text-xs text-[#efe56b]">W:{slot.summary.totalWins} D:{slot.summary.totalDraws} V:{slot.summary.totalLosses}</p>
                   )}
                   <div className="flex gap-1 mt-2">
                     {mode === 'save' ? (
-                      <button onClick={() => handleSave(i)} className="flex-1 border border-[#efe56b] bg-[#2a8a2b] text-[#efe56b] text-[10px] py-1 font-bold hover:bg-[#46b047]">💾 Overschrijven</button>
+                      <button onClick={() => handleSave(i)} className="flex-1 border border-[#efe56b] bg-[#2a8a2b] text-[#efe56b] text-xs py-1 font-bold hover:bg-[#46b047]">💾 Overschrijven</button>
                     ) : (
-                      <button onClick={() => onLoad(slot)} className="flex-1 border border-[#22c55e] bg-[#14532d] text-[#22c55e] text-[10px] py-1 font-bold hover:bg-[#166534]">📂 Laden</button>
+                      <button onClick={() => onLoad(slot)} className="flex-1 border border-[#22c55e] bg-[#14532d] text-[#22c55e] text-xs py-1 font-bold hover:bg-[#166534]">📂 Laden</button>
                     )}
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-col justify-between h-full">
-                  <p className="text-[10px] text-[#2a5a2e] italic mt-2">— Leeg slot —</p>
+                  <p className="text-xs text-[#2a5a2e] italic mt-2">— Leeg slot —</p>
                   {mode === 'save' && (
-                    <button onClick={() => handleSave(i)} className="mt-auto w-full border border-[#efe56b] bg-[#2a8a2b] text-[#efe56b] text-[10px] py-1 font-bold hover:bg-[#46b047]">💾 Hier opslaan</button>
+                    <button onClick={() => handleSave(i)} className="mt-auto w-full border border-[#efe56b] bg-[#2a8a2b] text-[#efe56b] text-xs py-1 font-bold hover:bg-[#46b047]">💾 Hier opslaan</button>
                   )}
                 </div>
               )}
@@ -1340,9 +1340,9 @@ function SaveLoadModal({
         <div className="border-t-2 border-[#6f4ca1] px-4 py-3 flex items-center justify-between gap-2 bg-[#2e1f4a]">
           {confirmNew ? (
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-[#ef4444] font-bold">Huidige voortgang verliezen?</span>
-              <button onClick={onNewGame} className="border border-[#ef4444] bg-[#7f1d1d] text-[#ef4444] px-2 py-0.5 text-[10px] font-bold">Ja, nieuw spel</button>
-              <button onClick={() => setConfirmNew(false)} className="border border-[#2a8a2b] px-2 py-0.5 text-[#98ca7a] text-[10px]">Annuleren</button>
+              <span className="text-xs text-[#ef4444] font-bold">Huidige voortgang verliezen?</span>
+              <button onClick={onNewGame} className="border border-[#ef4444] bg-[#7f1d1d] text-[#ef4444] px-2 py-0.5 text-xs font-bold">Ja, nieuw spel</button>
+              <button onClick={() => setConfirmNew(false)} className="border border-[#2a8a2b] px-2 py-0.5 text-[#98ca7a] text-xs">Annuleren</button>
             </div>
           ) : (
             <button onClick={() => setConfirmNew(true)} className="border border-[#ef4444] bg-[#7f1d1d] text-[#ef4444] px-3 py-1 text-xs font-bold uppercase hover:bg-[#991b1b]">🔄 Nieuw Spel</button>
@@ -1916,9 +1916,9 @@ export default function App() {
   return (
     <main className="min-h-screen bg-[#1a1e2b] p-4 text-[#d4f6a7] md:p-8">
       <section className="mx-auto max-w-6xl border-4 border-[#6f4ca1] bg-[#2a8a2b] shadow-[0_0_0_4px_#120d1f]">
-        <header className="flex items-center justify-between border-b-4 border-[#6f4ca1] bg-black px-4 py-3 text-[#ebe25f]">
-          <h1 className="flex items-center gap-3 text-2xl font-black uppercase tracking-widest"><ClubCrest clubName={activeClub.name} size={36} />{activeClub.name}</h1>
-          <div className="flex items-center gap-2">
+        <header className="flex flex-col gap-3 border-b-4 border-[#6f4ca1] bg-black px-4 py-3 text-[#ebe25f] md:flex-row md:items-center md:justify-between">
+          <h1 className="flex items-center gap-2 text-base font-black uppercase tracking-wide sm:gap-3 sm:text-xl md:tracking-widest lg:text-2xl"><ClubCrest clubName={activeClub.name} size={36} />{activeClub.name}</h1>
+          <div className="flex flex-wrap items-center gap-2">
             <button
               className="border border-[#98ca7a] bg-[#1a3a1e] px-2 py-1 text-xs font-bold uppercase text-[#98ca7a] hover:bg-[#2a8a2b]"
               onClick={() => { setSaveLoadMode('load'); setShowSaveLoad(true); }}
@@ -1945,7 +1945,7 @@ export default function App() {
           </div>
         </header>
 
-        <div className="grid gap-4 p-4 md:grid-cols-[220px_1fr_300px]">
+        <div className="grid gap-4 p-4 lg:grid-cols-[220px_1fr] xl:grid-cols-[220px_1fr_300px]">
           <aside className="border-4 border-[#6f4ca1] bg-[#2e1f4a] p-3 text-sm">
             <div className="mb-3 border-2 border-white bg-[#fff7de] p-2 text-center text-[#d0121b]">
               <div className="px-2">
@@ -2077,7 +2077,9 @@ export default function App() {
             ) : null}
           </section>
 
-          <RightSidebar summary={summary} events={events} clubs={clubs} activeClub={activeClub} squadPlayers={squadPlayers} />
+          <div className="lg:col-span-2 xl:col-span-1">
+            <RightSidebar summary={summary} events={events} clubs={clubs} activeClub={activeClub} squadPlayers={squadPlayers} />
+          </div>
         </div>
 
         {/* Save/Load Modal */}

@@ -7,6 +7,21 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  line-height: 1.45;
+  color: #d5f8b6;
+  background-color: #1a1e2b;
+  overflow-x: hidden;
+}
+
+html {
+  font-size: 16px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
 * {
@@ -40,4 +55,35 @@ body {
     140px 140px,
     130px 130px,
     100% 100%;
+}
+
+/* Readability polish for data-heavy pages (Transfers, Training, Tactics, Game) */
+.tm-page-readable {
+  line-height: 1.5;
+}
+
+.tm-page-readable .text-\[8px\] {
+  font-size: 0.75rem !important;
+  line-height: 1.1rem !important;
+}
+
+.tm-page-readable .text-\[9px\],
+.tm-page-readable .text-\[10px\],
+.tm-page-readable .text-\[11px\],
+.tm-page-readable .text-xs {
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+}
+
+.tm-page-readable button,
+.tm-page-readable select,
+.tm-page-readable input {
+  min-height: 2rem;
+}
+
+.tm-page-readable table th,
+.tm-page-readable table td {
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
+  vertical-align: middle;
 }

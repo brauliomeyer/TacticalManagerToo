@@ -904,7 +904,7 @@ export default function TacticsPage({ starters, bench, clubId, onAutoSelectByFor
   const presetMatch = TACTIC_PRESETS.find((p) => p.id === tactic.styleId);
 
   return (
-    <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3 space-y-3">
+    <section className="tm-page-readable border-4 border-[#6f4ca1] bg-[#16a51c] p-3 space-y-3">
       {/* Header */}
       <div className="border border-[#ceb8e1] bg-[#d5b5ec] px-3 py-2">
         <h2 className="text-sm font-black uppercase text-[#2e1f4a]">Tactical Desk</h2>

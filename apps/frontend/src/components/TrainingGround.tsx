@@ -1466,7 +1466,7 @@ export default function TrainingGround({ activeClub, squadPlayers }: TrainingGro
   }, [youthPlayers, addLog]);
 
   return (
-    <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
+    <section className="tm-page-readable border-4 border-[#6f4ca1] bg-[#16a51c] p-3 space-y-3">
       {/* Title */}
       <h2 className="mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
         Training Ground

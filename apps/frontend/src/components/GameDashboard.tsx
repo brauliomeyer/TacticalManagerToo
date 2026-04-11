@@ -1632,14 +1632,14 @@ export default function GameDashboard({ clubs, activeClub, squadPlayers, activeT
   // ── Render ──
   if (!gameState) {
     return (
-      <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
+      <section className="tm-page-readable border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
         <p className="text-sm text-[#d5f8b6]">Initializing game engine...</p>
       </section>
     );
   }
 
   return (
-    <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
+    <section className="tm-page-readable border-4 border-[#6f4ca1] bg-[#16a51c] p-3 space-y-3">
       {gameState.phase === 'idle' && (
         <WeekOverview gameState={gameState} onStartMatchday={handleStartMatchday} onResetSeason={handleResetSeason} />
       )}
