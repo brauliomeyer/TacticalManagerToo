@@ -64,6 +64,8 @@ interface GameDashboardProps {
   activeClub: Club;
   squadPlayers: SquadPlayer[];
   activeTactic?: FullTactic | null;
+  onMatchResult?: (homeGoals: number, awayGoals: number, isHome: boolean) => void;
+  onMatchEvents?: (events: MatchEvent[]) => void;
 }
 
 /* ── Helpers ── */
@@ -1389,7 +1391,7 @@ function EndOfSeasonView({
    MAIN COMPONENT
    ══════════════════════════════════════════════ */
 
-export default function GameDashboard({ clubs, activeClub, squadPlayers, activeTactic }: GameDashboardProps) {
+export default function GameDashboard({ clubs, activeClub, squadPlayers, activeTactic, onMatchResult, onMatchEvents }: GameDashboardProps) {
   // ── Game State ──
   const [gameState, setGameState] = useState<GameState | null>(() => {
     const saved = loadGameState();
@@ -1416,6 +1418,16 @@ export default function GameDashboard({ clubs, activeClub, squadPlayers, activeT
     const club = gameState?.clubs[opponentId];
     return club ? getPlayerNamesForClub(club.name, club.id) : getPlayerNamesForClub('Unknown', opponentId);
   }, [gameState]);
+
+  // Push live match events to the sidebar whenever they change
+  useEffect(() => {
+    if (interactiveMatch && onMatchEvents) {
+      onMatchEvents(interactiveMatch.events);
+    }
+    if (!interactiveMatch && onMatchEvents) {
+      onMatchEvents([]);
+    }
+  }, [interactiveMatch?.events, interactiveMatch, onMatchEvents]);
 
   // ── Handlers ──
   const handleStartMatchday = useCallback(() => {
@@ -1579,6 +1591,12 @@ export default function GameDashboard({ clubs, activeClub, squadPlayers, activeT
     state.phase = 'showing_results';
     setGameState(state);
     saveGameState(state);
+
+    // Notify parent so summary + feed update
+    const isHome = gameState.activeClubId === interactiveMatch.homeId;
+    onMatchResult?.(interactiveMatch.homeGoals, interactiveMatch.awayGoals, isHome);
+    onMatchEvents?.([]);
+
     setInteractiveMatch(null);
   }, [interactiveMatch, gameState]);
 
