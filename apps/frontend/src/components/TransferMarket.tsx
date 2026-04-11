@@ -294,6 +294,10 @@ function fmtWage(n: number): string {
   return `£${(n / 1000).toFixed(1)}K/w`;
 }
 
+function youthScoutRating(p: YouthPlayer): number {
+  return Math.round(p.potential * 0.7 + p.development * 0.3);
+}
+
 /* ══════════════════════════════════════════════
    Retro styling helpers
    ══════════════════════════════════════════════ */
@@ -662,6 +666,7 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
   const [maxPrice, setMaxPrice] = useState(999_000_000);
   const [sortBy, setSortBy] = useState<string>('rating');
   const [contractFilter, setContractFilter] = useState('ALL');
+  const [top100Only, setTop100Only] = useState(false);
 
   const availableNationalities = useMemo(
     () => Array.from(new Set(players.map((p) => p.nationality))).sort((a, b) => a.localeCompare(b)),
@@ -672,7 +677,7 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
     [players]
   );
 
-  const filtered = useMemo(() => {
+  const filteredAll = useMemo(() => {
     let list = [...players];
     if (posFilter !== 'ALL') list = list.filter((p) => p.position === posFilter);
     if (regionFilter !== 'ALL') list = list.filter((p) => getRegionForNationality(p.nationality) === regionFilter);
@@ -691,8 +696,15 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
       case 'age': list.sort((a, b) => a.age - b.age); break;
       case 'name': list.sort((a, b) => a.name.localeCompare(b.name)); break;
     }
-    return list.slice(0, 50);
+    return list;
   }, [players, posFilter, regionFilter, natFilter, leagueFilter, contractFilter, minAge, maxAge, minRating, maxPrice, sortBy]);
+
+  const filtered = useMemo(() => {
+    if (top100Only) {
+      return [...filteredAll].sort((a, b) => b.rating - a.rating).slice(0, 100);
+    }
+    return filteredAll.slice(0, 50);
+  }, [filteredAll, top100Only]);
 
   const thCls = 'py-1 px-1 text-left text-[9px] font-bold uppercase text-[#efe56b] cursor-pointer hover:text-white';
 
@@ -717,6 +729,7 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
     setMinRating(40);
     setMaxPrice(999_000_000);
     setSortBy('rating');
+    setTop100Only(false);
   };
 
   return (
@@ -789,6 +802,18 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
         </div>
 
         <div>
+          <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Scout Speed</label>
+          <button
+            type="button"
+            onClick={() => setTop100Only((v) => !v)}
+            className={`w-full border px-2 py-1 text-[10px] font-bold uppercase ${top100Only ? 'border-[#efe56b] bg-[#4a3a0a] text-[#efe56b]' : 'border-[#2a8a2b] bg-[#0a2e0d] text-[#98ca7a] hover:bg-[#1a4a1e]'}`}
+            style={{ fontFamily: MONO }}
+          >
+            {top100Only ? 'Top 100 by Rating: ON' : 'Top 100 by Rating: OFF'}
+          </button>
+        </div>
+
+        <div>
           <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Sort By</label>
           <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full bg-[#0a2e0d] border border-[#2a8a2b] text-[#d5f8b6] text-[10px] px-1 py-0.5">
             <option value="rating">Rating</option>
@@ -800,7 +825,7 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
         </div>
 
         <div className="text-[9px] text-[#5a8a4a] pt-1 border-t border-[#1a5a1e]">
-          Showing {filtered.length} of {players.length} players
+          Showing {filtered.length} of {filteredAll.length} filtered ({players.length} total)
         </div>
       </div>
 
@@ -1109,13 +1134,30 @@ function YouthAcademyTab({ youth, onPromote, onRelease, onSetFocus }: {
   onRelease: (id: string) => void;
   onSetFocus: (id: string, focus: string) => void;
 }) {
+  const [top100Only, setTop100Only] = useState(false);
+
+  const visibleYouth = useMemo(() => {
+    const ranked = [...youth].sort((a, b) => youthScoutRating(b) - youthScoutRating(a));
+    return top100Only ? ranked.slice(0, 100) : ranked;
+  }, [youth, top100Only]);
+
   return (
     <div>
-      <h3 className="mb-2 text-sm font-black uppercase text-[#00e5ff]" style={{ fontFamily: RETRO }}>
-        Youth Academy ({youth.length} players)
-      </h3>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <h3 className="text-sm font-black uppercase text-[#00e5ff]" style={{ fontFamily: RETRO }}>
+          Youth Academy ({visibleYouth.length}/{youth.length} players)
+        </h3>
+        <button
+          type="button"
+          onClick={() => setTop100Only((v) => !v)}
+          className={`border px-2 py-1 text-[10px] font-bold uppercase ${top100Only ? 'border-[#efe56b] bg-[#4a3a0a] text-[#efe56b]' : 'border-[#2a8a2b] bg-[#0a2e0d] text-[#98ca7a] hover:bg-[#1a4a1e]'}`}
+          style={{ fontFamily: MONO }}
+        >
+          {top100Only ? 'Top 100 by Rating: ON' : 'Top 100 by Rating: OFF'}
+        </button>
+      </div>
 
-      {youth.length === 0 ? (
+      {visibleYouth.length === 0 ? (
         <div className="border-2 border-[#2a8a2b] bg-[#0d3f10] p-6 text-center text-xs text-[#6b9a5a] italic">
           No youth players available. New intake due next season.
         </div>
@@ -1134,7 +1176,7 @@ function YouthAcademyTab({ youth, onPromote, onRelease, onSetFocus }: {
               </tr>
             </thead>
             <tbody>
-              {youth.map((p) => {
+              {visibleYouth.map((p) => {
                 const potColor = p.potential >= 85 ? 'text-[#2a8a2b]' : p.potential >= 70 ? 'text-[#efe56b]' : p.potential >= 55 ? 'text-[#ff8844]' : 'text-[#6b9a5a]';
                 return (
                   <tr key={p.id} className="border-b border-[#1a5a1e] hover:bg-[#1a4a1e]">
