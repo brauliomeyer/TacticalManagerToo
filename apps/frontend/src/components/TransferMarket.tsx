@@ -135,10 +135,19 @@ const NATIONALITIES = [
   'England', 'France', 'Spain', 'Germany', 'Italy', 'Brazil', 'Argentina',
   'Netherlands', 'Portugal', 'Belgium', 'Croatia', 'Nigeria', 'Colombia',
   'Denmark', 'Sweden', 'Norway', 'Scotland', 'Wales', 'Ireland', 'Japan',
+  'China', 'South Korea', 'Australia', 'USA', 'Mexico', 'Uruguay', 'Chile',
+  'Peru', 'Ecuador', 'Paraguay', 'Venezuela', 'Ghana', 'Senegal', 'Morocco',
+  'Egypt', 'South Africa', 'Cameroon', 'Ivory Coast', 'Tunisia', 'Algeria',
+  'Serbia', 'Poland', 'Czech Republic', 'Turkey', 'Saudi Arabia', 'Qatar',
 ];
 const LEAGUES = [
   'Premier League', 'Championship', 'La Liga', 'Serie A', 'Bundesliga',
   'Ligue 1', 'Eredivisie', 'Primeira Liga', 'Scottish Premier', 'MLS',
+  'Brasileirao Serie A', 'Argentine Primera', 'Liga MX', 'Uruguayan Primera',
+  'Chilean Primera', 'Colombian Primera A', 'Peruvian Liga 1', 'J1 League',
+  'Chinese Super League', 'K League 1', 'A-League', 'Egyptian Premier League',
+  'South African Premiership', 'Moroccan Botola', 'Tunisian Ligue 1',
+  'Saudi Pro League', 'Qatar Stars League',
 ];
 
 const FIRST_NAMES = [
@@ -176,9 +185,10 @@ const TRAINING_FOCUSES = ['General', 'Attacking', 'Defending', 'Physical', 'Tech
    Data generators
    ══════════════════════════════════════════════ */
 
-function generateMarketPlayers(clubId: string, count: number): MarketPlayer[] {
+function generateMarketPlayers(clubId: string, count: number, clubs: Club[]): MarketPlayer[] {
   const players: MarketPlayer[] = [];
   const baseSeed = hs(clubId + 'market');
+  const knownClubs = clubs.filter((c) => c.id !== clubId);
 
   for (let i = 0; i < count; i++) {
     const seed = baseSeed + i * 137;
@@ -191,6 +201,11 @@ function generateMarketPlayers(clubId: string, count: number): MarketPlayer[] {
     const fnIdx = Math.floor(sr(seed + 6) * FIRST_NAMES.length);
     const lnIdx = Math.floor(sr(seed + 7) * LAST_NAMES.length);
     const clIdx = Math.floor(sr(seed + 8) * CLUB_NAMES.length);
+    const knownClub = knownClubs.length > 0 ? knownClubs[Math.floor(sr(seed + 30) * knownClubs.length)] : null;
+    const useKnownClub = knownClub && sr(seed + 31) > 0.45;
+    const leagueName = useKnownClub && knownClub?.leagueName ? knownClub.leagueName : LEAGUES[lgIdx];
+    const clubName = useKnownClub ? knownClub!.name : CLUB_NAMES[clIdx];
+    const nationality = useKnownClub && knownClub?.country ? knownClub.country : NATIONALITIES[natIdx];
     const baseVal = rating * rating * 800 + (pot - rating) * 50000;
     const ageFactor = age < 23 ? 1.4 : age < 28 ? 1.2 : age < 32 ? 0.8 : 0.4;
 
@@ -199,9 +214,9 @@ function generateMarketPlayers(clubId: string, count: number): MarketPlayer[] {
       name: `${FIRST_NAMES[fnIdx]} ${LAST_NAMES[lnIdx]}`,
       age,
       position: POSITIONS[posIdx],
-      club: CLUB_NAMES[clIdx],
-      nationality: NATIONALITIES[natIdx],
-      league: LEAGUES[lgIdx],
+      club: clubName,
+      nationality,
+      league: leagueName,
       rating,
       potential: pot,
       value: Math.round(baseVal * ageFactor / 1000) * 1000,
@@ -629,6 +644,15 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
   const [sortBy, setSortBy] = useState<string>('rating');
   const [contractFilter, setContractFilter] = useState('ALL');
 
+  const availableNationalities = useMemo(
+    () => Array.from(new Set(players.map((p) => p.nationality))).sort((a, b) => a.localeCompare(b)),
+    [players]
+  );
+  const availableLeagues = useMemo(
+    () => Array.from(new Set(players.map((p) => p.league))).sort((a, b) => a.localeCompare(b)),
+    [players]
+  );
+
   const filtered = useMemo(() => {
     let list = [...players];
     if (posFilter !== 'ALL') list = list.filter((p) => p.position === posFilter);
@@ -652,11 +676,24 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
 
   const thCls = 'py-1 px-1 text-left text-[9px] font-bold uppercase text-[#efe56b] cursor-pointer hover:text-white';
 
+  const resetFilters = () => {
+    setPosFilter('ALL');
+    setNatFilter('ALL');
+    setLeagueFilter('ALL');
+    setContractFilter('ALL');
+    setMinAge(15);
+    setMaxAge(40);
+    setMinRating(40);
+    setMaxPrice(999_000_000);
+    setSortBy('rating');
+  };
+
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-[220px_1fr_280px]">
       {/* Filters panel */}
       <div className="border-2 border-[#2a8a2b] bg-[#0d3f10] p-2 space-y-2">
         <h4 className="text-[10px] font-black uppercase text-[#00e5ff]" style={{ fontFamily: RETRO }}>Filters</h4>
+        <ActionBtn onClick={resetFilters} variant="yellow">Reset Filters</ActionBtn>
 
         <div>
           <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Position</label>
@@ -670,7 +707,7 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
           <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Nationality</label>
           <select value={natFilter} onChange={(e) => setNatFilter(e.target.value)} className="w-full bg-[#0a2e0d] border border-[#2a8a2b] text-[#d5f8b6] text-[10px] px-1 py-0.5">
             <option value="ALL">All Nationalities</option>
-            {NATIONALITIES.map((n) => <option key={n} value={n}>{n}</option>)}
+            {availableNationalities.map((n) => <option key={n} value={n}>{n}</option>)}
           </select>
         </div>
 
@@ -678,7 +715,7 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
           <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">League</label>
           <select value={leagueFilter} onChange={(e) => setLeagueFilter(e.target.value)} className="w-full bg-[#0a2e0d] border border-[#2a8a2b] text-[#d5f8b6] text-[10px] px-1 py-0.5">
             <option value="ALL">All Leagues</option>
-            {LEAGUES.map((l) => <option key={l} value={l}>{l}</option>)}
+            {availableLeagues.map((l) => <option key={l} value={l}>{l}</option>)}
           </select>
         </div>
 
@@ -764,7 +801,7 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={8} className="py-4 text-center text-xs text-[#6b9a5a] italic">No players match the current filters.</td></tr>
+              <tr><td colSpan={8} className="py-4 text-center text-xs text-[#6b9a5a] italic">No players match the current filters. Use Reset Filters to show the full global market.</td></tr>
             )}
           </tbody>
         </table>
@@ -1241,10 +1278,8 @@ export default function TransferMarket({ activeClub, clubs, squadPlayers }: Tran
 
   // Generate market players — exclude own club
   const marketPlayers = useMemo(() => {
-    const all = generateMarketPlayers(activeClub.id, 200);
-    const clubNames = clubs.map((c) => c.name);
-    return all.map((p) => clubNames.includes(p.club) ? p : { ...p, league: activeClub.leagueName ?? p.league });
-  }, [activeClub.id, activeClub.leagueName, clubs]);
+    return generateMarketPlayers(activeClub.id, 1200, clubs);
+  }, [activeClub.id, clubs]);
   const youthPlayersBase = useMemo(() => generateYouthPlayers(activeClub.id), [activeClub.id]);
 
   // State
