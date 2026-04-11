@@ -35,6 +35,7 @@ interface TacticsPageProps {
   starters: StarterPlayer[];
   bench: BenchPlayer[];
   clubId: string;
+  onAutoSelectByFormation?: (tactic: FullTactic) => void;
 }
 
 /* ── Tab type ── */
@@ -293,19 +294,42 @@ function FormationPanel({
   tactic,
   starters,
   onChangeFormation,
+  onAutoSelectCurrent,
+  onQuickAutoFormation,
   selectedSlot,
   onSelectSlot,
 }: {
   tactic: FullTactic;
   starters: StarterPlayer[];
   onChangeFormation: (f: FormationId) => void;
+  onAutoSelectCurrent: () => void;
+  onQuickAutoFormation: (f: FormationId) => void;
   selectedSlot: string | null;
   onSelectSlot: (id: string) => void;
 }) {
   const formationIds = Object.keys(FORMATIONS) as FormationId[];
+  const quickAutoFormations = (['4-3-3', '4-2-3-1'] as FormationId[]).filter((fid) => !!FORMATIONS[fid]);
 
   return (
     <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-1 border border-[#2a8a2b] bg-[#0a3d0e] p-2">
+        <button
+          onClick={onAutoSelectCurrent}
+          className="px-2 py-1 text-[10px] font-black uppercase border-2 border-[#22c55e] bg-[#14532d] text-[#22c55e] hover:bg-[#166534]"
+        >
+          Auto Selectie op Huidige Formatie
+        </button>
+        {quickAutoFormations.map((fid) => (
+          <button
+            key={fid}
+            onClick={() => onQuickAutoFormation(fid)}
+            className="px-2 py-1 text-[10px] font-black uppercase border-2 border-[#efe56b] bg-[#efe56b] text-[#2e1f4a] hover:bg-[#f6ec96]"
+          >
+            Auto {fid}
+          </button>
+        ))}
+      </div>
+
       {/* Formation selector */}
       <div className="flex flex-wrap gap-1">
         {formationIds.map((fid) => (
@@ -787,7 +811,7 @@ function SummaryPanel({ tactic }: { tactic: FullTactic }) {
    MAIN COMPONENT
    ══════════════════════════════════════════════ */
 
-export default function TacticsPage({ starters, bench, clubId }: TacticsPageProps) {
+export default function TacticsPage({ starters, bench, clubId, onAutoSelectByFormation }: TacticsPageProps) {
   const [tab, setTab] = useState<Tab>('presets');
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
@@ -824,6 +848,19 @@ export default function TacticsPage({ starters, bench, clubId }: TacticsPageProp
     setTactic((prev) => changeFormation(prev, f));
     setSelectedSlot(null);
   }, []);
+
+  const handleAutoSelectCurrent = useCallback(() => {
+    onAutoSelectByFormation?.(tactic);
+  }, [onAutoSelectByFormation, tactic]);
+
+  const handleQuickAutoFormation = useCallback((f: FormationId) => {
+    setTactic((prev) => {
+      const next = changeFormation(prev, f);
+      onAutoSelectByFormation?.(next);
+      return next;
+    });
+    setSelectedSlot(null);
+  }, [onAutoSelectByFormation]);
 
   const handleChangeRole = useCallback((slotId: string, role: PlayerRole) => {
     setTactic((prev) => ({
@@ -914,6 +951,8 @@ export default function TacticsPage({ starters, bench, clubId }: TacticsPageProp
             tactic={tactic}
             starters={starters}
             onChangeFormation={handleChangeFormation}
+            onAutoSelectCurrent={handleAutoSelectCurrent}
+            onQuickAutoFormation={handleQuickAutoFormation}
             selectedSlot={selectedSlot}
             onSelectSlot={setSelectedSlot}
           />
