@@ -3,7 +3,7 @@ import axios from 'axios';
 import { io } from 'socket.io-client';
 import type { ManagerSummary, MatchEvent } from '@tmt/shared';
 import MatchScreen from './components/MatchScreen';
-import TacticsBoard from './components/TacticsBoard';
+import TacticsPage from './components/TacticsPage';
 import BoardRoom from './components/BoardRoom';
 import Mailbox from './components/Mailbox';
 import CupCenter from './components/CupCenter';
@@ -12,6 +12,9 @@ import TransferMarket from './components/TransferMarket';
 import TrainingGround from './components/TrainingGround';
 import ClubManagement from './components/ClubManagement';
 import ClubCrest from './components/ClubCrest';
+import ManagerPage from './components/ManagerPage';
+import GameDashboard from './components/GameDashboard';
+import { loadActiveTactic } from './engine/tacticsSystem';
 import { realSquads } from './realSquads';
 import { fallbackClubs } from './fallbackClubs';
 import {
@@ -160,7 +163,7 @@ const fallbackLastNames = [
   'Walker', 'Brown', 'Taylor', 'Wilson', 'Evans', 'King', 'Parker', 'Scott', 'Davies', 'Roberts'
 ];
 
-type PageKey = 'mail' | 'board' | 'squad' | 'cup' | 'human' | 'manager' | 'manage' | 'transfers' | 'training' | 'tactics' | 'match';
+type PageKey = 'mail' | 'board' | 'squad' | 'cup' | 'human' | 'manager' | 'manage' | 'transfers' | 'training' | 'tactics' | 'match' | 'game';
 
 const SQUAD_STORAGE_KEY = 'tmt-squad-statuses';
 
@@ -213,8 +216,9 @@ function savePositionOverrides(clubId: string, overrides: Record<string, string>
 const socket = io(API_BASE, { autoConnect: false });
 
 const sideMenu: { key: PageKey; label: string }[] = [
+  { key: 'game', label: 'Game' },
   { key: 'human', label: 'Player Fixtures' },
-  { key: 'manager', label: 'Computer Manager' },
+  { key: 'manager', label: 'Manager' },
   { key: 'manage', label: 'Manage' },
   { key: 'transfers', label: 'Transfers' },
   { key: 'training', label: 'Training' },
@@ -234,12 +238,13 @@ const pageDescriptions: Record<PageKey, { title: string; text: string }> = {
   squad: { title: 'Squad Hub', text: 'Overzicht van selectie, vorm, conditie en rollen.' },
   cup: { title: 'Cup Overview', text: 'Bekerloting, uitslagen en route naar de finale.' },
   human: { title: 'Player Fixtures & Records', text: 'Alle speler prestaties, doelpunten, assists en records van het seizoen.' },
-  manager: { title: 'AI Manager', text: 'Overzicht van de computer manager keuzes en tegenstandersanalyse.' },
+  manager: { title: 'Manager', text: 'Beheer je carrière, bekijk alle managers en kies een club om te managen.' },
   manage: { title: 'Club Management', text: 'Staf, faciliteiten en langetermijnplanning voor de club.' },
   transfers: { title: 'Transfer Market', text: 'Scoutrapporten, biedingen en contractonderhandelingen.' },
   training: { title: 'Training Ground', text: 'Trainingsschema, focusgebieden en spelersontwikkeling.' },
   tactics: { title: 'Tactical Desk', text: 'Plaats je spelers op het veld en verfijn je formatie.' },
-  match: { title: 'Live Match', text: 'Live simulatie met eventlog en mini-pitch.' }
+  match: { title: 'Live Match', text: 'Live simulatie met eventlog en mini-pitch.' },
+  game: { title: 'Game Engine', text: 'Speel wedstrijden, bekijk resultaten en beheer je seizoen.' }
 };
 
 function getOverall(player: SquadPlayer) {
@@ -907,7 +912,8 @@ function PagePanel({
   onSquadRoleFilterChange,
   onSquadSortChange,
   onSquadStatusChange,
-  onPositionChange
+  onPositionChange,
+  onClubChange
 }: {
   page: PageKey;
   activeClub: Club;
@@ -926,12 +932,22 @@ function PagePanel({
   onSquadSortChange: (value: SquadSortKey) => void;
   onSquadStatusChange: (playerId: string, status: SquadStatus) => void;
   onPositionChange: (playerId: string, role: string) => void;
+  onClubChange: (clubId: string) => void;
 }) {
+  if (page === 'game') {
+    return <GameDashboard clubs={clubs} activeClub={activeClub} squadPlayers={squadPlayers} activeTactic={loadActiveTactic(activeClub?.id)} />;
+  }
+  if (page === 'manager') {
+    return <ManagerPage activeClub={activeClub} clubs={clubs} onClubChange={onClubChange} />;
+  }
   if (page === 'tactics') {
     const starters = squadPlayers
       .filter((p) => squadStatuses[p.id] === 'STARTER')
       .map((p) => ({ ...p, role: positionOverrides[p.id] ?? p.role }));
-    return <TacticsBoard starters={starters} clubId={activeClub?.id} />;
+    const bench = squadPlayers
+      .filter((p) => squadStatuses[p.id] === 'BENCH')
+      .map((p) => ({ ...p, role: positionOverrides[p.id] ?? p.role }));
+    return <TacticsPage starters={starters} bench={bench} clubId={activeClub?.id} />;
   }
   if (page === 'match') return <MatchScreen />;
   if (page === 'board') {
@@ -976,13 +992,14 @@ function PagePanel({
     );
   }
 
+  const desc = pageDescriptions[page as PageKey];
   return (
     <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
       <h2 className="mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
-        {pageDescriptions[page].title}
+        {desc.title}
       </h2>
       <div className="retro-pitch mb-3 h-52 border-2 border-[#8ee486]" />
-      <p className="border border-[#98ca7a] bg-[#256d22] px-2 py-1 text-sm text-[#d5f8b6]">{pageDescriptions[page].text}</p>
+      <p className="border border-[#98ca7a] bg-[#256d22] px-2 py-1 text-sm text-[#d5f8b6]">{desc.text}</p>
       <p className="mt-3 border border-[#98ca7a] bg-[#1f641d] px-2 py-1 text-sm text-[#d5f8b6]">
         Division: <strong>{activeClub.leagueName ?? activeClub.country ?? '1st Division'}</strong>
       </p>
@@ -1324,7 +1341,7 @@ export default function App() {
           <h1 className="flex items-center gap-3 text-2xl font-black uppercase tracking-widest"><ClubCrest clubName={activeClub.name} size={36} />{activeClub.name}</h1>
           <button
             className="border-2 border-[#ebe25f] bg-[#2a8a2b] px-3 py-1 text-sm font-bold uppercase"
-            onClick={simulate}
+            onClick={() => setActivePage('game')}
             type="button"
           >
             Play Next Match
@@ -1450,6 +1467,7 @@ export default function App() {
               onSquadSortChange={setSquadSortBy}
               onSquadStatusChange={setPlayerStatus}
               onPositionChange={setPlayerPosition}
+              onClubChange={(id) => setActiveClubId(id)}
             />
 
             {error ? (

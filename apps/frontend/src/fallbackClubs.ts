@@ -13,7 +13,7 @@ export const fallbackClubs = [
     "name": "Barnsley FC",
     "country": "England",
     "budget": 105253410,
-    "reputation": 36,
+    "reputation": 46,
     "leagueId": "dfcc84cf-ea01-4094-baf0-284a906e2f1f",
     "leagueName": "Championship"
   },
@@ -22,7 +22,7 @@ export const fallbackClubs = [
     "name": "Birmingham City FC",
     "country": "England",
     "budget": 177980305,
-    "reputation": 78,
+    "reputation": 63,
     "leagueId": "dfcc84cf-ea01-4094-baf0-284a906e2f1f",
     "leagueName": "Championship"
   },
@@ -40,7 +40,7 @@ export const fallbackClubs = [
     "name": "Brentford FC",
     "country": "England",
     "budget": 93188034,
-    "reputation": 83,
+    "reputation": 68,
     "leagueId": "dfcc84cf-ea01-4094-baf0-284a906e2f1f",
     "leagueName": "Championship"
   },
@@ -49,7 +49,7 @@ export const fallbackClubs = [
     "name": "Bristol City FC",
     "country": "England",
     "budget": 168172638,
-    "reputation": 45,
+    "reputation": 54,
     "leagueId": "dfcc84cf-ea01-4094-baf0-284a906e2f1f",
     "leagueName": "Championship"
   },
@@ -67,7 +67,7 @@ export const fallbackClubs = [
     "name": "Coventry City FC",
     "country": "England",
     "budget": 44002262,
-    "reputation": 94,
+    "reputation": 58,
     "leagueId": "dfcc84cf-ea01-4094-baf0-284a906e2f1f",
     "leagueName": "Championship"
   },
@@ -76,7 +76,7 @@ export const fallbackClubs = [
     "name": "Derby County FC",
     "country": "England",
     "budget": 82333214,
-    "reputation": 47,
+    "reputation": 57,
     "leagueId": "dfcc84cf-ea01-4094-baf0-284a906e2f1f",
     "leagueName": "Championship"
   },
@@ -85,7 +85,7 @@ export const fallbackClubs = [
     "name": "Huddersfield Town AFC",
     "country": "England",
     "budget": 16944380,
-    "reputation": 73,
+    "reputation": 60,
     "leagueId": "dfcc84cf-ea01-4094-baf0-284a906e2f1f",
     "leagueName": "Championship"
   },
@@ -103,7 +103,7 @@ export const fallbackClubs = [
     "name": "Middlesbrough FC",
     "country": "England",
     "budget": 63242122,
-    "reputation": 43,
+    "reputation": 58,
     "leagueId": "dfcc84cf-ea01-4094-baf0-284a906e2f1f",
     "leagueName": "Championship"
   },
@@ -130,7 +130,7 @@ export const fallbackClubs = [
     "name": "Nottingham Forest FC",
     "country": "England",
     "budget": 139172599,
-    "reputation": 35,
+    "reputation": 64,
     "leagueId": "dfcc84cf-ea01-4094-baf0-284a906e2f1f",
     "leagueName": "Championship"
   },
@@ -139,7 +139,7 @@ export const fallbackClubs = [
     "name": "Preston North End FC",
     "country": "England",
     "budget": 33810173,
-    "reputation": 71,
+    "reputation": 55,
     "leagueId": "dfcc84cf-ea01-4094-baf0-284a906e2f1f",
     "leagueName": "Championship"
   },
@@ -157,7 +157,7 @@ export const fallbackClubs = [
     "name": "Reading FC",
     "country": "England",
     "budget": 112470808,
-    "reputation": 81,
+    "reputation": 58,
     "leagueId": "dfcc84cf-ea01-4094-baf0-284a906e2f1f",
     "leagueName": "Championship"
   },
@@ -166,7 +166,7 @@ export const fallbackClubs = [
     "name": "Rotherham United FC",
     "country": "England",
     "budget": 92320602,
-    "reputation": 94,
+    "reputation": 50,
     "leagueId": "dfcc84cf-ea01-4094-baf0-284a906e2f1f",
     "leagueName": "Championship"
   },
@@ -193,7 +193,7 @@ export const fallbackClubs = [
     "name": "Swansea City FC",
     "country": "England",
     "budget": 82211069,
-    "reputation": 83,
+    "reputation": 62,
     "leagueId": "dfcc84cf-ea01-4094-baf0-284a906e2f1f",
     "leagueName": "Championship"
   },
@@ -229,7 +229,7 @@ export const fallbackClubs = [
     "name": "Accrington Stanley FC",
     "country": "England",
     "budget": 139263554,
-    "reputation": 94,
+    "reputation": 37,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -238,7 +238,7 @@ export const fallbackClubs = [
     "name": "Blackpool FC",
     "country": "England",
     "budget": 138127946,
-    "reputation": 80,
+    "reputation": 48,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -247,7 +247,7 @@ export const fallbackClubs = [
     "name": "Bristol Rovers FC",
     "country": "England",
     "budget": 90466952,
-    "reputation": 81,
+    "reputation": 40,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -256,7 +256,7 @@ export const fallbackClubs = [
     "name": "Burton Albion FC",
     "country": "England",
     "budget": 94369333,
-    "reputation": 78,
+    "reputation": 44,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -265,7 +265,7 @@ export const fallbackClubs = [
     "name": "Charlton Athletic FC",
     "country": "England",
     "budget": 139493289,
-    "reputation": 45,
+    "reputation": 52,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -274,7 +274,7 @@ export const fallbackClubs = [
     "name": "Crewe Alexandra FC",
     "country": "England",
     "budget": 170539838,
-    "reputation": 88,
+    "reputation": 36,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -283,7 +283,7 @@ export const fallbackClubs = [
     "name": "Doncaster Rovers FC",
     "country": "England",
     "budget": 102942604,
-    "reputation": 87,
+    "reputation": 42,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -292,7 +292,7 @@ export const fallbackClubs = [
     "name": "Fleetwood Town FC",
     "country": "England",
     "budget": 211500560,
-    "reputation": 58,
+    "reputation": 40,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -310,7 +310,7 @@ export const fallbackClubs = [
     "name": "Hull City AFC",
     "country": "England",
     "budget": 143245968,
-    "reputation": 76,
+    "reputation": 55,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -319,7 +319,7 @@ export const fallbackClubs = [
     "name": "Ipswich Town FC",
     "country": "England",
     "budget": 50040326,
-    "reputation": 68,
+    "reputation": 56,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -328,7 +328,7 @@ export const fallbackClubs = [
     "name": "Lincoln City FC",
     "country": "England",
     "budget": 106064583,
-    "reputation": 94,
+    "reputation": 45,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -355,7 +355,7 @@ export const fallbackClubs = [
     "name": "Oxford United FC",
     "country": "England",
     "budget": 100069465,
-    "reputation": 92,
+    "reputation": 49,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -364,7 +364,7 @@ export const fallbackClubs = [
     "name": "Peterborough United FC",
     "country": "England",
     "budget": 87653828,
-    "reputation": 87,
+    "reputation": 48,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -382,7 +382,7 @@ export const fallbackClubs = [
     "name": "Portsmouth FC",
     "country": "England",
     "budget": 139030113,
-    "reputation": 88,
+    "reputation": 53,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -391,7 +391,7 @@ export const fallbackClubs = [
     "name": "Rochdale AFC",
     "country": "England",
     "budget": 149871908,
-    "reputation": 64,
+    "reputation": 38,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -400,7 +400,7 @@ export const fallbackClubs = [
     "name": "Shrewsbury Town FC",
     "country": "England",
     "budget": 192957667,
-    "reputation": 79,
+    "reputation": 40,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -409,7 +409,7 @@ export const fallbackClubs = [
     "name": "Sunderland AFC",
     "country": "England",
     "budget": 191582746,
-    "reputation": 55,
+    "reputation": 59,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -427,7 +427,7 @@ export const fallbackClubs = [
     "name": "Wigan Athletic FC",
     "country": "England",
     "budget": 207765697,
-    "reputation": 94,
+    "reputation": 52,
     "leagueId": "202178ae-f555-4647-be08-bd500485278c",
     "leagueName": "League One"
   },
@@ -436,7 +436,7 @@ export const fallbackClubs = [
     "name": "Barrow AFC",
     "country": "England",
     "budget": 16564129,
-    "reputation": 76,
+    "reputation": 32,
     "leagueId": "c00c9470-c2bc-43cc-9489-6ee3634597dd",
     "leagueName": "League Two"
   },
@@ -445,7 +445,7 @@ export const fallbackClubs = [
     "name": "Bolton Wanderers FC",
     "country": "England",
     "budget": 150002967,
-    "reputation": 68,
+    "reputation": 52,
     "leagueId": "c00c9470-c2bc-43cc-9489-6ee3634597dd",
     "leagueName": "League Two"
   },
@@ -463,7 +463,7 @@ export const fallbackClubs = [
     "name": "Cambridge United FC",
     "country": "England",
     "budget": 134113553,
-    "reputation": 67,
+    "reputation": 38,
     "leagueId": "c00c9470-c2bc-43cc-9489-6ee3634597dd",
     "leagueName": "League Two"
   },
@@ -472,7 +472,7 @@ export const fallbackClubs = [
     "name": "Carlisle United FC",
     "country": "England",
     "budget": 174415383,
-    "reputation": 74,
+    "reputation": 38,
     "leagueId": "c00c9470-c2bc-43cc-9489-6ee3634597dd",
     "leagueName": "League Two"
   },
@@ -481,7 +481,7 @@ export const fallbackClubs = [
     "name": "Cheltenham Town FC",
     "country": "England",
     "budget": 119456265,
-    "reputation": 94,
+    "reputation": 38,
     "leagueId": "c00c9470-c2bc-43cc-9489-6ee3634597dd",
     "leagueName": "League Two"
   },
@@ -490,7 +490,7 @@ export const fallbackClubs = [
     "name": "Colchester United FC",
     "country": "England",
     "budget": 130800610,
-    "reputation": 94,
+    "reputation": 36,
     "leagueId": "c00c9470-c2bc-43cc-9489-6ee3634597dd",
     "leagueName": "League Two"
   },
@@ -499,7 +499,7 @@ export const fallbackClubs = [
     "name": "Crawley Town FC",
     "country": "England",
     "budget": 44095987,
-    "reputation": 76,
+    "reputation": 32,
     "leagueId": "c00c9470-c2bc-43cc-9489-6ee3634597dd",
     "leagueName": "League Two"
   },
@@ -517,7 +517,7 @@ export const fallbackClubs = [
     "name": "Forest Green Rovers FC",
     "country": "England",
     "budget": 72870652,
-    "reputation": 93,
+    "reputation": 32,
     "leagueId": "c00c9470-c2bc-43cc-9489-6ee3634597dd",
     "leagueName": "League Two"
   },
@@ -526,7 +526,7 @@ export const fallbackClubs = [
     "name": "Grimsby Town FC",
     "country": "England",
     "budget": 88704324,
-    "reputation": 87,
+    "reputation": 38,
     "leagueId": "c00c9470-c2bc-43cc-9489-6ee3634597dd",
     "leagueName": "League Two"
   },
@@ -535,7 +535,7 @@ export const fallbackClubs = [
     "name": "Harrogate Town AFC",
     "country": "England",
     "budget": 93877758,
-    "reputation": 58,
+    "reputation": 30,
     "leagueId": "c00c9470-c2bc-43cc-9489-6ee3634597dd",
     "leagueName": "League Two"
   },
@@ -553,7 +553,7 @@ export const fallbackClubs = [
     "name": "Mansfield Town FC",
     "country": "England",
     "budget": 205200481,
-    "reputation": 79,
+    "reputation": 40,
     "leagueId": "c00c9470-c2bc-43cc-9489-6ee3634597dd",
     "leagueName": "League Two"
   },
@@ -562,7 +562,7 @@ export const fallbackClubs = [
     "name": "Morecambe FC",
     "country": "England",
     "budget": 159899597,
-    "reputation": 68,
+    "reputation": 32,
     "leagueId": "c00c9470-c2bc-43cc-9489-6ee3634597dd",
     "leagueName": "League Two"
   },
@@ -580,7 +580,7 @@ export const fallbackClubs = [
     "name": "Oldham Athletic AFC",
     "country": "England",
     "budget": 135419382,
-    "reputation": 79,
+    "reputation": 36,
     "leagueId": "c00c9470-c2bc-43cc-9489-6ee3634597dd",
     "leagueName": "League Two"
   },
@@ -607,7 +607,7 @@ export const fallbackClubs = [
     "name": "Scunthorpe United FC",
     "country": "England",
     "budget": 213101010,
-    "reputation": 70,
+    "reputation": 34,
     "leagueId": "c00c9470-c2bc-43cc-9489-6ee3634597dd",
     "leagueName": "League Two"
   },
@@ -616,7 +616,7 @@ export const fallbackClubs = [
     "name": "Southend United FC",
     "country": "England",
     "budget": 58235882,
-    "reputation": 84,
+    "reputation": 42,
     "leagueId": "c00c9470-c2bc-43cc-9489-6ee3634597dd",
     "leagueName": "League Two"
   },
@@ -625,7 +625,7 @@ export const fallbackClubs = [
     "name": "Stevenage FC",
     "country": "England",
     "budget": 89243676,
-    "reputation": 81,
+    "reputation": 32,
     "leagueId": "c00c9470-c2bc-43cc-9489-6ee3634597dd",
     "leagueName": "League Two"
   },
@@ -670,7 +670,7 @@ export const fallbackClubs = [
     "name": "Brighton",
     "country": "England",
     "budget": 102804450,
-    "reputation": 92,
+    "reputation": 76,
     "leagueId": "c7dc2f42-4010-4e2a-857c-8ffd18d84ba6",
     "leagueName": "Premier League"
   },
@@ -688,7 +688,7 @@ export const fallbackClubs = [
     "name": "Chelsea",
     "country": "England",
     "budget": 177744955,
-    "reputation": 49,
+    "reputation": 88,
     "leagueId": "c7dc2f42-4010-4e2a-857c-8ffd18d84ba6",
     "leagueName": "Premier League"
   },
@@ -697,7 +697,7 @@ export const fallbackClubs = [
     "name": "Crystal Palace",
     "country": "England",
     "budget": 35791538,
-    "reputation": 40,
+    "reputation": 64,
     "leagueId": "c7dc2f42-4010-4e2a-857c-8ffd18d84ba6",
     "leagueName": "Premier League"
   },
@@ -706,7 +706,7 @@ export const fallbackClubs = [
     "name": "Everton",
     "country": "England",
     "budget": 196265025,
-    "reputation": 87,
+    "reputation": 72,
     "leagueId": "c7dc2f42-4010-4e2a-857c-8ffd18d84ba6",
     "leagueName": "Premier League"
   },
@@ -742,7 +742,7 @@ export const fallbackClubs = [
     "name": "Liverpool",
     "country": "England",
     "budget": 100876621,
-    "reputation": 45,
+    "reputation": 92,
     "leagueId": "c7dc2f42-4010-4e2a-857c-8ffd18d84ba6",
     "leagueName": "Premier League"
   },
@@ -760,7 +760,7 @@ export const fallbackClubs = [
     "name": "Manchester Utd",
     "country": "England",
     "budget": 205034714,
-    "reputation": 71,
+    "reputation": 88,
     "leagueId": "c7dc2f42-4010-4e2a-857c-8ffd18d84ba6",
     "leagueName": "Premier League"
   },
@@ -769,7 +769,7 @@ export const fallbackClubs = [
     "name": "Newcastle Utd",
     "country": "England",
     "budget": 33127722,
-    "reputation": 88,
+    "reputation": 78,
     "leagueId": "c7dc2f42-4010-4e2a-857c-8ffd18d84ba6",
     "leagueName": "Premier League"
   },
@@ -796,7 +796,7 @@ export const fallbackClubs = [
     "name": "Tottenham",
     "country": "England",
     "budget": 100362308,
-    "reputation": 64,
+    "reputation": 82,
     "leagueId": "c7dc2f42-4010-4e2a-857c-8ffd18d84ba6",
     "leagueName": "Premier League"
   },
@@ -805,7 +805,7 @@ export const fallbackClubs = [
     "name": "West Brom",
     "country": "England",
     "budget": 75083917,
-    "reputation": 49,
+    "reputation": 67,
     "leagueId": "c7dc2f42-4010-4e2a-857c-8ffd18d84ba6",
     "leagueName": "Premier League"
   },
@@ -814,7 +814,7 @@ export const fallbackClubs = [
     "name": "West Ham",
     "country": "England",
     "budget": 212387395,
-    "reputation": 87,
+    "reputation": 72,
     "leagueId": "c7dc2f42-4010-4e2a-857c-8ffd18d84ba6",
     "leagueName": "Premier League"
   },
@@ -823,7 +823,7 @@ export const fallbackClubs = [
     "name": "Wolves",
     "country": "England",
     "budget": 146992350,
-    "reputation": 38,
+    "reputation": 67,
     "leagueId": "c7dc2f42-4010-4e2a-857c-8ffd18d84ba6",
     "leagueName": "Premier League"
   }
