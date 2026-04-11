@@ -11,7 +11,6 @@ import {
   FORMATIONS,
   TACTIC_PRESETS,
   createTacticFromPreset,
-  createCustomTactic,
   changeFormation,
   getAllowedRoles,
   saveActiveTactic,

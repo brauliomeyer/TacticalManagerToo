@@ -7,7 +7,6 @@
 
 import {
   type FullTactic,
-  type TacticModifiers,
   type TacticStyleId,
   computeTacticModifiers,
   getTacticCounterBonus,
@@ -488,8 +487,6 @@ export function simulateMatch(
 // ────────────────────────────────────────────
 // 5. INTERACTIVE MATCH ENGINE
 // ────────────────────────────────────────────
-
-const DEFAULT_TACTICS: TacticConfig = { tempo: 50, pressing: 50, width: 50, mentality: 'Balanced' };
 
 export function createInteractiveMatch(
   fixtureId: string,

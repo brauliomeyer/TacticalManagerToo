@@ -1347,17 +1347,7 @@ export default function App() {
     }
   };
 
-  const simulate = async () => {
-    if (!fixture) return;
 
-    try {
-      await axios.post(`${API_BASE}/matches/simulate`, fixture);
-      setActivePage('match');
-      setError(null);
-    } catch {
-      setError('Could not simulate match.');
-    }
-  };
 
   const setPlayerPosition = (playerId: string, role: string) => {
     setPositionOverrides((prev) => {

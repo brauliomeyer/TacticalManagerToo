@@ -28,7 +28,7 @@ import {
   formationToHomePitch,
   formationToAwayPitch,
 } from '../engine/footballEngine';
-import type { FullTactic, OffensiveRun, DefensiveRun } from '../engine/tacticsSystem';
+import type { FullTactic, OffensiveRun } from '../engine/tacticsSystem';
 import { TACTIC_PRESETS, createTacticFromPreset } from '../engine/tacticsSystem';
 
 /* ── Prop types (matching App.tsx definitions) ── */
