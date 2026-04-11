@@ -543,9 +543,18 @@ export default function PlayerFixtures({ activeClub, clubs, squadPlayers }: Play
       </div>
 
       {/* Quick overview: all categories compact */}
-      <h2 className="mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
-        All Categories — Top 3
-      </h2>
+      <div className="flex items-center mb-3">
+        <h2 className="flex-1 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
+          All Categories — Top 3
+        </h2>
+        <button
+          className="ml-2 px-3 py-1 text-[10px] font-bold uppercase border border-[#2a8a2b] bg-[#0d3f10] text-[#efe56b] hover:bg-[#1a4a1e]"
+          style={{ fontFamily: 'Courier New, monospace' }}
+          onClick={() => { window.localStorage.clear(); window.location.reload(); }}
+        >
+          Reset
+        </button>
+      </div>
       <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {CATEGORIES.map((cat) => {
           const catEntries = allData.get(cat.key) ?? [];
@@ -570,7 +579,7 @@ export default function PlayerFixtures({ activeClub, clubs, squadPlayers }: Play
               {top3.map((e) => (
                 <div key={`${e.rank}-${e.playerName}`} className="flex justify-between text-[10px]">
                   <span className={e.clubName === activeClub.name ? 'text-[#efe56b] font-bold' : 'text-[#d5f8b6]'}>
-                    {e.rank}. {e.playerName}
+                    {e.rank}. {e.playerName} <span className="text-[#98ca7a]">({e.clubName})</span>
                   </span>
                   <span className="text-white font-mono font-bold">{e.value}</span>
                 </div>
