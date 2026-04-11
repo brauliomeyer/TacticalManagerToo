@@ -167,11 +167,11 @@ const DEFAULT_SCHEDULE: ScheduleDay[] = [
 ];
 
 const SCHEDULE_PRESETS: { name: string; schedule: DayType[] }[] = [
+  { name: 'Match Week', schedule: ['recovery', 'tactical', 'technical', 'tactical', 'match-prep', 'rest', 'recovery'] },
+  { name: 'Development Week', schedule: ['technical', 'fitness', 'technical', 'tactical', 'technical', 'fitness', 'recovery'] },
+  { name: 'Recovery Week', schedule: ['recovery', 'rest', 'technical', 'recovery', 'rest', 'technical', 'recovery'] },
+  { name: 'Trainingskamp', schedule: ['fitness', 'technical', 'tactical', 'fitness', 'technical', 'match-prep', 'recovery'] },
   { name: 'Balanced Week', schedule: ['fitness', 'technical', 'tactical', 'technical', 'match-prep', 'rest', 'recovery'] },
-  { name: 'High Intensity', schedule: ['fitness', 'technical', 'tactical', 'fitness', 'technical', 'match-prep', 'rest'] },
-  { name: 'Recovery Focus', schedule: ['recovery', 'technical', 'rest', 'tactical', 'recovery', 'rest', 'rest'] },
-  { name: 'Match Week', schedule: ['tactical', 'match-prep', 'rest', 'tactical', 'match-prep', 'rest', 'rest'] },
-  { name: 'Preseason', schedule: ['fitness', 'fitness', 'technical', 'fitness', 'tactical', 'fitness', 'recovery'] },
 ];
 
 const YOUTH_FIRST = [
@@ -237,6 +237,35 @@ function growthRate(intensity: Intensity, fatigue: number, morale: number) {
   const fatMult = Math.max(0.2, 1 - fatigue / 150);
   const morMult = 0.5 + morale / 200;
   return intMult * fatMult * morMult;
+}
+
+function pickSquadFocus(role: string, teamFocus: TeamFocus): TrainingFocus {
+  const r = role.toUpperCase();
+  if (teamFocus === 'fitness') return 'fitness';
+  if (teamFocus === 'attacking') {
+    if (r.includes('STRIKER') || r.includes('WINGER') || r.includes('FORWARD')) return 'shooting';
+    if (r.includes('MIDFIELDER')) return 'passing';
+    return 'positioning';
+  }
+  if (teamFocus === 'defensive') {
+    if (r.includes('BACK') || r.includes('DEFENDER') || r.includes('SWEEPER')) return 'positioning';
+    if (r.includes('GOALKEEPER')) return 'concentration';
+    return 'stamina';
+  }
+  if (r.includes('GOALKEEPER')) return 'concentration';
+  if (r.includes('MIDFIELDER')) return 'vision';
+  if (r.includes('STRIKER') || r.includes('FORWARD')) return 'shooting';
+  return 'balanced';
+}
+
+function pickYouthFocus(position: string): TrainingFocus {
+  const pos = position.toUpperCase();
+  if (pos === 'GK') return 'concentration';
+  if (pos === 'CB' || pos === 'LB' || pos === 'RB' || pos === 'DM') return 'positioning';
+  if (pos === 'CM' || pos === 'AM') return 'vision';
+  if (pos === 'LW' || pos === 'RW') return 'dribbling';
+  if (pos === 'CF' || pos === 'ST') return 'shooting';
+  return 'balanced';
 }
 
 /* ══════════════════════════════════════════════
@@ -474,7 +503,7 @@ function OverviewTab({ squad, trainingStates, teamIntensity, teamFocus, onSetInt
    Squad Training Tab
    ══════════════════════════════════════════════ */
 
-function SquadTrainingTab({ squad, trainingStates, teamIntensity, onSetFocus, onSetIntensity, onRest, onRecover, onSelect }: {
+function SquadTrainingTab({ squad, trainingStates, teamIntensity, onSetFocus, onSetIntensity, onRest, onRecover, onAutoSelectTraining, onSelect }: {
   squad: SquadPlayer[];
   trainingStates: Map<string, PlayerTrainingState>;
   teamIntensity: Intensity;
@@ -482,6 +511,7 @@ function SquadTrainingTab({ squad, trainingStates, teamIntensity, onSetFocus, on
   onSetIntensity: (id: string, intensity: Intensity) => void;
   onRest: (id: string) => void;
   onRecover: (id: string) => void;
+  onAutoSelectTraining: () => void;
   onSelect: (p: SquadPlayer) => void;
 }) {
   const [roleFilter, setRoleFilter] = useState('ALL');
@@ -515,6 +545,7 @@ function SquadTrainingTab({ squad, trainingStates, teamIntensity, onSetFocus, on
         <h3 className="text-sm font-black uppercase text-[#00e5ff]" style={{ fontFamily: RETRO }}>
           Squad Training
         </h3>
+        <ActionBtn onClick={onAutoSelectTraining} variant="yellow">Auto Select Training</ActionBtn>
         <div className="flex gap-1 ml-auto">
           <Btn active={roleFilter === 'ALL'} onClick={() => setRoleFilter('ALL')}>All</Btn>
           {roles.map((r) => (
@@ -914,19 +945,23 @@ function ScheduleTab({ schedule, onChange, onApplyPreset }: {
    Youth Academy Tab
    ══════════════════════════════════════════════ */
 
-function YouthTab({ youth, onSetFocus, onSetIntensity, onPromote, onRelease, onTrain }: {
+function YouthTab({ youth, onSetFocus, onSetIntensity, onPromote, onRelease, onTrain, onAutoSelectYouthTraining }: {
   youth: YouthPlayer[];
   onSetFocus: (id: string, focus: TrainingFocus) => void;
   onSetIntensity: (id: string, intensity: Intensity) => void;
   onPromote: (id: string) => void;
   onRelease: (id: string) => void;
   onTrain: (id: string) => void;
+  onAutoSelectYouthTraining: () => void;
 }) {
   return (
     <div>
-      <h3 className="mb-2 text-sm font-black uppercase text-[#00e5ff]" style={{ fontFamily: RETRO }}>
-        Youth Academy ({youth.length} players)
-      </h3>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <h3 className="text-sm font-black uppercase text-[#00e5ff]" style={{ fontFamily: RETRO }}>
+          Youth Academy ({youth.length} players)
+        </h3>
+        <ActionBtn onClick={onAutoSelectYouthTraining} variant="yellow">Auto Select Youth</ActionBtn>
+      </div>
 
       {youth.length === 0 ? (
         <div className="border-2 border-[#2a8a2b] bg-[#0d3f10] p-6 text-center text-xs text-[#6b9a5a] italic">
@@ -1223,6 +1258,42 @@ export default function TrainingGround({ activeClub, squadPlayers }: TrainingGro
     addLog(`${p.name} completed a ${ts.intensity} ${focusKey} session. +${totalGain - Object.values(ts.gains ?? {}).reduce((s, v) => s + v, 0)} skill points. Fatigue +${fatGain}.`);
   }, [squadPlayers, getOrCreateTS, updateTS, addLog]);
 
+  const handleAutoSelectTraining = useCallback(() => {
+    setTrainingStates((prev) => {
+      const next = new Map(prev);
+      let recoverCount = 0;
+      let restCount = 0;
+      for (const player of squadPlayers) {
+        const current = next.get(player.id) ?? {
+          focus: 'balanced' as TrainingFocus,
+          intensity: teamIntensity,
+          resting: false,
+          recovering: false,
+          fatigue: 0,
+          fitnessBoost: 0,
+          gains: {},
+        };
+        const fatigue = playerFatigue(player, current);
+        const risk = injuryRisk(fatigue, current.intensity);
+        const focus = fatigue >= 55 ? 'fitness' : pickSquadFocus(player.role, teamFocus);
+        const intensity: Intensity = fatigue >= 70 || risk >= 75 ? 'low' : fatigue >= 45 ? 'medium' : player.age <= 23 ? 'high' : 'medium';
+        const recovering = fatigue >= 80 || risk >= 85;
+        const resting = !recovering && fatigue >= 65;
+        if (recovering) recoverCount += 1;
+        if (resting) restCount += 1;
+        next.set(player.id, {
+          ...current,
+          focus,
+          intensity,
+          recovering,
+          resting,
+        });
+      }
+      addLog(`Auto training applied: ${recoverCount} recovering, ${restCount} resting, focus/intensity tuned for ${squadPlayers.length} players.`);
+      return next;
+    });
+  }, [addLog, squadPlayers, teamFocus, teamIntensity]);
+
   // Schedule actions
   const handleScheduleChange = useCallback((day: string, type: DayType) => {
     setSchedule((prev) => prev.map((s) => s.day === day ? { ...s, type } : s));
@@ -1259,6 +1330,18 @@ export default function TrainingGround({ activeClub, squadPlayers }: TrainingGro
     const p = youthPlayers.find((y) => y.id === id);
     if (p) addLog(`${p.name} completed a youth training session.`);
   }, [youthPlayers, addLog]);
+
+  const handleAutoSelectYouthTraining = useCallback(() => {
+    setYouthPlayers((prev) => {
+      const next = prev.map((p) => {
+        const focus = p.fatigue >= 50 ? 'fitness' : pickYouthFocus(p.position);
+        const intensity: Intensity = p.fatigue >= 70 ? 'low' : p.potential >= 80 && p.age <= 17 ? 'high' : 'medium';
+        return { ...p, focus, intensity };
+      });
+      addLog(`Auto youth training applied for ${next.length} academy players.`);
+      return next;
+    });
+  }, [addLog]);
 
   const handleYouthPromote = useCallback((id: string) => {
     const p = youthPlayers.find((y) => y.id === id);
@@ -1306,6 +1389,7 @@ export default function TrainingGround({ activeClub, squadPlayers }: TrainingGro
         <SquadTrainingTab
           squad={squadPlayers} trainingStates={trainingStates} teamIntensity={teamIntensity}
           onSetFocus={handleSetPlayerFocus} onSetIntensity={handleSetPlayerIntensity}
+          onAutoSelectTraining={handleAutoSelectTraining}
           onRest={handleRest} onRecover={handleRecover} onSelect={(p) => { setSelectedPlayer(p); setTab('individual'); }}
         />
       )}
@@ -1324,6 +1408,7 @@ export default function TrainingGround({ activeClub, squadPlayers }: TrainingGro
         <YouthTab
           youth={youthPlayers}
           onSetFocus={handleYouthSetFocus} onSetIntensity={handleYouthSetIntensity}
+          onAutoSelectYouthTraining={handleAutoSelectYouthTraining}
           onPromote={handleYouthPromote} onRelease={handleYouthRelease} onTrain={handleYouthTrain}
         />
       )}
