@@ -14,8 +14,8 @@ import ClubManagement from './components/ClubManagement';
 import ClubCrest from './components/ClubCrest';
 import ManagerPage from './components/ManagerPage';
 import GameDashboard from './components/GameDashboard';
-import { loadActiveTactic } from './engine/tacticsSystem';
-import { loadGameState, type MatchEvent } from './engine/footballEngine';
+import { loadActiveTactic, saveActiveTactic, type FullTactic } from './engine/tacticsSystem';
+import { loadGameState, saveGameState, clearGameState as clearEngineGameState, type MatchEvent } from './engine/footballEngine';
 import { realSquads } from './realSquads';
 import { fallbackClubs } from './fallbackClubs';
 import {
@@ -101,9 +101,39 @@ interface SquadPlayer {
 
 type SquadSortKey = 'overall' | 'name' | 'age' | 'morale' | 'potential';
 type SquadStatus = 'STARTER' | 'BENCH' | 'EXCLUDED';
+type SquadBulkUpdate = { playerId: string; status: SquadStatus };
 
 const MAX_STARTERS = 11;
 const MAX_BENCH = 12;
+
+const SLOT_ROLE_PREFERENCES: Record<string, string[]> = {
+  gk: ['GOALKEEPER'],
+  lb: ['LEFT_BACK', 'LEFT_WING_BACK'],
+  rb: ['RIGHT_BACK', 'RIGHT_WING_BACK'],
+  lwb: ['LEFT_WING_BACK', 'LEFT_BACK'],
+  rwb: ['RIGHT_WING_BACK', 'RIGHT_BACK'],
+  cb1: ['CENTER_BACK', 'SWEEPER'],
+  cb2: ['CENTER_BACK', 'SWEEPER'],
+  cb3: ['CENTER_BACK', 'SWEEPER'],
+  dm: ['DEFENSIVE_MIDFIELDER', 'ANCHOR'],
+  dm1: ['DEFENSIVE_MIDFIELDER', 'ANCHOR'],
+  dm2: ['DEFENSIVE_MIDFIELDER', 'CENTRAL_MIDFIELDER'],
+  cm1: ['CENTRAL_MIDFIELDER', 'BOX_TO_BOX_MIDFIELDER', 'ANCHOR'],
+  cm2: ['CENTRAL_MIDFIELDER', 'PLAYMAKER', 'BOX_TO_BOX_MIDFIELDER'],
+  cm3: ['ATTACKING_MIDFIELDER', 'CENTRAL_MIDFIELDER', 'PLAYMAKER'],
+  am: ['ATTACKING_MIDFIELDER', 'PLAYMAKER'],
+  lm: ['LEFT_WINGER', 'LEFT_MIDFIELDER', 'INVERTED_WINGER'],
+  rm: ['RIGHT_WINGER', 'RIGHT_MIDFIELDER', 'INVERTED_WINGER'],
+  lw: ['LEFT_WINGER', 'INVERTED_WINGER', 'LEFT_MIDFIELDER'],
+  rw: ['RIGHT_WINGER', 'INVERTED_WINGER', 'RIGHT_MIDFIELDER'],
+  st: ['STRIKER', 'TARGET_MAN', 'FALSE_NINE', 'SECOND_STRIKER'],
+  st1: ['STRIKER', 'TARGET_MAN', 'FALSE_NINE'],
+  st2: ['STRIKER', 'SECOND_STRIKER', 'TARGET_MAN'],
+};
+
+function normalizeRoleKey(role: string): string {
+  return role.trim().toUpperCase().replace(/\s+/g, '_');
+}
 
 const ALL_POSITIONS = [
   'GOALKEEPER',
@@ -446,6 +476,7 @@ function SquadPanel({
   onRoleFilterChange,
   onSortChange,
   onStatusChange,
+  onBulkStatusChange,
   onPositionChange
 }: {
   activeClub: Club;
@@ -461,6 +492,7 @@ function SquadPanel({
   onSortChange: (value: SquadSortKey) => void;
   positionOverrides: Record<string, string>;
   onStatusChange: (playerId: string, status: SquadStatus) => void;
+  onBulkStatusChange: (updates: SquadBulkUpdate[]) => void;
   onPositionChange: (playerId: string, role: string) => void;
 }) {
   const roleOptions = ['ALL', ...Array.from(new Set(players.map((player: SquadPlayer) => positionOverrides[player.id] ?? player.role))).sort((a, b) => a.localeCompare(b))];
@@ -487,6 +519,27 @@ function SquadPanel({
 
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const selectedPlayer = selectedPlayerId ? players.find((p) => p.id === selectedPlayerId) ?? null : null;
+
+  const applyVisibleStatus = (target: SquadStatus) => {
+    const updates: SquadBulkUpdate[] = visiblePlayers.map((player) => ({ playerId: player.id, status: target }));
+    onBulkStatusChange(updates);
+  };
+
+  const autoSelectMatchdaySquad = () => {
+    const ranked = [...players].sort((left, right) => getOverall(right) - getOverall(left));
+    const startersSet = new Set(ranked.slice(0, MAX_STARTERS).map((player) => player.id));
+    const benchSet = new Set(ranked.slice(MAX_STARTERS, MAX_STARTERS + MAX_BENCH).map((player) => player.id));
+    const updates: SquadBulkUpdate[] = ranked.map((player) => ({
+      playerId: player.id,
+      status: startersSet.has(player.id) ? 'STARTER' : benchSet.has(player.id) ? 'BENCH' : 'EXCLUDED'
+    }));
+    onBulkStatusChange(updates);
+  };
+
+  const clearSelection = () => {
+    const updates: SquadBulkUpdate[] = players.map((player) => ({ playerId: player.id, status: 'EXCLUDED' }));
+    onBulkStatusChange(updates);
+  };
 
   return (
     <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
@@ -527,6 +580,45 @@ function SquadPanel({
           <option value="age">Sort: Age</option>
           <option value="name">Sort: Name</option>
         </select>
+      </div>
+
+      <div className="mb-3 flex flex-wrap items-center gap-2 border border-[#98ca7a] bg-[#1f641d] px-2 py-2 text-xs">
+        <button
+          type="button"
+          onClick={autoSelectMatchdaySquad}
+          className="border border-[#efe56b] bg-[#3a6e1d] px-2 py-1 font-bold text-[#efe56b] hover:bg-[#4a7e22]"
+        >
+          Auto Selectie (11+12)
+        </button>
+        <button
+          type="button"
+          onClick={() => applyVisibleStatus('STARTER')}
+          className="border border-[#b78bda] bg-[#caa6e6] px-2 py-1 font-semibold text-[#2e1f4a] hover:bg-[#d7b8ee]"
+        >
+          Zichtbaar naar Basis
+        </button>
+        <button
+          type="button"
+          onClick={() => applyVisibleStatus('BENCH')}
+          className="border border-[#b78bda] bg-[#caa6e6] px-2 py-1 font-semibold text-[#2e1f4a] hover:bg-[#d7b8ee]"
+        >
+          Zichtbaar naar Reserve
+        </button>
+        <button
+          type="button"
+          onClick={() => applyVisibleStatus('EXCLUDED')}
+          className="border border-[#b78bda] bg-[#caa6e6] px-2 py-1 font-semibold text-[#2e1f4a] hover:bg-[#d7b8ee]"
+        >
+          Zichtbaar naar Uitgesloten
+        </button>
+        <button
+          type="button"
+          onClick={clearSelection}
+          className="border border-[#ff6b6b] bg-[#ff6b6b] px-2 py-1 font-semibold text-[#2e1f4a] hover:bg-[#ff8282]"
+        >
+          Wis Selectie
+        </button>
+        <span className="ml-auto text-[#d5f8b6]">{visiblePlayers.length} zichtbaar</span>
       </div>
 
       {loading ? <p className="text-sm">Spelers laden...</p> : null}
@@ -913,10 +1005,13 @@ function PagePanel({
   onSquadRoleFilterChange,
   onSquadSortChange,
   onSquadStatusChange,
+  onBulkSquadStatusChange,
+  onAutoSelectFromTactic,
   onPositionChange,
   onClubChange,
   onMatchResult,
-  onMatchEvents
+  onMatchEvents,
+  gameResetKey,
 }: {
   page: PageKey;
   activeClub: Club;
@@ -934,15 +1029,19 @@ function PagePanel({
   onSquadRoleFilterChange: (value: string) => void;
   onSquadSortChange: (value: SquadSortKey) => void;
   onSquadStatusChange: (playerId: string, status: SquadStatus) => void;
+  onBulkSquadStatusChange: (updates: SquadBulkUpdate[]) => void;
+  onAutoSelectFromTactic: (tactic: FullTactic) => void;
   onPositionChange: (playerId: string, role: string) => void;
   onClubChange: (clubId: string) => void;
   onMatchResult: (homeGoals: number, awayGoals: number, isHome: boolean) => void;
   onMatchEvents: (events: MatchEvent[]) => void;
+  gameResetKey: number;
 }) {
   // Pages that remount on each visit (state is either in localStorage or not important)
   if (page === 'game') {
     return (
       <GameDashboard
+        key={gameResetKey}
         clubs={clubs}
         activeClub={activeClub}
         squadPlayers={squadPlayers}
@@ -1011,11 +1110,17 @@ function PagePanel({
           onRoleFilterChange={onSquadRoleFilterChange}
           onSortChange={onSquadSortChange}
           onStatusChange={onSquadStatusChange}
+          onBulkStatusChange={onBulkSquadStatusChange}
           onPositionChange={onPositionChange}
         />
       </div>
       <div style={show('tactics')}>
-        <TacticsPage starters={starters} bench={bench} clubId={activeClub?.id} />
+        <TacticsPage
+          starters={starters}
+          bench={bench}
+          clubId={activeClub?.id}
+          onAutoSelectByFormation={onAutoSelectFromTactic}
+        />
       </div>
       {isFallback && (
         <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
@@ -1066,6 +1171,188 @@ function getDivisionSortRank(name: string) {
 /* ── Manager Summary: localStorage persistence ── */
 const SUMMARY_KEY = 'tmt_manager_summary';
 const MATCH_FEED_KEY = 'tmt_match_feed';
+
+/* ── Save/Load slot system ── */
+const NUM_SAVE_SLOTS = 4;
+const SAVE_SLOT_KEY = (s: number) => `tmt_saveslot_${s}`;
+
+interface SaveSlotData {
+  version: 1;
+  savedAt: string;
+  activeClubId: string;
+  clubName: string;
+  season: number;
+  week: number;
+  summary: ManagerSummary | null;
+  gameStateRaw: string;
+  squadStatusesRaw: string;
+  positionOverridesRaw: string;
+  activeTacticRaw: string | null;
+  matchFeedRaw: string;
+}
+
+function readSaveSlot(slot: number): SaveSlotData | null {
+  try {
+    const raw = localStorage.getItem(SAVE_SLOT_KEY(slot));
+    return raw ? (JSON.parse(raw) as SaveSlotData) : null;
+  } catch { return null; }
+}
+
+function writeSaveSlot(slot: number, data: SaveSlotData) {
+  try {
+    localStorage.setItem(SAVE_SLOT_KEY(slot), JSON.stringify(data));
+  } catch { /* quota exceeded */ }
+}
+
+function eraseSlot(slot: number) {
+  localStorage.removeItem(SAVE_SLOT_KEY(slot));
+}
+
+/* ── SaveLoadModal component ── */
+function SaveLoadModal({
+  mode,
+  activeClub,
+  summary,
+  squadStatuses,
+  positionOverrides,
+  events,
+  onClose,
+  onLoad,
+  onNewGame,
+}: {
+  mode: 'save' | 'load';
+  activeClub: Club;
+  summary: ManagerSummary | null;
+  squadStatuses: Record<string, SquadStatus>;
+  positionOverrides: Record<string, string>;
+  events: MatchEvent[];
+  onClose: () => void;
+  onLoad: (data: SaveSlotData) => void;
+  onNewGame: () => void;
+}) {
+  const [slots, setSlots] = useState<(SaveSlotData | null)[]>(() =>
+    Array.from({ length: NUM_SAVE_SLOTS }, (_, i) => readSaveSlot(i))
+  );
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [confirmNew, setConfirmNew] = useState(false);
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
+
+  const handleSave = (slot: number) => {
+    const gs = loadGameState();
+    const at = loadActiveTactic(activeClub.id);
+    const data: SaveSlotData = {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      activeClubId: activeClub.id,
+      clubName: activeClub.name,
+      season: gs?.season ?? 1,
+      week: gs?.gameWeek ?? 1,
+      summary,
+      gameStateRaw: gs ? JSON.stringify(gs) : 'null',
+      squadStatusesRaw: JSON.stringify(squadStatuses),
+      positionOverridesRaw: JSON.stringify(positionOverrides),
+      activeTacticRaw: at ? JSON.stringify(at) : null,
+      matchFeedRaw: JSON.stringify(events),
+    };
+    writeSaveSlot(slot, data);
+    setSlots((prev) => { const n = [...prev]; n[slot] = data; return n; });
+    setSavedMsg(`Game opgeslagen in slot ${slot + 1}!`);
+    setTimeout(() => setSavedMsg(null), 2500);
+  };
+
+  const handleDelete = (slot: number) => {
+    eraseSlot(slot);
+    setSlots((prev) => { const n = [...prev]; n[slot] = null; return n; });
+    setConfirmDelete(null);
+  };
+
+  const fmt = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+    } catch { return iso; }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
+      <section className="w-full max-w-xl border-4 border-[#6f4ca1] bg-[#0d5e13] text-sm text-[#d5f8b6]">
+        {/* Title bar */}
+        <div className="border-b-2 border-[#6f4ca1] bg-[#2e1f4a] flex items-center justify-between px-4 py-2">
+          <h2 className="font-black uppercase text-[#efe56b] tracking-widest text-sm">
+            {mode === 'save' ? '💾 Spel Opslaan' : '📂 Spel Laden'}
+          </h2>
+          <button onClick={onClose} className="border border-[#efe56b] bg-[#1a3a1e] px-2 py-0.5 font-bold text-[#efe56b] hover:bg-[#2a8a2b]">✕</button>
+        </div>
+
+        {savedMsg && (
+          <div className="bg-[#1a5a28] border-b border-[#efe56b] px-4 py-2 text-[#efe56b] font-bold text-xs text-center animate-pulse">
+            ✓ {savedMsg}
+          </div>
+        )}
+
+        {/* 2×2 save slot grid */}
+        <div className="grid grid-cols-2 gap-3 p-4">
+          {slots.map((slot, i) => (
+            <div key={i} className={`border-2 p-3 min-h-[110px] ${slot ? 'border-[#2a8a2b] bg-[#0a3d0e]' : 'border-[#1a3a1e] bg-[#081a0a]'}`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-black text-[#efe56b] text-xs uppercase">Slot {i + 1}</span>
+                {slot && confirmDelete !== i && (
+                  <button onClick={() => setConfirmDelete(i)} className="text-[9px] border border-[#ef4444] px-1 py-0.5 text-[#ef4444] hover:bg-[#7f1d1d]">🗑</button>
+                )}
+              </div>
+
+              {confirmDelete === i ? (
+                <div className="space-y-1">
+                  <p className="text-[10px] text-[#ef4444] font-bold">Verwijderen?</p>
+                  <div className="flex gap-1">
+                    <button onClick={() => handleDelete(i)} className="flex-1 border border-[#ef4444] bg-[#7f1d1d] text-[#ef4444] text-[10px] py-0.5 font-bold">Ja</button>
+                    <button onClick={() => setConfirmDelete(null)} className="flex-1 border border-[#2a8a2b] bg-[#0a3d0e] text-[#98ca7a] text-[10px] py-0.5">Nee</button>
+                  </div>
+                </div>
+              ) : slot ? (
+                <div className="space-y-0.5">
+                  <p className="font-bold text-white text-xs truncate">{slot.clubName}</p>
+                  <p className="text-[10px] text-[#98ca7a]">Seizoen {slot.season} — Week {slot.week}</p>
+                  <p className="text-[10px] text-[#6b9a5a]">{fmt(slot.savedAt)}</p>
+                  {slot.summary && (
+                    <p className="text-[10px] text-[#efe56b]">W:{slot.summary.totalWins} D:{slot.summary.totalDraws} V:{slot.summary.totalLosses}</p>
+                  )}
+                  <div className="flex gap-1 mt-2">
+                    {mode === 'save' ? (
+                      <button onClick={() => handleSave(i)} className="flex-1 border border-[#efe56b] bg-[#2a8a2b] text-[#efe56b] text-[10px] py-1 font-bold hover:bg-[#46b047]">💾 Overschrijven</button>
+                    ) : (
+                      <button onClick={() => onLoad(slot)} className="flex-1 border border-[#22c55e] bg-[#14532d] text-[#22c55e] text-[10px] py-1 font-bold hover:bg-[#166534]">📂 Laden</button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col justify-between h-full">
+                  <p className="text-[10px] text-[#2a5a2e] italic mt-2">— Leeg slot —</p>
+                  {mode === 'save' && (
+                    <button onClick={() => handleSave(i)} className="mt-auto w-full border border-[#efe56b] bg-[#2a8a2b] text-[#efe56b] text-[10px] py-1 font-bold hover:bg-[#46b047]">💾 Hier opslaan</button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t-2 border-[#6f4ca1] px-4 py-3 flex items-center justify-between gap-2 bg-[#2e1f4a]">
+          {confirmNew ? (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-[#ef4444] font-bold">Huidige voortgang verliezen?</span>
+              <button onClick={onNewGame} className="border border-[#ef4444] bg-[#7f1d1d] text-[#ef4444] px-2 py-0.5 text-[10px] font-bold">Ja, nieuw spel</button>
+              <button onClick={() => setConfirmNew(false)} className="border border-[#2a8a2b] px-2 py-0.5 text-[#98ca7a] text-[10px]">Annuleren</button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmNew(true)} className="border border-[#ef4444] bg-[#7f1d1d] text-[#ef4444] px-3 py-1 text-xs font-bold uppercase hover:bg-[#991b1b]">🔄 Nieuw Spel</button>
+          )}
+          <button onClick={onClose} className="border border-[#2a8a2b] bg-[#0a3d0e] text-[#98ca7a] px-4 py-1 text-xs font-bold hover:bg-[#1a5a28]">Sluiten</button>
+        </div>
+      </section>
+    </div>
+  );
+}
 
 function loadManagerSummary(): ManagerSummary | null {
   try {
@@ -1168,6 +1455,10 @@ export default function App() {
   const [squadSortBy, setSquadSortBy] = useState<SquadSortKey>('overall');
   const [squadStatuses, setSquadStatuses] = useState<Record<string, SquadStatus>>({});
   const [positionOverrides, setPositionOverrides] = useState<Record<string, string>>({});
+  // Save/Load modal state
+  const [showSaveLoad, setShowSaveLoad] = useState(false);
+  const [saveLoadMode, setSaveLoadMode] = useState<'save' | 'load'>('save');
+  const [gameResetKey, setGameResetKey] = useState(0);
 
   // Called by GameDashboard when an interactive match finishes
   const handleMatchResult = useCallback((homeGoals: number, awayGoals: number, isHome: boolean) => {
@@ -1182,6 +1473,75 @@ export default function App() {
   const handleMatchEvents = useCallback((evs: MatchEvent[]) => {
     setEvents(evs);
     saveStoredMatchFeed(evs);
+  }, []);
+
+  // Full game load from a save slot
+  const handleLoadSlot = useCallback((data: SaveSlotData) => {
+    // 1. Restore engine game state to localStorage
+    if (data.gameStateRaw && data.gameStateRaw !== 'null') {
+      try {
+        const gs = JSON.parse(data.gameStateRaw);
+        saveGameState(gs);
+      } catch { /* corrupt save */ }
+    } else {
+      clearEngineGameState();
+    }
+    // 2. Restore active tactic
+    if (data.activeTacticRaw) {
+      try {
+        const at = JSON.parse(data.activeTacticRaw);
+        saveActiveTactic(data.activeClubId, at);
+      } catch { /* corrupt */ }
+    }
+    // 3. Restore squad statuses to localStorage + state
+    if (data.squadStatusesRaw) {
+      try {
+        const ss = JSON.parse(data.squadStatusesRaw) as Record<string, SquadStatus>;
+        localStorage.setItem(SQUAD_STORAGE_KEY, JSON.stringify({ [data.activeClubId]: ss }));
+        setSquadStatuses(ss);
+      } catch { /* corrupt */ }
+    }
+    // 4. Restore position overrides
+    if (data.positionOverridesRaw) {
+      try {
+        const po = JSON.parse(data.positionOverridesRaw) as Record<string, string>;
+        localStorage.setItem(POSITION_OVERRIDES_KEY, JSON.stringify({ [data.activeClubId]: po }));
+        setPositionOverrides(po);
+      } catch { /* corrupt */ }
+    }
+    // 5. Restore manager summary
+    if (data.summary) {
+      saveManagerSummary(data.summary);
+      setSummary(data.summary);
+    }
+    // 6. Restore match feed
+    if (data.matchFeedRaw) {
+      try {
+        const feed = JSON.parse(data.matchFeedRaw) as MatchEvent[];
+        saveStoredMatchFeed(feed);
+        setEvents(feed);
+      } catch { /* corrupt */ }
+    }
+    // 7. Restore active club → triggers squad reload
+    setActiveClubId(data.activeClubId);
+    // 8. Force GameDashboard remount so it re-reads localStorage
+    setGameResetKey((k) => k + 1);
+    // 9. Close modal + go to game
+    setShowSaveLoad(false);
+    setActivePage('game');
+  }, []);
+
+  // New game: wipe all persisted state and restart
+  const handleNewGame = useCallback(() => {
+    clearEngineGameState();
+    const blank: ManagerSummary = { status: 'INEXPERIENCED', level: 1, successes: 0, successiveWins: 0, successiveLosses: 0, totalWins: 0, totalLosses: 0, totalDraws: 0 };
+    saveManagerSummary(blank);
+    setSummary(null);
+    saveStoredMatchFeed([]);
+    setEvents([]);
+    setGameResetKey((k) => k + 1);
+    setShowSaveLoad(false);
+    setActivePage('game');
   }, []);
 
   useEffect(() => {
@@ -1471,21 +1831,86 @@ export default function App() {
     });
   };
 
-  const setPlayerStatus = (playerId: string, status: SquadStatus) => {
-    const target: SquadStatus = status;
+  const setBulkPlayerStatuses = useCallback((updates: SquadBulkUpdate[]) => {
+    if (updates.length === 0) return;
     setSquadStatuses((prev) => {
-      if (target === 'STARTER') {
-        const currentStarters = Object.values(prev).filter((s) => s === 'STARTER').length;
-        if (prev[playerId] !== 'STARTER' && currentStarters >= MAX_STARTERS) return prev;
+      const next = { ...prev };
+      let startersCount = Object.values(next).filter((s) => s === 'STARTER').length;
+      let benchCount = Object.values(next).filter((s) => s === 'BENCH').length;
+
+      for (const update of updates) {
+        const current = next[update.playerId] ?? 'EXCLUDED';
+        const target = update.status;
+        if (current === target) continue;
+
+        if (target === 'STARTER' && startersCount >= MAX_STARTERS) continue;
+        if (target === 'BENCH' && benchCount >= MAX_BENCH) continue;
+
+        if (current === 'STARTER') startersCount -= 1;
+        if (current === 'BENCH') benchCount -= 1;
+        if (target === 'STARTER') startersCount += 1;
+        if (target === 'BENCH') benchCount += 1;
+
+        next[update.playerId] = target;
       }
-      if (target === 'BENCH') {
-        const currentBench = Object.values(prev).filter((s) => s === 'BENCH').length;
-        if (prev[playerId] !== 'BENCH' && currentBench >= MAX_BENCH) return prev;
-      }
-      const next = { ...prev, [playerId]: target };
+
       if (activeClubId) saveSquadStatuses(activeClubId, next);
       return next;
     });
+  }, [activeClubId]);
+
+  const autoSelectByTacticFormation = useCallback((tactic: FullTactic) => {
+    if (!tactic || squadPlayers.length === 0) return;
+
+    const ranked = [...squadPlayers].sort((left, right) => getOverall(right) - getOverall(left));
+    const used = new Set<string>();
+    const starterIds: string[] = [];
+    const nextOverrides: Record<string, string> = { ...positionOverrides };
+
+    for (const slot of tactic.slots.slice(0, MAX_STARTERS)) {
+      const wanted = SLOT_ROLE_PREFERENCES[slot.id] ?? [];
+      const match = ranked.find((player) => {
+        if (used.has(player.id)) return false;
+        const effectiveRole = normalizeRoleKey(positionOverrides[player.id] ?? player.role);
+        return wanted.includes(effectiveRole);
+      });
+      if (!match) continue;
+      used.add(match.id);
+      starterIds.push(match.id);
+      if (wanted.length > 0) nextOverrides[match.id] = wanted[0];
+    }
+
+    for (const player of ranked) {
+      if (starterIds.length >= MAX_STARTERS) break;
+      if (used.has(player.id)) continue;
+      used.add(player.id);
+      starterIds.push(player.id);
+    }
+
+    const benchIds: string[] = [];
+    for (const player of ranked) {
+      if (benchIds.length >= MAX_BENCH) break;
+      if (used.has(player.id)) continue;
+      used.add(player.id);
+      benchIds.push(player.id);
+    }
+
+    const updates: SquadBulkUpdate[] = ranked.map((player) => ({
+      playerId: player.id,
+      status: starterIds.includes(player.id)
+        ? 'STARTER'
+        : benchIds.includes(player.id)
+          ? 'BENCH'
+          : 'EXCLUDED',
+    }));
+
+    setBulkPlayerStatuses(updates);
+    setPositionOverrides(nextOverrides);
+    if (activeClubId) savePositionOverrides(activeClubId, nextOverrides);
+  }, [activeClubId, positionOverrides, setBulkPlayerStatuses, squadPlayers]);
+
+  const setPlayerStatus = (playerId: string, status: SquadStatus) => {
+    setBulkPlayerStatuses([{ playerId, status }]);
   };
 
   return (
@@ -1493,13 +1918,31 @@ export default function App() {
       <section className="mx-auto max-w-6xl border-4 border-[#6f4ca1] bg-[#2a8a2b] shadow-[0_0_0_4px_#120d1f]">
         <header className="flex items-center justify-between border-b-4 border-[#6f4ca1] bg-black px-4 py-3 text-[#ebe25f]">
           <h1 className="flex items-center gap-3 text-2xl font-black uppercase tracking-widest"><ClubCrest clubName={activeClub.name} size={36} />{activeClub.name}</h1>
-          <button
-            className="border-2 border-[#ebe25f] bg-[#2a8a2b] px-3 py-1 text-sm font-bold uppercase"
-            onClick={() => setActivePage('game')}
-            type="button"
-          >
-            Play Next Match
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              className="border border-[#98ca7a] bg-[#1a3a1e] px-2 py-1 text-xs font-bold uppercase text-[#98ca7a] hover:bg-[#2a8a2b]"
+              onClick={() => { setSaveLoadMode('load'); setShowSaveLoad(true); }}
+              type="button"
+              title="Spel laden"
+            >
+              📂 Laden
+            </button>
+            <button
+              className="border border-[#efe56b] bg-[#1a3a1e] px-2 py-1 text-xs font-bold uppercase text-[#efe56b] hover:bg-[#2a8a2b]"
+              onClick={() => { setSaveLoadMode('save'); setShowSaveLoad(true); }}
+              type="button"
+              title="Spel opslaan"
+            >
+              💾 Opslaan
+            </button>
+            <button
+              className="border-2 border-[#ebe25f] bg-[#2a8a2b] px-3 py-1 text-sm font-bold uppercase"
+              onClick={() => setActivePage('game')}
+              type="button"
+            >
+              Play Next Match
+            </button>
+          </div>
         </header>
 
         <div className="grid gap-4 p-4 md:grid-cols-[220px_1fr_300px]">
@@ -1620,10 +2063,13 @@ export default function App() {
               onSquadRoleFilterChange={setSquadRoleFilter}
               onSquadSortChange={setSquadSortBy}
               onSquadStatusChange={setPlayerStatus}
+              onBulkSquadStatusChange={setBulkPlayerStatuses}
+              onAutoSelectFromTactic={autoSelectByTacticFormation}
               onPositionChange={setPlayerPosition}
               onClubChange={(id) => setActiveClubId(id)}
               onMatchResult={handleMatchResult}
               onMatchEvents={handleMatchEvents}
+              gameResetKey={gameResetKey}
             />
 
             {error ? (
@@ -1633,6 +2079,21 @@ export default function App() {
 
           <RightSidebar summary={summary} events={events} clubs={clubs} activeClub={activeClub} squadPlayers={squadPlayers} />
         </div>
+
+        {/* Save/Load Modal */}
+        {showSaveLoad && (
+          <SaveLoadModal
+            mode={saveLoadMode}
+            activeClub={activeClub}
+            summary={summary}
+            squadStatuses={squadStatuses}
+            positionOverrides={positionOverrides}
+            events={events}
+            onClose={() => setShowSaveLoad(false)}
+            onLoad={handleLoadSlot}
+            onNewGame={handleNewGame}
+          />
+        )}
 
         {showStandings ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
