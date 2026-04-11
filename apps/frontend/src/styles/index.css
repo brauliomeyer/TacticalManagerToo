@@ -62,17 +62,39 @@ textarea {
   line-height: 1.5;
 }
 
+.tm-font-root {
+  --tm-base-font-size: 12pt;
+}
+
+.tm-font-root .text-\[8px\] {
+  font-size: calc(var(--tm-base-font-size) * 0.85) !important;
+  line-height: 1.2 !important;
+}
+
+.tm-font-root .text-\[9px\],
+.tm-font-root .text-\[10px\],
+.tm-font-root .text-\[11px\],
+.tm-font-root .text-xs {
+  font-size: calc(var(--tm-base-font-size) * 0.92) !important;
+  line-height: 1.3 !important;
+}
+
+.tm-font-root .text-sm {
+  font-size: var(--tm-base-font-size) !important;
+  line-height: 1.35 !important;
+}
+
 .tm-page-readable .text-\[8px\] {
-  font-size: 0.75rem !important;
-  line-height: 1.1rem !important;
+  font-size: calc(var(--tm-base-font-size) * 0.85) !important;
+  line-height: 1.2 !important;
 }
 
 .tm-page-readable .text-\[9px\],
 .tm-page-readable .text-\[10px\],
 .tm-page-readable .text-\[11px\],
 .tm-page-readable .text-xs {
-  font-size: 0.875rem !important;
-  line-height: 1.25rem !important;
+  font-size: calc(var(--tm-base-font-size) * 0.92) !important;
+  line-height: 1.3 !important;
 }
 
 .tm-page-readable button,
