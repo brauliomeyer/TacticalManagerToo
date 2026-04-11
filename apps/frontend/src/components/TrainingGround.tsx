@@ -1105,10 +1105,11 @@ function YouthTab({ youth, onSetFocus, onSetIntensity, onPromote, onRelease, onT
    Development Tracking Tab
    ══════════════════════════════════════════════ */
 
-function DevelopmentTab({ squad, trainingStates, teamIntensity }: {
+function DevelopmentTab({ squad, trainingStates, teamIntensity, onAutoSelectDevelopment }: {
   squad: SquadPlayer[];
   trainingStates: Map<string, PlayerTrainingState>;
   teamIntensity: Intensity;
+  onAutoSelectDevelopment: () => void;
 }) {
   const [sortBy, setSortBy] = useState<string>('gains');
 
@@ -1145,9 +1146,12 @@ function DevelopmentTab({ squad, trainingStates, teamIntensity }: {
 
   return (
     <div>
-      <h3 className="mb-2 text-sm font-black uppercase text-[#00e5ff]" style={{ fontFamily: RETRO }}>
-        Development Tracking
-      </h3>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <h3 className="text-sm font-black uppercase text-[#00e5ff]" style={{ fontFamily: RETRO }}>
+          Development Tracking
+        </h3>
+        <ActionBtn onClick={onAutoSelectDevelopment} variant="yellow">Auto Select Development</ActionBtn>
+      </div>
 
       <div className="border-2 border-[#2a8a2b] bg-[#0d3f10] overflow-x-auto">
         <table className="w-full">
@@ -1521,7 +1525,12 @@ export default function TrainingGround({ activeClub, squadPlayers }: TrainingGro
         />
       )}
       {tab === 'development' && (
-        <DevelopmentTab squad={squadPlayers} trainingStates={trainingStates} teamIntensity={teamIntensity} />
+        <DevelopmentTab
+          squad={squadPlayers}
+          trainingStates={trainingStates}
+          teamIntensity={teamIntensity}
+          onAutoSelectDevelopment={handleAutoSelectTraining}
+        />
       )}
 
       {/* Activity log */}
