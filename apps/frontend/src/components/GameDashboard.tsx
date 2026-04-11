@@ -930,60 +930,65 @@ function InteractiveMatchView({
     return () => clearInterval(interval);
   }, [matchState.isRunning, matchState.isFinished, matchState.speed, onTick]);
 
-  // Player position offsets — full-pitch ball tracking + formation shape
+  // Player position offsets — formation-centroid shift: whole shape moves with ball
   const homePosOffset = useMemo(() => {
     const ft = matchState.homeFullTactic;
     const basePosArr = ft ? formationToHomePitch(getFormationPositions(ft).positions) : HOME_POSITIONS;
     const n = basePosArr.length;
-    const mentality = matchState.homeTactics.mentality;
-    const mentFwd  = mentality === 'Attacking' ? -12 : mentality === 'Defensive' ? 10 : 0;
-    const mentMid  = mentality === 'Attacking' ?  -8 : mentality === 'Defensive' ?  6 : 0;
-    const mentDef  = mentality === 'Attacking' ?  -4 : mentality === 'Defensive' ?  4 : 0;
-
     const ballY = matchState.ballPos[1];
     const ballX = matchState.ballPos[0];
-    // +1 = home fully attacking (ball near opponent goal y≈10), -1 = home defending (ball near y≈140)
-    // Divide by 25 (was 40) so pressure saturates faster and movement is larger
-    const pressure = Math.max(-1, Math.min(1, (75 - ballY) / 25));
 
-    // 4 nearest players sprint hard toward the ball
-    const dists = basePosArr.map(([x, y], i) => ({ i, d: Math.hypot(x - ballX, y - ballY) }));
-    dists.sort((a, b) => a.d - b.d);
-    const ballChasers = new Set(dists.slice(1, 5).map(d => d.i));
+    // Centroid of outfield players (skip GK)
+    const outfield = basePosArr.slice(1);
+    const centX = outfield.reduce((s, [x]) => s + x, 0) / outfield.length;
+    const centY = outfield.reduce((s, [, y]) => s + y, 0) / outfield.length;
 
-    return basePosArr.map(([x, y], i) => {
-      if (i === 0) {
-        // GK creeps forward when team attacks, drops back when defending
-        return [x, Math.max(125, Math.min(144, y + pressure * 12))] as [number, number];
-      }
+    // How far ball has moved from the formation centroid
+    const shiftX = ballX - centX;
+    const shiftY = ballY - centY; // negative = ball in opponent half (home attacking)
+
+    const mentality = matchState.homeTactics.mentality;
+    const mentalityY = mentality === 'Attacking' ? -10 : mentality === 'Defensive' ? 8 : 0;
+
+    // Only 1 player goes to the exact ball position (closest outfield player)
+    let minDist = Infinity, ballIdx = 1;
+    for (let i = 1; i < n; i++) {
+      const d = Math.hypot(basePosArr[i][0] - ballX, basePosArr[i][1] - ballY);
+      if (d < minDist) { minDist = d; ballIdx = i; }
+    }
+
+    return basePosArr.map(([bx, by], i) => {
       const seed = hashStr(`${matchState.minute}-home-${i}`);
-      const jx = ((seed % 17) - 8) * 2.2;
-      const jy = ((seed % 11) - 5) * 2.0;
+      const jx = ((seed % 9) - 4) * 0.8;  // small jitter ±3.2 units
+      const jy = ((seed % 7) - 3) * 0.7;  // small jitter ±2.1 units
 
-      let pressY = 0, pressX = 0;
-      if (ballChasers.has(i)) {
-        // Sprint to ball — crosses halfway line freely
-        pressX = (ballX - x) * 0.72;
-        pressY = (ballY - y) * 0.72;
-      } else if (i >= n - 3) {
-        // Forwards — chase deep into opponent half
-        pressY = -pressure * 55;
-        pressX = (ballX - x) * 0.35;
-      } else if (i >= Math.max(2, n - 7) && i < n - 3) {
-        // Midfielders — cross the halfway line with the ball
-        pressY = -pressure * 45;
-        pressX = (ballX - x) * 0.22;
-      } else {
-        // Defenders — push up significantly when attacking
-        pressY = -pressure * 32;
-        pressX = (ballX - x) * 0.10;
+      if (i === 0) {
+        // GK: stays in goal, tiny horizontal drift, mentality shifts line slightly
+        return [
+          Math.max(36, Math.min(64, bx + shiftX * 0.06 + jx * 0.4)),
+          Math.max(130, Math.min(145, by + mentalityY * 0.15 + jy * 0.3)),
+        ] as [number, number];
       }
 
-      const lineY = i >= n - 3 ? mentFwd : i >= n - 7 ? mentMid : mentDef;
+      if (i === ballIdx) {
+        // Ball carrier: moves to ball position
+        return [
+          Math.max(4, Math.min(96, ballX + jx * 0.3)),
+          Math.max(8, Math.min(145, ballY + jy * 0.3)),
+        ] as [number, number];
+      }
+
+      // Role from base Y — home: GK@140, DEF@108-125, MID@75-98, FWD@50-72
+      const isForward = by < 72;
+      const isDefender = by > 108;
+      // Shift factors: how much each role tracks the ball shift
+      const fxr = isForward ? 0.30 : isDefender ? 0.10 : 0.20;
+      const fyr = isForward ? 0.42 : isDefender ? 0.16 : 0.30;
+      const mentY = isForward ? mentalityY * 0.6 : isDefender ? mentalityY * 0.2 : mentalityY * 0.4;
 
       return [
-        Math.max(4, Math.min(96, x + jx + pressX)),
-        Math.max(6, Math.min(144, y + jy + lineY + pressY)),
+        Math.max(4, Math.min(96, bx + shiftX * fxr + jx)),
+        Math.max(6, Math.min(144, by + shiftY * fyr + mentY + jy)),
       ] as [number, number];
     });
   }, [matchState.minute, matchState.homeTactics.mentality, matchState.homeFullTactic, matchState.ballPos]);
@@ -992,52 +997,59 @@ function InteractiveMatchView({
     const ft = matchState.awayFullTactic;
     const basePosArr = ft ? formationToAwayPitch(getFormationPositions(ft).positions) : AWAY_POSITIONS;
     const n = basePosArr.length;
-    const mentality = matchState.awayTactics.mentality;
-    const mentFwd  = mentality === 'Attacking' ? 12 : mentality === 'Defensive' ? -10 : 0;
-    const mentMid  = mentality === 'Attacking' ?  8 : mentality === 'Defensive' ?  -6 : 0;
-    const mentDef  = mentality === 'Attacking' ?  4 : mentality === 'Defensive' ?  -4 : 0;
-
     const ballY = matchState.ballPos[1];
     const ballX = matchState.ballPos[0];
-    // +1 = away fully attacking (ball near y≈140)
-    const pressure = Math.max(-1, Math.min(1, (ballY - 75) / 25));
 
-    const dists = basePosArr.map(([x, y], i) => ({ i, d: Math.hypot(x - ballX, y - ballY) }));
-    dists.sort((a, b) => a.d - b.d);
-    const ballChasers = new Set(dists.slice(1, 5).map(d => d.i));
+    // Centroid of away outfield players
+    const outfield = basePosArr.slice(1);
+    const centX = outfield.reduce((s, [x]) => s + x, 0) / outfield.length;
+    const centY = outfield.reduce((s, [, y]) => s + y, 0) / outfield.length;
 
-    return basePosArr.map(([x, y], i) => {
-      if (i === 0) {
-        // GK creeps forward when attacking, drops back when defending
-        return [x, Math.max(6, Math.min(25, y - pressure * 12))] as [number, number];
-      }
+    // Ball displacement from formation centroid
+    const shiftX = ballX - centX;
+    const shiftY = ballY - centY; // positive = ball in home half (away attacking)
+
+    const mentality = matchState.awayTactics.mentality;
+    const mentalityY = mentality === 'Attacking' ? 10 : mentality === 'Defensive' ? -8 : 0;
+
+    // Only closest outfield player goes to ball
+    let minDist = Infinity, ballIdx = 1;
+    for (let i = 1; i < n; i++) {
+      const d = Math.hypot(basePosArr[i][0] - ballX, basePosArr[i][1] - ballY);
+      if (d < minDist) { minDist = d; ballIdx = i; }
+    }
+
+    return basePosArr.map(([bx, by], i) => {
       const seed = hashStr(`${matchState.minute}-away-${i}`);
-      const jx = ((seed % 17) - 8) * 2.2;
-      const jy = ((seed % 11) - 5) * 2.0;
+      const jx = ((seed % 9) - 4) * 0.8;
+      const jy = ((seed % 7) - 3) * 0.7;
 
-      let pressY = 0, pressX = 0;
-      if (ballChasers.has(i)) {
-        pressX = (ballX - x) * 0.72;
-        pressY = (ballY - y) * 0.72;
-      } else if (i >= n - 3) {
-        // Forwards — push deep into home half
-        pressY = pressure * 55;
-        pressX = (ballX - x) * 0.35;
-      } else if (i >= Math.max(2, n - 7) && i < n - 3) {
-        // Midfielders — cross the halfway line
-        pressY = pressure * 45;
-        pressX = (ballX - x) * 0.22;
-      } else {
-        // Defenders — push up when attacking
-        pressY = pressure * 32;
-        pressX = (ballX - x) * 0.10;
+      if (i === 0) {
+        // Away GK: stays near own goal, tiny horizontal drift
+        return [
+          Math.max(36, Math.min(64, bx + shiftX * 0.06 + jx * 0.4)),
+          Math.max(5, Math.min(20, by + mentalityY * 0.15 + jy * 0.3)),
+        ] as [number, number];
       }
 
-      const lineY = i >= n - 3 ? mentFwd : i >= n - 7 ? mentMid : mentDef;
+      if (i === ballIdx) {
+        // Ball carrier: goes to ball
+        return [
+          Math.max(4, Math.min(96, ballX + jx * 0.3)),
+          Math.max(5, Math.min(142, ballY + jy * 0.3)),
+        ] as [number, number];
+      }
+
+      // Role from base Y — away: GK@10, DEF@25-42, MID@55-75, FWD@78-110
+      const isForward = by > 78;
+      const isDefender = by < 42;
+      const fxr = isForward ? 0.30 : isDefender ? 0.10 : 0.20;
+      const fyr = isForward ? 0.42 : isDefender ? 0.16 : 0.30;
+      const mentY = isForward ? mentalityY * 0.6 : isDefender ? mentalityY * 0.2 : mentalityY * 0.4;
 
       return [
-        Math.max(4, Math.min(96, x + jx + pressX)),
-        Math.max(6, Math.min(144, y + jy + lineY + pressY)),
+        Math.max(4, Math.min(96, bx + shiftX * fxr + jx)),
+        Math.max(6, Math.min(144, by + shiftY * fyr + mentY + jy)),
       ] as [number, number];
     });
   }, [matchState.minute, matchState.awayTactics.mentality, matchState.awayFullTactic, matchState.ballPos]);
