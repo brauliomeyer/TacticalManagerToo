@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { ManagerSummary } from '@tmt/shared';
+import { getWeekFixtures, loadGameState, type MatchFixture } from '../engine/footballEngine';
 
 /* ── Types ── */
 
@@ -83,6 +84,10 @@ function mailDate(daysAgo: number): string {
   return `${d.getDate()} ${months[d.getMonth()]}`;
 }
 
+function findClubFixture(fixtures: MatchFixture[], clubId: string): MatchFixture | undefined {
+  return fixtures.find((f) => f.homeId === clubId || f.awayId === clubId);
+}
+
 /* ── Mail Icons ── */
 
 const TYPE_ICONS: Record<MailType, string> = {
@@ -116,6 +121,16 @@ function generateMails(club: Club, clubs: Club[], squad: SquadPlayer[], summary:
   const mails: Mail[] = [];
   const otherClubs = clubs.filter((c) => c.id !== club.id);
   const division = club.leagueName ?? '1st Division';
+  const gs = loadGameState();
+  const weekFixtures = gs ? getWeekFixtures(gs) : [];
+  const nextClubFixture = findClubFixture(weekFixtures.filter((f) => !f.played), club.id);
+  const lastClubFixtureId = gs?.lastWeekResultIds.find((fid) => {
+    const fixture = gs.fixtures[fid];
+    return !!fixture && fixture.played && (fixture.homeId === club.id || fixture.awayId === club.id);
+  });
+  const lastClubFixture = lastClubFixtureId ? gs?.fixtures[lastClubFixtureId] : undefined;
+  const leagueId = gs?.clubs[club.id]?.leagueId ?? club.leagueId ?? null;
+  const standingRow = leagueId ? gs?.leagues[leagueId]?.standings.find((s) => s.teamId === club.id) : undefined;
 
   let idCounter = 0;
   const nextId = () => `mail-${++idCounter}`;
