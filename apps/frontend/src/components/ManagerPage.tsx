@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { loadGameState } from '../engine/footballEngine';
 
 /* ══════════════════════════════════════════════
    Types
@@ -59,6 +60,33 @@ interface ManagerPageProps {
   activeClub: Club;
   clubs: Club[];
   onClubChange?: (clubId: string) => void;
+}
+
+const MANAGER_PROFILE_KEY = 'tmt-human-manager-profile';
+
+function loadSavedHumanManager(): Manager | null {
+  try {
+    const raw = localStorage.getItem(MANAGER_PROFILE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Manager;
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!parsed.id || !parsed.name || parsed.type !== 'Human') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveHumanManager(manager: Manager | null) {
+  try {
+    if (!manager) {
+      localStorage.removeItem(MANAGER_PROFILE_KEY);
+      return;
+    }
+    localStorage.setItem(MANAGER_PROFILE_KEY, JSON.stringify(manager));
+  } catch {
+    // storage unavailable
+  }
 }
 
 /* ══════════════════════════════════════════════
@@ -901,6 +929,27 @@ function ordSuffix(n: number): string {
   return s[(v - 20) % 10] || s[v] || s[0];
 }
 
+function computeStatsFromGameState(clubId?: string): ManagerStats {
+  if (!clubId) return { wins: 0, draws: 0, losses: 0 };
+  const gs = loadGameState();
+  if (!gs) return { wins: 0, draws: 0, losses: 0 };
+
+  const fixtures = Object.values(gs.fixtures).filter((f) => f.played && (f.homeId === clubId || f.awayId === clubId));
+  let wins = 0;
+  let draws = 0;
+  let losses = 0;
+
+  for (const fixture of fixtures) {
+    const goalsFor = fixture.homeId === clubId ? fixture.homeGoals : fixture.awayGoals;
+    const goalsAgainst = fixture.homeId === clubId ? fixture.awayGoals : fixture.homeGoals;
+    if (goalsFor > goalsAgainst) wins += 1;
+    else if (goalsFor === goalsAgainst) draws += 1;
+    else losses += 1;
+  }
+
+  return { wins, draws, losses };
+}
+
 /* ══════════════════════════════════════════════
    Main Component
    ══════════════════════════════════════════════ */
@@ -908,8 +957,12 @@ function ordSuffix(n: number): string {
 export default function ManagerPage({ clubs, onClubChange }: ManagerPageProps) {
   /* ── Core state ── */
   const aiManagers = useMemo<Manager[]>(() => generateAIManagers(clubs), [clubs]);
-  const [humanManager, setHumanManager] = useState<Manager | null>(null);
-  const [flowStep, setFlowStep] = useState<FlowStep>('idle');
+  const [humanManager, setHumanManager] = useState<Manager | null>(() => loadSavedHumanManager());
+  const [flowStep, setFlowStep] = useState<FlowStep>(() => {
+    const saved = loadSavedHumanManager();
+    if (!saved) return 'idle';
+    return saved.clubId ? 'done' : 'select_club';
+  });
 
   /* ── List state ── */
   const [filter, setFilter] = useState<FilterKey>('all');
@@ -924,17 +977,25 @@ export default function ManagerPage({ clubs, onClubChange }: ManagerPageProps) {
   /* ── Resign confirmation ── */
   const [showResignConfirm, setShowResignConfirm] = useState(false);
 
+  const derivedHumanManager = useMemo<Manager | null>(() => {
+    if (!humanManager) return null;
+    return {
+      ...humanManager,
+      stats: computeStatsFromGameState(humanManager.clubId),
+    };
+  }, [humanManager]);
+
   /* ── Derived data ── */
   const allManagers = useMemo<Manager[]>(() => {
     const list = [...aiManagers];
-    if (humanManager) {
+    if (derivedHumanManager) {
       // Replace AI manager of human's club
-      const idx = list.findIndex((m) => m.clubId === humanManager.clubId);
+      const idx = list.findIndex((m) => m.clubId === derivedHumanManager.clubId);
       if (idx >= 0) list.splice(idx, 1);
-      list.unshift(humanManager);
+      list.unshift(derivedHumanManager);
     }
     return list;
-  }, [aiManagers, humanManager]);
+  }, [aiManagers, derivedHumanManager]);
 
   const clubOptions = useMemo(() => generateClubOptions(clubs, allManagers), [clubs, allManagers]);
 
@@ -948,10 +1009,25 @@ export default function ManagerPage({ clubs, onClubChange }: ManagerPageProps) {
     [allManagers],
   );
 
-  const activeManagerId = humanManager?.id ?? null;
-  const activeClubOption = humanManager?.clubId
-    ? clubOptions.find((c) => c.id === humanManager.clubId) ?? null
+  const activeManagerId = derivedHumanManager?.id ?? null;
+  const activeClubOption = derivedHumanManager?.clubId
+    ? clubOptions.find((c) => c.id === derivedHumanManager.clubId) ?? null
     : null;
+
+  useEffect(() => {
+    saveHumanManager(humanManager);
+  }, [humanManager]);
+
+  useEffect(() => {
+    if (!humanManager?.clubId) return;
+    if (!clubs.some((c) => c.id === humanManager.clubId)) return;
+    onClubChange?.(humanManager.clubId);
+  }, [humanManager?.clubId, clubs, onClubChange]);
+
+  useEffect(() => {
+    if (!humanManager) return;
+    if (!selectedManagerId) setSelectedManagerId(humanManager.id);
+  }, [humanManager, selectedManagerId]);
 
   /* ── Handlers ── */
   const handleManagerCreated = useCallback((name: string, nationality: string, experience: ExperienceLevel) => {
@@ -1108,10 +1184,10 @@ export default function ManagerPage({ clubs, onClubChange }: ManagerPageProps) {
           )}
 
           {/* Active career status */}
-          {hasHumanManager && hasClub && flowStep === 'done' && (
+          {hasHumanManager && hasClub && flowStep === 'done' && derivedHumanManager && (
             <>
               <ManagerStatusPanel
-                manager={humanManager!}
+                manager={derivedHumanManager}
                 club={activeClubOption}
                 onResign={() => setShowResignConfirm(true)}
                 onSwitchClub={handleSwitchClub}
