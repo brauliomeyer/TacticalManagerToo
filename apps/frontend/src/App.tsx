@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
-import type { ManagerSummary, MatchEvent } from '@tmt/shared';
+import type { ManagerSummary } from '@tmt/shared';
 import MatchScreen from './components/MatchScreen';
 import TacticsPage from './components/TacticsPage';
 import BoardRoom from './components/BoardRoom';
@@ -15,7 +15,7 @@ import ClubCrest from './components/ClubCrest';
 import ManagerPage from './components/ManagerPage';
 import GameDashboard from './components/GameDashboard';
 import { loadActiveTactic } from './engine/tacticsSystem';
-import { loadGameState } from './engine/footballEngine';
+import { loadGameState, type MatchEvent } from './engine/footballEngine';
 import { realSquads } from './realSquads';
 import { fallbackClubs } from './fallbackClubs';
 import {
@@ -867,7 +867,7 @@ function RightSidebar({
       ) : (
         <ul className="space-y-1 max-h-48 overflow-y-auto">
           {events.map((event) => {
-            const isGoal = event.type === 'GOAL' || event.type === 'goal';
+            const isGoal = event.type === 'GOAL';
             return (
               <li
                 className={`border px-2 py-1 ${isGoal ? 'border-[#efe56b] bg-[#2a6a1b]' : 'border-[#98ca7a] bg-[#256d22]'}`}
@@ -914,7 +914,9 @@ function PagePanel({
   onSquadSortChange,
   onSquadStatusChange,
   onPositionChange,
-  onClubChange
+  onClubChange,
+  onMatchResult,
+  onMatchEvents
 }: {
   page: PageKey;
   activeClub: Club;
@@ -934,10 +936,21 @@ function PagePanel({
   onSquadStatusChange: (playerId: string, status: SquadStatus) => void;
   onPositionChange: (playerId: string, role: string) => void;
   onClubChange: (clubId: string) => void;
+  onMatchResult: (homeGoals: number, awayGoals: number, isHome: boolean) => void;
+  onMatchEvents: (events: MatchEvent[]) => void;
 }) {
   // Pages that remount on each visit (state is either in localStorage or not important)
   if (page === 'game') {
-    return <GameDashboard clubs={clubs} activeClub={activeClub} squadPlayers={squadPlayers} activeTactic={loadActiveTactic(activeClub?.id)} />;
+    return (
+      <GameDashboard
+        clubs={clubs}
+        activeClub={activeClub}
+        squadPlayers={squadPlayers}
+        activeTactic={loadActiveTactic(activeClub?.id)}
+        onMatchResult={onMatchResult}
+        onMatchEvents={onMatchEvents}
+      />
+    );
   }
   if (page === 'manager') {
     return <ManagerPage activeClub={activeClub} clubs={clubs} onClubChange={onClubChange} />;
@@ -1050,11 +1063,96 @@ function getDivisionSortRank(name: string) {
   return order[name] ?? 99;
 }
 
+/* ── Manager Summary: localStorage persistence ── */
+const SUMMARY_KEY = 'tmt_manager_summary';
+const MATCH_FEED_KEY = 'tmt_match_feed';
+
+function loadManagerSummary(): ManagerSummary | null {
+  try {
+    const raw = localStorage.getItem(SUMMARY_KEY);
+    return raw ? (JSON.parse(raw) as ManagerSummary) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveManagerSummary(s: ManagerSummary) {
+  try {
+    localStorage.setItem(SUMMARY_KEY, JSON.stringify(s));
+  } catch { /* ignore quota errors */ }
+}
+
+function loadStoredMatchFeed(): MatchEvent[] {
+  try {
+    const raw = localStorage.getItem(MATCH_FEED_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as MatchEvent[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredMatchFeed(events: MatchEvent[]) {
+  try {
+    localStorage.setItem(MATCH_FEED_KEY, JSON.stringify(events.slice(-40)));
+  } catch {
+    // ignore quota errors
+  }
+}
+
+function summaryMatchesPlayed(s: ManagerSummary | null): number {
+  if (!s) return 0;
+  return (s.totalWins ?? 0) + (s.totalDraws ?? 0) + (s.totalLosses ?? 0);
+}
+
+function pickMostAdvancedSummary(localSummary: ManagerSummary | null, remoteSummary: ManagerSummary): ManagerSummary {
+  if (!localSummary) return remoteSummary;
+  const localPlayed = summaryMatchesPlayed(localSummary);
+  const remotePlayed = summaryMatchesPlayed(remoteSummary);
+  if (localPlayed > remotePlayed) return localSummary;
+  if (remotePlayed > localPlayed) return remoteSummary;
+  if ((localSummary.level ?? 0) > (remoteSummary.level ?? 0)) return localSummary;
+  if ((remoteSummary.level ?? 0) > (localSummary.level ?? 0)) return remoteSummary;
+  return (localSummary.successes ?? 0) >= (remoteSummary.successes ?? 0) ? localSummary : remoteSummary;
+}
+
+function deriveStatus(level: number): ManagerSummary['status'] {
+  if (level >= 10) return 'ELITE';
+  if (level >= 7) return 'PRO';
+  return 'INEXPERIENCED';
+}
+
+function updateSummaryAfterMatch(prev: ManagerSummary | null, homeGoals: number, awayGoals: number, isHome: boolean): ManagerSummary {
+  const base: ManagerSummary = prev ?? {
+    status: 'INEXPERIENCED', level: 1, successes: 0,
+    successiveWins: 0, successiveLosses: 0, totalWins: 0, totalLosses: 0, totalDraws: 0,
+  };
+
+  const playerGoals = isHome ? homeGoals : awayGoals;
+  const opponentGoals = isHome ? awayGoals : homeGoals;
+  const isWin  = playerGoals > opponentGoals;
+  const isDraw = playerGoals === opponentGoals;
+
+  const totalWins   = base.totalWins   + (isWin  ? 1 : 0);
+  const totalDraws  = base.totalDraws  + (isDraw  ? 1 : 0);
+  const totalLosses = base.totalLosses + (!isWin && !isDraw ? 1 : 0);
+
+  const successiveWins   = isWin  ? base.successiveWins + 1 : 0;
+  const successiveLosses = !isWin && !isDraw ? base.successiveLosses + 1 : 0;
+  const successes        = base.successes + (isWin ? 1 : 0);
+
+  const level  = Math.max(1, 1 + Math.floor(totalWins / 5));
+  const status = deriveStatus(level);
+
+  return { status, level, successes, successiveWins, successiveLosses, totalWins, totalLosses, totalDraws };
+}
+
 export default function App() {
   const [clubs, setClubs] = useState<Club[]>([]);
   const [activeClubId, setActiveClubId] = useState<string | null>(null);
-  const [events, setEvents] = useState<MatchEvent[]>([]);
-  const [summary, setSummary] = useState<ManagerSummary | null>(null);
+  const [events, setEvents] = useState<MatchEvent[]>(() => loadStoredMatchFeed());
+  const [summary, setSummary] = useState<ManagerSummary | null>(() => loadManagerSummary());
   const error: string | null = null;
   const [activePage, setActivePage] = useState<PageKey>('mail');
   const [showStandings, setShowStandings] = useState(false);
@@ -1071,6 +1169,21 @@ export default function App() {
   const [squadStatuses, setSquadStatuses] = useState<Record<string, SquadStatus>>({});
   const [positionOverrides, setPositionOverrides] = useState<Record<string, string>>({});
 
+  // Called by GameDashboard when an interactive match finishes
+  const handleMatchResult = useCallback((homeGoals: number, awayGoals: number, isHome: boolean) => {
+    setSummary((prev) => {
+      const next = updateSummaryAfterMatch(prev, homeGoals, awayGoals, isHome);
+      saveManagerSummary(next);
+      return next;
+    });
+  }, []);
+
+  // Called by GameDashboard when live match events change
+  const handleMatchEvents = useCallback((evs: MatchEvent[]) => {
+    setEvents(evs);
+    saveStoredMatchFeed(evs);
+  }, []);
+
   useEffect(() => {
     axios
       .get<Club[]>(`${API_BASE}/clubs`)
@@ -1084,12 +1197,19 @@ export default function App() {
 
     axios
       .get<ManagerSummary>(`${API_BASE}/manager/summary`)
-      .then((res) => setSummary(res.data))
-      .catch(() => { /* BoardRoom handles null summary gracefully */ });
+      .then((res) => {
+        setSummary((prev) => {
+          const next = pickMostAdvancedSummary(prev, res.data);
+          saveManagerSummary(next);
+          return next;
+        });
+      })
+      .catch(() => { /* use localStorage fallback loaded in useState initializer */ });
 
     socket.connect();
     socket.on('match:update', (payload: { events: MatchEvent[] }) => {
       setEvents(payload.events);
+      saveStoredMatchFeed(payload.events);
     });
 
     return () => {
@@ -1502,6 +1622,8 @@ export default function App() {
               onSquadStatusChange={setPlayerStatus}
               onPositionChange={setPlayerPosition}
               onClubChange={(id) => setActiveClubId(id)}
+              onMatchResult={handleMatchResult}
+              onMatchEvents={handleMatchEvents}
             />
 
             {error ? (
