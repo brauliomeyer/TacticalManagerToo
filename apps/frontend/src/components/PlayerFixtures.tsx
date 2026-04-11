@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { loadGameState } from '../engine/footballEngine';
 
 /* ══════════════════════════════════════════════
    Types
@@ -166,59 +167,95 @@ function generateCompEntries(
   clubs: Club[],
   squad: SquadPlayer[],
 ): { playerName: string; clubName: string; value: number }[] {
+  // Load all played fixtures and stats from game state
+  let state: any = null;
+  try { state = loadGameState(); } catch {}
+  const realStats: Record<string, { [player: string]: { [cat: string]: number } }> = {};
+  if (state && state.fixtures) {
+    for (const fixId in state.fixtures) {
+      const fix = state.fixtures[fixId];
+      if (!fix.played || !fix.stats) continue;
+      // Only include fixtures for the selected comp
+      if (fix.compId !== comp) continue;
+      // Home/away clubs
+      const home = state.clubs[fix.homeId]?.name;
+      const away = state.clubs[fix.awayId]?.name;
+      // Simulate player stats: for demo, just use goals for shooters, appearances for appearances, etc.
+      // In real engine, would use fix.events or fix.stats.players
+      // Here, we just increment appearances for both clubs
+      if (home) {
+        if (!realStats[home]) realStats[home] = {};
+        realStats[home][`GK`] = realStats[home][`GK`] || {};
+        realStats[home][`GK`]["appearances"] = (realStats[home][`GK`]["appearances"] || 0) + 1;
+        realStats[home][`GK`]["motm"] = (realStats[home][`GK`]["motm"] || 0) + (fix.stats.shotsOnTarget[0] > fix.stats.shotsOnTarget[1] ? 1 : 0);
+        realStats[home][`GK`]["shooters"] = (realStats[home][`GK`]["shooters"] || 0) + fix.homeGoals;
+      }
+      if (away) {
+        if (!realStats[away]) realStats[away] = {};
+        realStats[away][`GK`] = realStats[away][`GK`] || {};
+        realStats[away][`GK`]["appearances"] = (realStats[away][`GK`]["appearances"] || 0) + 1;
+        realStats[away][`GK`]["motm"] = (realStats[away][`GK`]["motm"] || 0) + (fix.stats.shotsOnTarget[1] > fix.stats.shotsOnTarget[0] ? 1 : 0);
+        realStats[away][`GK`]["shooters"] = (realStats[away][`GK`]["shooters"] || 0) + fix.awayGoals;
+      }
+    }
+  }
   const cfg = COMP_CONFIG[comp];
   const seed = hs(activeClub.id + category + comp) + cfg.seedOff;
   const entries: { playerName: string; clubName: string; value: number }[] = [];
   const m = cfg.mult;
 
+  // Echte stats voor eigen club
   for (let i = 0; i < squad.length; i++) {
     const p = squad[i];
-    const pSeed = hs(p.id + category + comp) + seed;
     let value = 0;
-
-    switch (category) {
-      case 'motm':
-        value = Math.max(0, Math.round((p.influence * 0.3 + p.form * 0.2 + sr(pSeed) * 4 - 1) * m));
-        break;
-      case 'penalties':
-        value = p.role.includes('FORWARD') || p.role.includes('ATTACKING')
-          ? Math.round(sr(pSeed) * 6 * m)
-          : Math.round(sr(pSeed) * 2 * m);
-        break;
-      case 'shooters':
-        value = p.scored > 0 ? Math.round(p.scored * m) : Math.round(p.shooting * 0.4 * sr(pSeed + 1) * m);
-        break;
-      case 'cupGoals':
-        value = Math.round((p.scored > 0 ? p.scored * 0.3 : p.shooting * 0.15) * sr(pSeed + 2) * m);
-        break;
-      case 'superSubs':
-        value = Math.round(sr(pSeed) * 4 * (p.attitude > 12 ? 1.5 : 1) * m);
-        break;
-      case 'hatTricks':
-        value = p.scored >= 8 ? Math.max(0, Math.round((sr(pSeed) * 3 - 0.5) * m)) : 0;
-        break;
-      case 'redCards':
-        value = Math.round(sr(pSeed) * (p.tackling > 14 ? 3 : 1.5) * (p.attitude < 10 ? 1.5 : 0.8) * m);
-        break;
-      case 'yellowCards':
-        value = Math.round(sr(pSeed) * (p.tackling > 10 ? 8 : 4) * (p.attitude < 12 ? 1.3 : 0.7) * m);
-        break;
-      case 'capped':
-        value = p.caps > 0 ? Math.round(p.caps * m) : Math.round(sr(pSeed) * 30 * (p.influence > 12 ? 1.5 : 0.5) * m);
-        break;
-      case 'assists':
-        value = Math.round((p.passing * 0.35 * sr(pSeed + 3) + p.played * 0.1) * m);
-        break;
-      case 'cleanSheets':
-        value = p.role === 'GOALKEEPER' || p.role.includes('BACK')
-          ? Math.round((sr(pSeed) * 12 + p.played * 0.2) * m)
-          : 0;
-        break;
-      case 'appearances':
-        value = p.played > 0 ? Math.round(p.played * m) : Math.round((8 + sr(pSeed) * 30) * m);
-        break;
+    if (realStats[activeClub.name] && realStats[activeClub.name][p.name] && realStats[activeClub.name][p.name][category]) {
+      value = realStats[activeClub.name][p.name][category];
+    } else {
+      // Fallback: oude logica
+      const pSeed = hs(p.id + category + comp) + seed;
+      switch (category) {
+        case 'motm':
+          value = Math.max(0, Math.round((p.influence * 0.3 + p.form * 0.2 + sr(pSeed) * 4 - 1) * m));
+          break;
+        case 'penalties':
+          value = p.role.includes('FORWARD') || p.role.includes('ATTACKING')
+            ? Math.round(sr(pSeed) * 6 * m)
+            : Math.round(sr(pSeed) * 2 * m);
+          break;
+        case 'shooters':
+          value = p.scored > 0 ? Math.round(p.scored * m) : Math.round(p.shooting * 0.4 * sr(pSeed + 1) * m);
+          break;
+        case 'cupGoals':
+          value = Math.round((p.scored > 0 ? p.scored * 0.3 : p.shooting * 0.15) * sr(pSeed + 2) * m);
+          break;
+        case 'superSubs':
+          value = Math.round(sr(pSeed) * 4 * (p.attitude > 12 ? 1.5 : 1) * m);
+          break;
+        case 'hatTricks':
+          value = p.scored >= 8 ? Math.max(0, Math.round((sr(pSeed) * 3 - 0.5) * m)) : 0;
+          break;
+        case 'redCards':
+          value = Math.round(sr(pSeed) * (p.tackling > 14 ? 3 : 1.5) * (p.attitude < 10 ? 1.5 : 0.8) * m);
+          break;
+        case 'yellowCards':
+          value = Math.round(sr(pSeed) * (p.tackling > 10 ? 8 : 4) * (p.attitude < 12 ? 1.3 : 0.7) * m);
+          break;
+        case 'capped':
+          value = p.caps > 0 ? Math.round(p.caps * m) : Math.round(sr(pSeed) * 30 * (p.influence > 12 ? 1.5 : 0.5) * m);
+          break;
+        case 'assists':
+          value = Math.round((p.passing * 0.35 * sr(pSeed + 3) + p.played * 0.1) * m);
+          break;
+        case 'cleanSheets':
+          value = p.role === 'GOALKEEPER' || p.role.includes('BACK')
+            ? Math.round((sr(pSeed) * 12 + p.played * 0.2) * m)
+            : 0;
+          break;
+        case 'appearances':
+          value = p.played > 0 ? Math.round(p.played * m) : Math.round((8 + sr(pSeed) * 30) * m);
+          break;
+      }
     }
-
     if (value > 0) {
       entries.push({ playerName: p.name, clubName: activeClub.name, value });
     }
@@ -228,29 +265,41 @@ function generateCompEntries(
     ? clubs.filter((c) => c.id !== activeClub.id).map((c) => c.name)
     : CLUB_NAMES.filter((c) => c !== activeClub.name);
 
-  for (let i = 0; i < 35; i++) {
-    const pSeed = seed + i * 97 + 500;
-    const name = PLAYER_POOL[Math.floor(sr(pSeed) * PLAYER_POOL.length)];
-    const club = otherClubs[Math.floor(sr(pSeed + 1) * otherClubs.length)];
-    let value = 0;
-
-    switch (category) {
-      case 'motm': value = Math.round((1 + sr(pSeed + 2) * 8) * m); break;
-      case 'penalties': value = Math.round(sr(pSeed + 2) * 8 * m); break;
-      case 'shooters': value = Math.round((1 + sr(pSeed + 2) * 25) * m); break;
-      case 'cupGoals': value = Math.round(sr(pSeed + 2) * 10 * m); break;
-      case 'superSubs': value = Math.round(sr(pSeed + 2) * 6 * m); break;
-      case 'hatTricks': value = Math.round(sr(pSeed + 2) * 4 * m); break;
-      case 'redCards': value = Math.round(sr(pSeed + 2) * 4 * m); break;
-      case 'yellowCards': value = Math.round((1 + sr(pSeed + 2) * 12) * m); break;
-      case 'capped': value = Math.round((10 + sr(pSeed + 2) * 80) * m); break;
-      case 'assists': value = Math.round((1 + sr(pSeed + 2) * 15) * m); break;
-      case 'cleanSheets': value = Math.round(sr(pSeed + 2) * 15 * m); break;
-      case 'appearances': value = Math.round((10 + sr(pSeed + 2) * 35) * m); break;
-    }
-
-    if (value > 0) {
-      entries.push({ playerName: name, clubName: club, value });
+  // Voor AI-clubs: als er echte stats zijn, gebruik die, anders fallback op random
+  for (const club of clubs) {
+    if (club.id === activeClub.id) continue;
+    const clubName = club.name;
+    if (realStats[clubName]) {
+      for (const player in realStats[clubName]) {
+        const value = realStats[clubName][player][category] || 0;
+        if (value > 0) {
+          entries.push({ playerName: player, clubName, value });
+        }
+      }
+    } else {
+      // Fallback: random AI
+      for (let i = 0; i < 2; i++) {
+        const pSeed = seed + i * 97 + 500 + hs(clubName);
+        const name = PLAYER_POOL[Math.floor(sr(pSeed) * PLAYER_POOL.length)];
+        let value = 0;
+        switch (category) {
+          case 'motm': value = Math.round((1 + sr(pSeed + 2) * 8) * m); break;
+          case 'penalties': value = Math.round(sr(pSeed + 2) * 8 * m); break;
+          case 'shooters': value = Math.round((1 + sr(pSeed + 2) * 25) * m); break;
+          case 'cupGoals': value = Math.round(sr(pSeed + 2) * 10 * m); break;
+          case 'superSubs': value = Math.round(sr(pSeed + 2) * 6 * m); break;
+          case 'hatTricks': value = Math.round(sr(pSeed + 2) * 4 * m); break;
+          case 'redCards': value = Math.round(sr(pSeed + 2) * 4 * m); break;
+          case 'yellowCards': value = Math.round((1 + sr(pSeed + 2) * 12) * m); break;
+          case 'capped': value = Math.round((10 + sr(pSeed + 2) * 80) * m); break;
+          case 'assists': value = Math.round((1 + sr(pSeed + 2) * 15) * m); break;
+          case 'cleanSheets': value = Math.round(sr(pSeed + 2) * 15 * m); break;
+          case 'appearances': value = Math.round((10 + sr(pSeed + 2) * 35) * m); break;
+        }
+        if (value > 0) {
+          entries.push({ playerName: name, clubName, value });
+        }
+      }
     }
   }
 
