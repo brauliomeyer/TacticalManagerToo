@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 
 /* ══════════════════════════════════════════════
    Types
@@ -696,6 +696,16 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
 
   const thCls = 'py-1 px-1 text-left text-[9px] font-bold uppercase text-[#efe56b] cursor-pointer hover:text-white';
 
+  useEffect(() => {
+    if (filtered.length === 0) {
+      if (selectedPlayer) onSelect(null);
+      return;
+    }
+    if (!selectedPlayer || !filtered.some((p) => p.id === selectedPlayer.id)) {
+      onSelect(filtered[0]);
+    }
+  }, [filtered, selectedPlayer, onSelect]);
+
   const resetFilters = () => {
     setPosFilter('ALL');
     setRegionFilter('ALL');
@@ -796,6 +806,27 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
 
       {/* Results table */}
       <div className="border-2 border-[#2a8a2b] bg-[#0d3f10] overflow-x-auto">
+        {filtered.length > 0 && (
+          <div className="border-b border-[#1a5a1e] bg-[#0a2e0d] p-2">
+            <div className="mb-1 text-[10px] font-bold uppercase text-[#00e5ff]" style={{ fontFamily: RETRO }}>
+              Quick Results
+            </div>
+            <div className="grid gap-1 sm:grid-cols-2">
+              {filtered.slice(0, 10).map((p) => (
+                <button
+                  key={`quick-${p.id}`}
+                  type="button"
+                  onClick={() => onSelect(p)}
+                  className={`w-full border px-2 py-1 text-left text-[10px] ${selectedPlayer?.id === p.id ? 'border-[#efe56b] bg-[#1a4a1e] text-[#efe56b]' : 'border-[#2a8a2b] bg-[#0d3f10] text-[#d5f8b6] hover:bg-[#1a4a1e]'}`}
+                >
+                  <span className="font-bold uppercase" style={{ fontFamily: MONO }}>{p.name}</span>
+                  <span className="ml-1 text-[#98ca7a]">{p.position}</span>
+                  <span className="ml-1 text-white">{p.rating}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <table className="w-full">
           <thead>
             <tr className="border-b-2 border-[#2a8a2b]">
