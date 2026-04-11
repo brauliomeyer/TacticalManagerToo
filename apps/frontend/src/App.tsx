@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import type { ManagerSummary } from '@tmt/shared';
@@ -14,6 +14,7 @@ import ClubManagement from './components/ClubManagement';
 import ClubCrest from './components/ClubCrest';
 import ManagerPage from './components/ManagerPage';
 import GameDashboard from './components/GameDashboard';
+import ReadabilitySettings from './components/ReadabilitySettings';
 import { loadActiveTactic, saveActiveTactic, type FullTactic } from './engine/tacticsSystem';
 import { loadGameState, saveGameState, clearGameState as clearEngineGameState, type MatchEvent } from './engine/footballEngine';
 import { realSquads } from './realSquads';
@@ -194,9 +195,31 @@ const fallbackLastNames = [
   'Walker', 'Brown', 'Taylor', 'Wilson', 'Evans', 'King', 'Parker', 'Scott', 'Davies', 'Roberts'
 ];
 
-type PageKey = 'mail' | 'board' | 'squad' | 'cup' | 'human' | 'manager' | 'manage' | 'transfers' | 'training' | 'tactics' | 'match' | 'game';
+type PageKey = 'mail' | 'board' | 'squad' | 'cup' | 'human' | 'manager' | 'manage' | 'transfers' | 'training' | 'tactics' | 'match' | 'game' | 'readability';
 
 const SQUAD_STORAGE_KEY = 'tmt-squad-statuses';
+const UI_FONT_SIZE_KEY = 'tmt-ui-font-size-pt';
+
+function loadUiFontSizePt(): number {
+  try {
+    const raw = localStorage.getItem(UI_FONT_SIZE_KEY);
+    const parsed = raw ? Number(raw) : 12;
+    if (Number.isFinite(parsed)) {
+      return Math.min(20, Math.max(10, parsed));
+    }
+  } catch {
+    // storage unavailable
+  }
+  return 12;
+}
+
+function saveUiFontSizePt(value: number) {
+  try {
+    localStorage.setItem(UI_FONT_SIZE_KEY, String(value));
+  } catch {
+    // storage unavailable
+  }
+}
 
 function loadSquadStatuses(clubId: string): Record<string, SquadStatus> {
   try {
@@ -253,7 +276,8 @@ const sideMenu: { key: PageKey; label: string }[] = [
   { key: 'manage', label: 'Manage' },
   { key: 'transfers', label: 'Transfers' },
   { key: 'training', label: 'Training' },
-  { key: 'tactics', label: 'Tactics' }
+  { key: 'tactics', label: 'Tactics' },
+  { key: 'readability', label: 'Readability' }
 ];
 
 const topTabs: { key: PageKey; label: string }[] = [
@@ -275,7 +299,8 @@ const pageDescriptions: Record<PageKey, { title: string; text: string }> = {
   training: { title: 'Training Ground', text: 'Trainingsschema, focusgebieden en spelersontwikkeling.' },
   tactics: { title: 'Tactical Desk', text: 'Plaats je spelers op het veld en verfijn je formatie.' },
   match: { title: 'Live Match', text: 'Live simulatie met eventlog en mini-pitch.' },
-  game: { title: 'Game Engine', text: 'Speel wedstrijden, bekijk resultaten en beheer je seizoen.' }
+  game: { title: 'Game Engine', text: 'Speel wedstrijden, bekijk resultaten en beheer je seizoen.' },
+  readability: { title: 'Readability Settings', text: 'Stel centraal de leesbaarheid in voor alle pagina\'s.' }
 };
 
 function getOverall(player: SquadPlayer) {
@@ -1012,6 +1037,8 @@ function PagePanel({
   onMatchResult,
   onMatchEvents,
   gameResetKey,
+  uiFontSizePt,
+  onUiFontSizeChange,
 }: {
   page: PageKey;
   activeClub: Club;
@@ -1036,6 +1063,8 @@ function PagePanel({
   onMatchResult: (homeGoals: number, awayGoals: number, isHome: boolean) => void;
   onMatchEvents: (events: MatchEvent[]) => void;
   gameResetKey: number;
+  uiFontSizePt: number;
+  onUiFontSizeChange: (value: number) => void;
 }) {
   // Pages that remount on each visit (state is either in localStorage or not important)
   if (page === 'game') {
@@ -1054,6 +1083,9 @@ function PagePanel({
   if (page === 'manager') {
     return <ManagerPage activeClub={activeClub} clubs={clubs} onClubChange={onClubChange} />;
   }
+  if (page === 'readability') {
+    return <ReadabilitySettings fontSizePt={uiFontSizePt} onFontSizeChange={onUiFontSizeChange} />;
+  }
   if (page === 'match') return <MatchScreen />;
 
   // Derive starters/bench for tactics at this level so it's always fresh
@@ -1069,7 +1101,7 @@ function PagePanel({
 
   // Fallback for unknown page keys
   const desc = pageDescriptions[page as PageKey];
-  const isFallback = !['board','mail','cup','human','transfers','training','manage','squad','tactics'].includes(page);
+  const isFallback = !['board','mail','cup','human','transfers','training','manage','squad','tactics','readability'].includes(page);
 
   return (
     <>
@@ -1459,6 +1491,7 @@ export default function App() {
   const [showSaveLoad, setShowSaveLoad] = useState(false);
   const [saveLoadMode, setSaveLoadMode] = useState<'save' | 'load'>('save');
   const [gameResetKey, setGameResetKey] = useState(0);
+  const [uiFontSizePt, setUiFontSizePt] = useState<number>(() => loadUiFontSizePt());
 
   // Called by GameDashboard when an interactive match finishes
   const handleMatchResult = useCallback((homeGoals: number, awayGoals: number, isHome: boolean) => {
@@ -1913,8 +1946,21 @@ export default function App() {
     setBulkPlayerStatuses([{ playerId, status }]);
   };
 
+  const handleUiFontSizeChange = useCallback((value: number) => {
+    const next = Math.min(20, Math.max(10, Math.round(value)));
+    setUiFontSizePt(next);
+    saveUiFontSizePt(next);
+  }, []);
+
+  const mainStyle = {
+    '--tm-base-font-size': `${uiFontSizePt}pt`,
+  } as CSSProperties;
+
   return (
-    <main className="min-h-screen bg-[#1a1e2b] p-4 text-[#d4f6a7] md:p-8">
+    <main
+      className="tm-font-root min-h-screen bg-[#1a1e2b] p-4 text-[#d4f6a7] md:p-8"
+      style={mainStyle}
+    >
       <section className="mx-auto max-w-6xl border-4 border-[#6f4ca1] bg-[#2a8a2b] shadow-[0_0_0_4px_#120d1f]">
         <header className="flex flex-col gap-3 border-b-4 border-[#6f4ca1] bg-black px-4 py-3 text-[#ebe25f] md:flex-row md:items-center md:justify-between">
           <h1 className="flex items-center gap-2 text-base font-black uppercase tracking-wide sm:gap-3 sm:text-xl md:tracking-widest lg:text-2xl"><ClubCrest clubName={activeClub.name} size={36} />{activeClub.name}</h1>
@@ -2070,6 +2116,8 @@ export default function App() {
               onMatchResult={handleMatchResult}
               onMatchEvents={handleMatchEvents}
               gameResetKey={gameResetKey}
+              uiFontSizePt={uiFontSizePt}
+              onUiFontSizeChange={handleUiFontSizeChange}
             />
 
             {error ? (
