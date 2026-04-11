@@ -100,6 +100,8 @@ function PitchView({
   homeRuns,
   awayRuns,
   possession,
+  lastEvent,
+  currentMinute,
 }: {
   homePositions: [number, number][];
   awayPositions: [number, number][];
@@ -111,6 +113,8 @@ function PitchView({
   homeRuns?: OffensiveRun[];
   awayRuns?: OffensiveRun[];
   possession?: 'HOME' | 'AWAY';
+  lastEvent?: MatchEvent;
+  currentMinute?: number;
 }) {
   const hLabels = homeLabels ?? POSITION_LABELS;
   const aLabels = awayLabels ?? POSITION_LABELS;
@@ -126,6 +130,26 @@ function PitchView({
   const PT = 'cx 0.42s ease-in-out, cy 0.42s ease-in-out';
   const LT = 'x 0.42s ease-in-out, y 0.42s ease-in-out';
   const BT = 'cx 0.28s ease, cy 0.28s ease';
+
+  // Resolve latest significant event to display on pitch (visible for 4 match-minutes)
+  const evMinute = lastEvent?.minute ?? -99;
+  const showPitchEvent = !!lastEvent && (currentMinute ?? 0) - evMinute <= 4;
+  const pitchEventType = showPitchEvent ? lastEvent!.type : null;
+  const pitchEventTeam = showPitchEvent ? lastEvent!.team : null;
+  const pitchEventIdx  = showPitchEvent ? lastEvent!.playerIndex : -1;
+
+  // Resolve player position on the SVG for the event's player
+  let evPlayerPos: [number, number] | null = null;
+  if (showPitchEvent && pitchEventIdx >= 0) {
+    const posArr = pitchEventTeam === 'HOME' ? homePositions : awayPositions;
+    if (pitchEventIdx < posArr.length) evPlayerPos = posArr[pitchEventIdx];
+  }
+  // Goal / Shot events use ball position; card/foul use player position
+  const isGoalEvent = pitchEventType === 'GOAL';
+  const isCardEvent = pitchEventType === 'YELLOW_CARD' || pitchEventType === 'RED_CARD';
+  const isFoulEvent = pitchEventType === 'FOUL';
+  const isSubEvent  = pitchEventType === 'SUBSTITUTION';
+  const evPos: [number, number] | null = isGoalEvent ? ballPos : evPlayerPos;
 
   // Generate offensive run arrows — animated marching dashes
   const renderRunLines = (positions: [number, number][], runs: OffensiveRun[] | undefined, color: string, isHome: boolean) => {
@@ -174,6 +198,12 @@ function PitchView({
         <style>{`
           @keyframes march { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -5; } }
           @keyframes ballglow { 0%,100% { opacity: 0.12; } 50% { opacity: 0.48; } }
+          @keyframes goalflash { 0%,100% { opacity: 1; r: 8; } 40% { opacity: 0.25; r: 14; } }
+          @keyframes eventfade { 0% { opacity: 1; } 60% { opacity: 0.92; } 100% { opacity: 0; } }
+          @keyframes cardpop { 0% { transform: scale(0.2); opacity: 1; } 15% { transform: scale(1.3); } 30%,80% { transform: scale(1); opacity: 1; } 100% { opacity: 0; } }
+          .ev-goal { animation: goalflash 0.7s ease-in-out 3; }
+          .ev-fade { animation: eventfade 3.5s ease-out forwards; }
+          .ev-card { animation: cardpop 3.5s ease-out forwards; transform-box: fill-box; transform-origin: center; }
         `}</style>
         <marker id="arrowHead" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
           <path d="M0,0 L6,3 L0,6 Z" fill="#efe56b" opacity="0.85" />
@@ -250,6 +280,51 @@ function PitchView({
         filter="url(#ballShadow)"
         style={{ transition: BT }}
       />
+
+      {/* ── Event Overlays ── */}
+      {showPitchEvent && evPos && isGoalEvent && (
+        <g key={`ev-goal-${evMinute}`}>
+          {/* pulsing halo */}
+          <circle cx={evPos[0]} cy={evPos[1]} r="8" fill="#efe56b" className="ev-goal" />
+          {/* GOAL label */}
+          <rect x={evPos[0] - 9} y={evPos[1] - 16} width="18" height="7" rx="1.5" fill="#efe56b" className="ev-fade" />
+          <text x={evPos[0]} y={evPos[1] - 10.5} textAnchor="middle" fontSize="4.5" fontWeight="bold" fill="#1a3a1e" className="ev-fade">⚽ GOAL!</text>
+        </g>
+      )}
+
+      {showPitchEvent && evPos && isCardEvent && (
+        <g key={`ev-card-${evMinute}`}>
+          {/* Card rectangle */}
+          <rect
+            x={evPos[0] - 2.5} y={evPos[1] - 11}
+            width="5" height="7" rx="0.7"
+            fill={pitchEventType === 'RED_CARD' ? '#ef4444' : '#eab308'}
+            stroke="white" strokeWidth="0.4"
+            className="ev-card"
+          />
+          {/* Label */}
+          <rect x={evPos[0] - 8} y={evPos[1] - 19} width="16" height="6.5" rx="1.5" fill="rgba(0,0,0,0.65)" className="ev-fade" />
+          <text x={evPos[0]} y={evPos[1] - 14} textAnchor="middle" fontSize="3.5" fill="white" fontWeight="bold" className="ev-fade">
+            {pitchEventType === 'RED_CARD' ? '🟥 Red Card' : '🟨 Yellow Card'}
+          </text>
+        </g>
+      )}
+
+      {showPitchEvent && evPos && isFoulEvent && (
+        <g key={`ev-foul-${evMinute}`}>
+          <circle cx={evPos[0]} cy={evPos[1]} r="3.5" fill="none" stroke="#f97316" strokeWidth="0.6" className="ev-fade" />
+          <text x={evPos[0]} y={evPos[1] + 1.2} textAnchor="middle" fontSize="3.5" fontWeight="bold" fill="#f97316" className="ev-fade">!</text>
+          <rect x={evPos[0] - 7} y={evPos[1] - 11} width="14" height="5.5" rx="1.2" fill="rgba(0,0,0,0.65)" className="ev-fade" />
+          <text x={evPos[0]} y={evPos[1] - 7} textAnchor="middle" fontSize="3" fill="#f97316" fontWeight="bold" className="ev-fade">⛔ Foul</text>
+        </g>
+      )}
+
+      {showPitchEvent && evPos && isSubEvent && (
+        <g key={`ev-sub-${evMinute}`}>
+          <rect x={evPos[0] - 8} y={evPos[1] - 10} width="16" height="7" rx="1.5" fill="rgba(0,0,0,0.7)" className="ev-fade" />
+          <text x={evPos[0]} y={evPos[1] - 4.8} textAnchor="middle" fontSize="3.5" fill="#22c55e" fontWeight="bold" className="ev-fade">🔄 Sub</text>
+        </g>
+      )}
     </svg>
   );
 }
@@ -1158,6 +1233,8 @@ function InteractiveMatchView({
             homeRuns={matchState.homeFullTactic?.offensiveRuns}
             awayRuns={matchState.awayFullTactic?.offensiveRuns}
             possession={matchState.ballPos[1] < 68 ? 'HOME' : matchState.ballPos[1] > 82 ? 'AWAY' : undefined}
+            lastEvent={matchState.events.length > 0 ? matchState.events[matchState.events.length - 1] : undefined}
+            currentMinute={matchState.minute}
           />
         </div>
 
