@@ -181,6 +181,24 @@ const YOUTH_FIRST = [
 
 const TRAINING_FOCUSES = ['General', 'Attacking', 'Defending', 'Physical', 'Technical', 'Tactical'];
 
+type RegionFilter = 'ALL' | 'Europe' | 'South America' | 'Africa' | 'Asia';
+
+const NATIONALITY_REGION: Record<string, Exclude<RegionFilter, 'ALL'>> = {
+  England: 'Europe', France: 'Europe', Spain: 'Europe', Germany: 'Europe', Italy: 'Europe',
+  Netherlands: 'Europe', Portugal: 'Europe', Belgium: 'Europe', Croatia: 'Europe', Denmark: 'Europe',
+  Sweden: 'Europe', Norway: 'Europe', Scotland: 'Europe', Wales: 'Europe', Ireland: 'Europe',
+  Serbia: 'Europe', Poland: 'Europe', 'Czech Republic': 'Europe',
+  Brazil: 'South America', Argentina: 'South America', Colombia: 'South America', Uruguay: 'South America',
+  Chile: 'South America', Peru: 'South America', Ecuador: 'South America', Paraguay: 'South America', Venezuela: 'South America',
+  Nigeria: 'Africa', Ghana: 'Africa', Senegal: 'Africa', Morocco: 'Africa', Egypt: 'Africa',
+  'South Africa': 'Africa', Cameroon: 'Africa', 'Ivory Coast': 'Africa', Tunisia: 'Africa', Algeria: 'Africa',
+  Japan: 'Asia', China: 'Asia', 'South Korea': 'Asia', Turkey: 'Asia', 'Saudi Arabia': 'Asia', Qatar: 'Asia',
+};
+
+function getRegionForNationality(nationality: string): Exclude<RegionFilter, 'ALL'> {
+  return NATIONALITY_REGION[nationality] ?? 'Europe';
+}
+
 /* ══════════════════════════════════════════════
    Data generators
    ══════════════════════════════════════════════ */
@@ -635,6 +653,7 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
   onSelect: (p: MarketPlayer | null) => void;
 }) {
   const [posFilter, setPosFilter] = useState('ALL');
+  const [regionFilter, setRegionFilter] = useState<RegionFilter>('ALL');
   const [natFilter, setNatFilter] = useState('ALL');
   const [leagueFilter, setLeagueFilter] = useState('ALL');
   const [minAge, setMinAge] = useState(15);
@@ -656,6 +675,7 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
   const filtered = useMemo(() => {
     let list = [...players];
     if (posFilter !== 'ALL') list = list.filter((p) => p.position === posFilter);
+    if (regionFilter !== 'ALL') list = list.filter((p) => getRegionForNationality(p.nationality) === regionFilter);
     if (natFilter !== 'ALL') list = list.filter((p) => p.nationality === natFilter);
     if (leagueFilter !== 'ALL') list = list.filter((p) => p.league === leagueFilter);
     if (contractFilter === 'expiring') list = list.filter((p) => p.contractYears <= 1);
@@ -672,12 +692,13 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
       case 'name': list.sort((a, b) => a.name.localeCompare(b.name)); break;
     }
     return list.slice(0, 50);
-  }, [players, posFilter, natFilter, leagueFilter, contractFilter, minAge, maxAge, minRating, maxPrice, sortBy]);
+  }, [players, posFilter, regionFilter, natFilter, leagueFilter, contractFilter, minAge, maxAge, minRating, maxPrice, sortBy]);
 
   const thCls = 'py-1 px-1 text-left text-[9px] font-bold uppercase text-[#efe56b] cursor-pointer hover:text-white';
 
   const resetFilters = () => {
     setPosFilter('ALL');
+    setRegionFilter('ALL');
     setNatFilter('ALL');
     setLeagueFilter('ALL');
     setContractFilter('ALL');
@@ -700,6 +721,17 @@ function ScoutTab({ players, onAddShortlist, onMakeOffer, onRequestLoan, windowO
           <select value={posFilter} onChange={(e) => setPosFilter(e.target.value)} className="w-full bg-[#0a2e0d] border border-[#2a8a2b] text-[#d5f8b6] text-[10px] px-1 py-0.5">
             <option value="ALL">All Positions</option>
             {POSITIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-[10px] uppercase text-[#6b9a5a] mb-0.5">Region</label>
+          <select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value as RegionFilter)} className="w-full bg-[#0a2e0d] border border-[#2a8a2b] text-[#d5f8b6] text-[10px] px-1 py-0.5">
+            <option value="ALL">All Regions</option>
+            <option value="Europe">Europe</option>
+            <option value="South America">South America</option>
+            <option value="Africa">Africa</option>
+            <option value="Asia">Asia</option>
           </select>
         </div>
 
