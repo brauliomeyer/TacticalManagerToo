@@ -1447,6 +1447,65 @@ function deriveStatus(level: number): ManagerSummary['status'] {
   return 'INEXPERIENCED';
 }
 
+function buildSummaryFromGameState(activeClubId: string | null): ManagerSummary | null {
+  if (!activeClubId) return null;
+  const gs = loadGameState();
+  if (!gs) return null;
+
+  const played = Object.values(gs.fixtures)
+    .filter((f) => f.played && (f.homeId === activeClubId || f.awayId === activeClubId))
+    .sort((a, b) => {
+      if (a.week !== b.week) return a.week - b.week;
+      return a.id.localeCompare(b.id);
+    });
+
+  let totalWins = 0;
+  let totalDraws = 0;
+  let totalLosses = 0;
+
+  for (const fixture of played) {
+    const goalsFor = fixture.homeId === activeClubId ? fixture.homeGoals : fixture.awayGoals;
+    const goalsAgainst = fixture.homeId === activeClubId ? fixture.awayGoals : fixture.homeGoals;
+    if (goalsFor > goalsAgainst) totalWins += 1;
+    else if (goalsFor === goalsAgainst) totalDraws += 1;
+    else totalLosses += 1;
+  }
+
+  let successiveWins = 0;
+  let successiveLosses = 0;
+  for (let i = played.length - 1; i >= 0; i -= 1) {
+    const fixture = played[i];
+    const goalsFor = fixture.homeId === activeClubId ? fixture.homeGoals : fixture.awayGoals;
+    const goalsAgainst = fixture.homeId === activeClubId ? fixture.awayGoals : fixture.homeGoals;
+    if (goalsFor > goalsAgainst) {
+      if (successiveLosses > 0) break;
+      successiveWins += 1;
+      continue;
+    }
+    if (goalsFor < goalsAgainst) {
+      if (successiveWins > 0) break;
+      successiveLosses += 1;
+      continue;
+    }
+    break;
+  }
+
+  const successes = totalWins;
+  const level = Math.max(1, 1 + Math.floor(totalWins / 5));
+  const status = deriveStatus(level);
+
+  return {
+    status,
+    level,
+    successes,
+    successiveWins,
+    successiveLosses,
+    totalWins,
+    totalLosses,
+    totalDraws,
+  };
+}
+
 function updateSummaryAfterMatch(prev: ManagerSummary | null, homeGoals: number, awayGoals: number, isHome: boolean): ManagerSummary {
   const base: ManagerSummary = prev ?? {
     status: 'INEXPERIENCED', level: 1, successes: 0,
@@ -1499,6 +1558,13 @@ export default function App() {
   const [mailboxRefreshToken, setMailboxRefreshToken] = useState(0);
   const [uiFontSizePt, setUiFontSizePt] = useState<number>(() => loadUiFontSizePt());
 
+  const refreshSummaryFromGameState = useCallback((clubId?: string | null) => {
+    const next = buildSummaryFromGameState(clubId ?? activeClubId);
+    if (!next) return;
+    setSummary(next);
+    saveManagerSummary(next);
+  }, [activeClubId]);
+
   // Called by GameDashboard when an interactive match finishes
   const handleMatchResult = useCallback((homeGoals: number, awayGoals: number, isHome: boolean) => {
     setSummary((prev) => {
@@ -1507,11 +1573,13 @@ export default function App() {
       return next;
     });
     setMailboxRefreshToken((v) => v + 1);
-  }, []);
+    refreshSummaryFromGameState();
+  }, [refreshSummaryFromGameState]);
 
   const handleGameWeekAdvance = useCallback(() => {
     setMailboxRefreshToken((v) => v + 1);
-  }, []);
+    refreshSummaryFromGameState();
+  }, [refreshSummaryFromGameState]);
 
   // Called by GameDashboard when live match events change
   const handleMatchEvents = useCallback((evs: MatchEvent[]) => {
@@ -1568,6 +1636,7 @@ export default function App() {
     }
     // 7. Restore active club → triggers squad reload
     setActiveClubId(data.activeClubId);
+    refreshSummaryFromGameState(data.activeClubId);
     // 8. Force GameDashboard remount so it re-reads localStorage
     setGameResetKey((k) => k + 1);
     setMailboxRefreshToken((v) => v + 1);

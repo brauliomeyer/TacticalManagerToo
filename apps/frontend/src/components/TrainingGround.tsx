@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 
 /* ══════════════════════════════════════════════
    Types
@@ -84,6 +84,14 @@ interface YouthPlayer {
 interface ScheduleDay {
   day: string;
   type: DayType;
+}
+
+interface PersistedTrainingData {
+  teamIntensity: Intensity;
+  teamFocus: TeamFocus;
+  schedule: ScheduleDay[];
+  trainingStates: Record<string, PlayerTrainingState>;
+  youthPlayers: YouthPlayer[];
 }
 
 /* ══════════════════════════════════════════════
@@ -192,6 +200,39 @@ const YOUTH_LAST = [
 ];
 
 const POSITIONS = ['GK', 'CB', 'LB', 'RB', 'DM', 'CM', 'AM', 'LW', 'RW', 'CF', 'ST'];
+const TRAINING_STORAGE_KEY = 'tmt-training-ground';
+
+function mapToRecord(map: Map<string, PlayerTrainingState>): Record<string, PlayerTrainingState> {
+  const out: Record<string, PlayerTrainingState> = {};
+  for (const [id, state] of map.entries()) out[id] = state;
+  return out;
+}
+
+function recordToMap(record?: Record<string, PlayerTrainingState>): Map<string, PlayerTrainingState> {
+  return new Map(Object.entries(record ?? {}));
+}
+
+function loadTrainingData(clubId: string): PersistedTrainingData | null {
+  try {
+    const raw = localStorage.getItem(TRAINING_STORAGE_KEY);
+    if (!raw) return null;
+    const all = JSON.parse(raw) as Record<string, PersistedTrainingData>;
+    return all[clubId] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function saveTrainingData(clubId: string, data: PersistedTrainingData) {
+  try {
+    const raw = localStorage.getItem(TRAINING_STORAGE_KEY);
+    const all = raw ? (JSON.parse(raw) as Record<string, PersistedTrainingData>) : {};
+    all[clubId] = data;
+    localStorage.setItem(TRAINING_STORAGE_KEY, JSON.stringify(all));
+  } catch {
+    // storage unavailable
+  }
+}
 
 /* ══════════════════════════════════════════════
    Youth generation
@@ -1225,6 +1266,37 @@ export default function TrainingGround({ activeClub, squadPlayers }: TrainingGro
 
   const youthBase = useMemo(() => generateYouth(activeClub.id), [activeClub.id]);
   const [youthPlayers, setYouthPlayers] = useState<YouthPlayer[]>(youthBase);
+
+  useEffect(() => {
+    const persisted = loadTrainingData(activeClub.id);
+    if (!persisted) {
+      setTeamIntensity('medium');
+      setTeamFocus('balanced');
+      setSchedule(DEFAULT_SCHEDULE);
+      setTrainingStates(new Map());
+      setYouthPlayers(youthBase);
+      setSelectedPlayer(null);
+      return;
+    }
+
+    setTeamIntensity(persisted.teamIntensity ?? 'medium');
+    setTeamFocus(persisted.teamFocus ?? 'balanced');
+    setSchedule(Array.isArray(persisted.schedule) && persisted.schedule.length === DAYS.length ? persisted.schedule : DEFAULT_SCHEDULE);
+    setTrainingStates(recordToMap(persisted.trainingStates));
+    setYouthPlayers(Array.isArray(persisted.youthPlayers) && persisted.youthPlayers.length > 0 ? persisted.youthPlayers : youthBase);
+    setSelectedPlayer(null);
+  }, [activeClub.id, youthBase]);
+
+  useEffect(() => {
+    const persisted: PersistedTrainingData = {
+      teamIntensity,
+      teamFocus,
+      schedule,
+      trainingStates: mapToRecord(trainingStates),
+      youthPlayers,
+    };
+    saveTrainingData(activeClub.id, persisted);
+  }, [activeClub.id, teamIntensity, teamFocus, schedule, trainingStates, youthPlayers]);
 
   const addLog = useCallback((msg: string) => {
     setLog((prev) => [msg, ...prev].slice(0, 40));
