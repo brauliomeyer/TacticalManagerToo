@@ -1958,10 +1958,10 @@ export default function App() {
 
   return (
     <main
-      className="tm-font-root min-h-screen bg-[#1a1e2b] p-4 text-[#d4f6a7] md:p-8"
+      className="tm-font-root min-h-screen bg-[#1a1e2b] p-3 text-[#d4f6a7] md:p-6 lg:p-8"
       style={mainStyle}
     >
-      <section className="mx-auto max-w-6xl border-4 border-[#6f4ca1] bg-[#2a8a2b] shadow-[0_0_0_4px_#120d1f]">
+      <section className="mx-auto w-[min(96vw,1720px)] border-4 border-[#6f4ca1] bg-[#2a8a2b] shadow-[0_0_0_4px_#120d1f]">
         <header className="flex flex-col gap-3 border-b-4 border-[#6f4ca1] bg-black px-4 py-3 text-[#ebe25f] md:flex-row md:items-center md:justify-between">
           <h1 className="flex items-center gap-2 text-base font-black uppercase tracking-wide sm:gap-3 sm:text-xl md:tracking-widest lg:text-2xl"><ClubCrest clubName={activeClub.name} size={36} />{activeClub.name}</h1>
           <div className="flex flex-wrap items-center gap-2">
@@ -1991,7 +1991,7 @@ export default function App() {
           </div>
         </header>
 
-        <div className="grid gap-4 p-4 lg:grid-cols-[220px_1fr] xl:grid-cols-[220px_1fr_300px]">
+        <div className="grid gap-4 p-4 lg:grid-cols-[250px_minmax(0,1fr)_340px]">
           <aside className="border-4 border-[#6f4ca1] bg-[#2e1f4a] p-3 text-sm">
             <div className="mb-3 border-2 border-white bg-[#fff7de] p-2 text-center text-[#d0121b]">
               <div className="px-2">
@@ -2074,11 +2074,11 @@ export default function App() {
             </div>
           </aside>
 
-          <section>
-            <div className="mb-3 grid grid-cols-4 gap-2 text-center text-xs uppercase text-[#2e1f4a]">
+          <section className="min-w-0">
+            <div className="mb-3 grid grid-cols-4 gap-2 text-center text-sm uppercase text-[#2e1f4a]">
               {topTabs.map((item) => (
                 <button
-                  className={`border p-2 font-bold ${
+                  className={`border p-2.5 font-bold ${
                     activePage === item.key
                       ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]'
                       : 'border-[#ceb8e1] bg-[#d5b5ec] text-[#2e1f4a]'
@@ -2125,7 +2125,7 @@ export default function App() {
             ) : null}
           </section>
 
-          <div className="lg:col-span-2 xl:col-span-1">
+          <div>
             <RightSidebar summary={summary} events={events} clubs={clubs} activeClub={activeClub} squadPlayers={squadPlayers} />
           </div>
         </div>
