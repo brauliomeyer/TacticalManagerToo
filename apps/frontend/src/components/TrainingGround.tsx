@@ -154,6 +154,13 @@ const DAY_TYPES: { key: DayType; label: string; color: string }[] = [
   { key: 'match-prep', label: 'Match Prep', color: 'bg-[#6a1a1a]' },
 ];
 
+const DAY_PROFILE_OPTIONS: { label: string; type: DayType }[] = [
+  { label: 'Match Day', type: 'match-prep' },
+  { label: 'Development Day', type: 'technical' },
+  { label: 'Recovery Day', type: 'recovery' },
+  { label: 'Trainingskamp Day', type: 'fitness' },
+];
+
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 const DEFAULT_SCHEDULE: ScheduleDay[] = [
@@ -851,6 +858,10 @@ function ScheduleTab({ schedule, onChange, onApplyPreset }: {
   onChange: (day: string, type: DayType) => void;
   onApplyPreset: (preset: DayType[]) => void;
 }) {
+  const applyDayProfile = (day: string, type: DayType) => {
+    onChange(day, type);
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -900,6 +911,23 @@ function ScheduleTab({ schedule, onChange, onApplyPreset }: {
                       >
                         {DAY_TYPES.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}
                       </select>
+                      <div className="mt-1 grid gap-1">
+                        {DAY_PROFILE_OPTIONS.map((profile) => (
+                          <button
+                            key={profile.label}
+                            type="button"
+                            onClick={() => applyDayProfile(day, profile.type)}
+                            className={`w-full border px-1 py-0.5 text-[8px] font-bold uppercase ${
+                              current === profile.type
+                                ? 'border-[#efe56b] bg-[#efe56b] text-[#2e1f4a]'
+                                : 'border-[#2a8a2b] bg-[#0a2e0d] text-[#98ca7a] hover:bg-[#1a4a1e]'
+                            }`}
+                            style={{ fontFamily: MONO }}
+                          >
+                            {profile.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   );
                 })()}
