@@ -167,6 +167,104 @@ function generateMails(club: Club, clubs: Club[], squad: SquadPlayer[], summary:
     ],
   });
 
+  // ─── 2b. New round summary (live game state) ───
+  if (gs) {
+    const totalWeekFixtures = weekFixtures.length;
+    const playedWeekFixtures = weekFixtures.filter((f) => f.played).length;
+    mails.push({
+      id: nextId(),
+      type: 'match',
+      subject: `New Round Summary - Season ${gs.season}, Week ${gs.gameWeek}`,
+      message: `The new round is now active.
+
+Season: ${gs.season}
+Week: ${gs.gameWeek}
+Competition block: ${division}
+
+${standingRow
+  ? `League position: ${standingRow.points} pts from ${standingRow.played} matches (${standingRow.won}W-${standingRow.drawn}D-${standingRow.lost}L).`
+  : 'League standing data is currently being prepared.'}
+
+Fixtures this week: ${playedWeekFixtures}/${totalWeekFixtures} completed.
+
+Mailbox modules are refreshed for this round with new pre-match and post-match updates.`,
+      from: 'Competition Secretary',
+      date: mailDate(0),
+      read: false,
+      priority: 'medium',
+    });
+  }
+
+  // ─── 2c. Pre-match briefing (next scheduled club fixture) ───
+  if (gs && nextClubFixture) {
+    const isHome = nextClubFixture.homeId === club.id;
+    const opponentId = isHome ? nextClubFixture.awayId : nextClubFixture.homeId;
+    const opponentName = gs.clubs[opponentId]?.name ?? clubs.find((c) => c.id === opponentId)?.name ?? 'Unknown Opponent';
+    mails.push({
+      id: nextId(),
+      type: 'match',
+      subject: `Pre-Match Briefing: ${isHome ? `${club.name} vs ${opponentName}` : `${opponentName} vs ${club.name}`}`,
+      message: `Upcoming fixture ready.
+
+Competition: ${nextClubFixture.compName}
+Round week: ${nextClubFixture.week}
+Venue: ${isHome ? 'Home' : 'Away'}
+Opponent: ${opponentName}
+
+Key focus points:
+- Start with defensive discipline in the first 20 minutes.
+- Press aggressively after turnovers.
+- Use width to isolate their full-backs.
+
+Submit your final lineup and tactical plan before kickoff.`,
+      from: 'Assistant Manager',
+      date: mailDate(0),
+      read: false,
+      priority: 'high',
+      actions: [
+        { label: 'Open Tactics Desk', action: 'open_tactics' },
+        { label: 'Review Squad', action: 'open_squad' },
+      ],
+    });
+  }
+
+  // ─── 2d. Post-match review (latest club result) ───
+  if (gs && lastClubFixture) {
+    const isHome = lastClubFixture.homeId === club.id;
+    const opponentId = isHome ? lastClubFixture.awayId : lastClubFixture.homeId;
+    const opponentName = gs.clubs[opponentId]?.name ?? clubs.find((c) => c.id === opponentId)?.name ?? 'Unknown Opponent';
+    const goalsFor = isHome ? lastClubFixture.homeGoals : lastClubFixture.awayGoals;
+    const goalsAgainst = isHome ? lastClubFixture.awayGoals : lastClubFixture.homeGoals;
+    const resultLabel = goalsFor > goalsAgainst ? 'WIN' : goalsFor < goalsAgainst ? 'LOSS' : 'DRAW';
+    const moodLine = resultLabel === 'WIN'
+      ? 'Strong execution and positive momentum heading into the next round.'
+      : resultLabel === 'LOSS'
+        ? 'Performance review required before the next matchday.'
+        : 'Solid point earned, but attacking output can improve.';
+    const stats = lastClubFixture.stats;
+
+    mails.push({
+      id: nextId(),
+      type: 'match',
+      subject: `Post-Match Review: ${club.name} ${goalsFor}-${goalsAgainst} ${opponentName}`,
+      message: `Final score confirmed for week ${lastClubFixture.week}.
+
+Result: ${resultLabel}
+Fixture: ${isHome ? `${club.name} vs ${opponentName}` : `${opponentName} vs ${club.name}`}
+Scoreline: ${goalsFor}-${goalsAgainst}
+
+${stats
+  ? `Match stats:\n- Possession: ${isHome ? stats.possession[0] : stats.possession[1]}%\n- Shots: ${isHome ? stats.shots[0] : stats.shots[1]}\n- Shots on target: ${isHome ? stats.shotsOnTarget[0] : stats.shotsOnTarget[1]}`
+  : 'Detailed match stats are being processed.'}
+
+${moodLine}`,
+      from: 'Match Analyst',
+      date: mailDate(0),
+      read: false,
+      priority: resultLabel === 'LOSS' ? 'high' : resultLabel === 'DRAW' ? 'medium' : 'low',
+    });
+  }
+
   // ─── 3. Finance report ───
   const wageBudget = Math.round(club.budget * 0.6);
   const currentSpend = Math.round(wageBudget * (0.55 + seeded(seed + 7) * 0.35));
@@ -266,22 +364,24 @@ function generateMails(club: Club, clubs: Club[], squad: SquadPlayer[], summary:
     priority: media.priority,
   });
 
-  // ─── 8. Match report (last match) ───
-  const homeGoals = Math.floor(seeded(seed + 80) * 4);
-  const awayGoals = Math.floor(seeded(seed + 81) * 3);
-  const opponent = pick(otherClubs.length > 0 ? otherClubs : [club], seed + 82);
-  const result = homeGoals > awayGoals ? 'WIN' : homeGoals < awayGoals ? 'LOSS' : 'DRAW';
-  const resultEmoji = result === 'WIN' ? '✅' : result === 'LOSS' ? '❌' : '➖';
-  mails.push({
-    id: nextId(),
-    type: 'match',
-    subject: `Match Report: ${club.name} ${homeGoals}-${awayGoals} ${opponent.name}`,
-    message: `${resultEmoji} Full Time: ${club.name} ${homeGoals} - ${awayGoals} ${opponent.name}\n\nResult: ${result}\n\n${result === 'WIN' ? 'An excellent performance from the lads. The gameplan was executed well and the players showed great determination.' : result === 'LOSS' ? 'A disappointing result. The team struggled to create chances and looked vulnerable at the back. The board will expect a response.' : 'A hard-fought draw. Neither side could find a breakthrough. The team showed resilience but lacked a cutting edge.'}\n\nAttendance: ${(15000 + Math.floor(seeded(seed + 83) * 30000)).toLocaleString()}\nRating: ${(5.5 + seeded(seed + 84) * 4.0).toFixed(1)}/10`,
-    from: 'Match Analyst',
-    date: mailDate(0),
-    read: false,
-    priority: result === 'LOSS' ? 'medium' : 'low',
-  });
+  // ─── 8. Synthetic match report fallback (when no live post-match exists yet) ───
+  if (!lastClubFixture) {
+    const homeGoals = Math.floor(seeded(seed + 80) * 4);
+    const awayGoals = Math.floor(seeded(seed + 81) * 3);
+    const opponent = pick(otherClubs.length > 0 ? otherClubs : [club], seed + 82);
+    const result = homeGoals > awayGoals ? 'WIN' : homeGoals < awayGoals ? 'LOSS' : 'DRAW';
+    const resultEmoji = result === 'WIN' ? '✅' : result === 'LOSS' ? '❌' : '➖';
+    mails.push({
+      id: nextId(),
+      type: 'match',
+      subject: `Match Report: ${club.name} ${homeGoals}-${awayGoals} ${opponent.name}`,
+      message: `${resultEmoji} Full Time: ${club.name} ${homeGoals} - ${awayGoals} ${opponent.name}\n\nResult: ${result}\n\n${result === 'WIN' ? 'An excellent performance from the lads. The gameplan was executed well and the players showed great determination.' : result === 'LOSS' ? 'A disappointing result. The team struggled to create chances and looked vulnerable at the back. The board will expect a response.' : 'A hard-fought draw. Neither side could find a breakthrough. The team showed resilience but lacked a cutting edge.'}\n\nAttendance: ${(15000 + Math.floor(seeded(seed + 83) * 30000)).toLocaleString()}\nRating: ${(5.5 + seeded(seed + 84) * 4.0).toFixed(1)}/10`,
+      from: 'Match Analyst',
+      date: mailDate(0),
+      read: false,
+      priority: result === 'LOSS' ? 'medium' : 'low',
+    });
+  }
 
   // ─── 9. Board reaction to results ───
   if (summary) {
