@@ -882,10 +882,11 @@ function PlayerTrainingDetail({ player, ts, teamIntensity, teamFocus, onSetFocus
    Training Schedule Tab
    ══════════════════════════════════════════════ */
 
-function ScheduleTab({ schedule, onChange, onApplyPreset }: {
+function ScheduleTab({ schedule, onChange, onApplyPreset, onAutoSelectSchedule }: {
   schedule: ScheduleDay[];
   onChange: (day: string, type: DayType) => void;
   onApplyPreset: (preset: DayType[]) => void;
+  onAutoSelectSchedule: () => void;
 }) {
   const applyDayProfile = (day: string, type: DayType) => {
     onChange(day, type);
@@ -897,6 +898,7 @@ function ScheduleTab({ schedule, onChange, onApplyPreset }: {
         <h3 className="text-sm font-black uppercase text-[#00e5ff]" style={{ fontFamily: RETRO }}>
           Weekly Schedule
         </h3>
+        <ActionBtn onClick={onAutoSelectSchedule} variant="yellow">Auto Select Week</ActionBtn>
         <div className="flex gap-1 ml-auto flex-wrap">
           {SCHEDULE_PRESETS.map((p) => (
             <ActionBtn key={p.name} onClick={() => onApplyPreset(p.schedule)} variant="blue">{p.name}</ActionBtn>
@@ -1376,6 +1378,34 @@ export default function TrainingGround({ activeClub, squadPlayers }: TrainingGro
     addLog('Applied new training schedule preset.');
   }, [addLog]);
 
+  const handleAutoSelectSchedule = useCallback(() => {
+    const fatigueStats = squadPlayers.map((p) => {
+      const ts = trainingStates.get(p.id);
+      const fatigue = playerFatigue(p, ts);
+      const risk = injuryRisk(fatigue, ts?.intensity ?? teamIntensity);
+      return { fatigue, risk };
+    });
+
+    const fatiguedCount = fatigueStats.filter((s) => s.fatigue >= 60).length;
+    const highRiskCount = fatigueStats.filter((s) => s.risk >= 70).length;
+    const avgAge = squadPlayers.length > 0 ? squadPlayers.reduce((sum, p) => sum + p.age, 0) / squadPlayers.length : 25;
+
+    let presetName = 'Balanced Week';
+    if (highRiskCount >= 5 || fatiguedCount >= 8) {
+      presetName = 'Recovery Week';
+    } else if (teamFocus === 'fitness' || teamIntensity === 'high') {
+      presetName = 'Trainingskamp';
+    } else if (avgAge <= 24) {
+      presetName = 'Development Week';
+    } else if (teamFocus === 'attacking' || teamFocus === 'defensive') {
+      presetName = 'Match Week';
+    }
+
+    const selected = SCHEDULE_PRESETS.find((p) => p.name === presetName) ?? SCHEDULE_PRESETS[0];
+    setSchedule(DAYS.map((day, i) => ({ day, type: selected.schedule[i] })));
+    addLog(`Auto week selected: ${selected.name} (fatigued: ${fatiguedCount}, high risk: ${highRiskCount}).`);
+  }, [addLog, squadPlayers, teamFocus, teamIntensity, trainingStates]);
+
   // Youth actions
   const handleYouthSetFocus = useCallback((id: string, focus: TrainingFocus) => {
     setYouthPlayers((prev) => prev.map((p) => p.id === id ? { ...p, focus } : p));
@@ -1475,7 +1505,12 @@ export default function TrainingGround({ activeClub, squadPlayers }: TrainingGro
         />
       )}
       {tab === 'schedule' && (
-        <ScheduleTab schedule={schedule} onChange={handleScheduleChange} onApplyPreset={handleApplyPreset} />
+        <ScheduleTab
+          schedule={schedule}
+          onChange={handleScheduleChange}
+          onApplyPreset={handleApplyPreset}
+          onAutoSelectSchedule={handleAutoSelectSchedule}
+        />
       )}
       {tab === 'youth' && (
         <YouthTab
