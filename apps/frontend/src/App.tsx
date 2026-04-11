@@ -1055,7 +1055,7 @@ export default function App() {
   const [activeClubId, setActiveClubId] = useState<string | null>(null);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [summary, setSummary] = useState<ManagerSummary | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const error: string | null = null;
   const [activePage, setActivePage] = useState<PageKey>('mail');
   const [showStandings, setShowStandings] = useState(false);
   const [standingsLoading, setStandingsLoading] = useState(false);
@@ -1229,12 +1229,6 @@ export default function App() {
     0,
     competitionClubs.findIndex((club: Club) => club.id === activeClub.id)
   );
-
-  const fixture = useMemo(() => {
-    if (clubs.length < 2) return null;
-    const awayClub = clubs.find((club: Club) => club.id !== activeClub.id) ?? clubs[0];
-    return { homeClubId: activeClub.id, awayClubId: awayClub.id };
-  }, [clubs, activeClub.id]);
 
   const previousClub = () => {
     if (competitionClubs.length === 0) return;
