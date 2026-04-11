@@ -275,6 +275,22 @@ function pickYouthFocus(position: string): TrainingFocus {
   return 'balanced';
 }
 
+function recommendTrainingPlan(
+  player: SquadPlayer,
+  fatigue: number,
+  risk: number,
+  teamFocus: TeamFocus
+): { focus: TrainingFocus; intensity: Intensity; resting: boolean; recovering: boolean } {
+  const focus = fatigue >= 55 ? 'fitness' : pickSquadFocus(player.role, teamFocus);
+  const intensity: Intensity =
+    fatigue >= 70 || risk >= 75 ? 'low' :
+    fatigue >= 45 ? 'medium' :
+    player.age <= 23 ? 'high' : 'medium';
+  const recovering = fatigue >= 80 || risk >= 85;
+  const resting = !recovering && fatigue >= 65;
+  return { focus, intensity, resting, recovering };
+}
+
 /* ══════════════════════════════════════════════
    Retro style helpers
    ══════════════════════════════════════════════ */
@@ -653,10 +669,11 @@ function SquadTrainingTab({ squad, trainingStates, teamIntensity, onSetFocus, on
    Individual Training Tab
    ══════════════════════════════════════════════ */
 
-function IndividualTab({ squad, trainingStates, teamIntensity, selectedPlayer, onSelect, onSetFocus, onSetIntensity, onRest, onRecover, onTrain }: {
+function IndividualTab({ squad, trainingStates, teamIntensity, teamFocus, selectedPlayer, onSelect, onSetFocus, onSetIntensity, onRest, onRecover, onTrain, onAutoPlan }: {
   squad: SquadPlayer[];
   trainingStates: Map<string, PlayerTrainingState>;
   teamIntensity: Intensity;
+  teamFocus: TeamFocus;
   selectedPlayer: SquadPlayer | null;
   onSelect: (p: SquadPlayer | null) => void;
   onSetFocus: (id: string, focus: TrainingFocus) => void;
@@ -664,6 +681,7 @@ function IndividualTab({ squad, trainingStates, teamIntensity, selectedPlayer, o
   onRest: (id: string) => void;
   onRecover: (id: string) => void;
   onTrain: (id: string) => void;
+  onAutoPlan: (id: string) => void;
 }) {
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-[220px_1fr]">
@@ -705,11 +723,13 @@ function IndividualTab({ squad, trainingStates, teamIntensity, selectedPlayer, o
             player={selectedPlayer}
             ts={trainingStates.get(selectedPlayer.id)}
             teamIntensity={teamIntensity}
+            teamFocus={teamFocus}
             onSetFocus={onSetFocus}
             onSetIntensity={onSetIntensity}
             onRest={onRest}
             onRecover={onRecover}
             onTrain={onTrain}
+            onAutoPlan={onAutoPlan}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-xs text-[#6b9a5a] italic p-8">
@@ -721,21 +741,24 @@ function IndividualTab({ squad, trainingStates, teamIntensity, selectedPlayer, o
   );
 }
 
-function PlayerTrainingDetail({ player, ts, teamIntensity, onSetFocus, onSetIntensity, onRest, onRecover, onTrain }: {
+function PlayerTrainingDetail({ player, ts, teamIntensity, teamFocus, onSetFocus, onSetIntensity, onRest, onRecover, onTrain, onAutoPlan }: {
   player: SquadPlayer;
   ts: PlayerTrainingState | undefined;
   teamIntensity: Intensity;
+  teamFocus: TeamFocus;
   onSetFocus: (id: string, focus: TrainingFocus) => void;
   onSetIntensity: (id: string, intensity: Intensity) => void;
   onRest: (id: string) => void;
   onRecover: (id: string) => void;
   onTrain: (id: string) => void;
+  onAutoPlan: (id: string) => void;
 }) {
   const ovr = overall(player);
   const fat = playerFatigue(player, ts);
   const risk = injuryRisk(fat, ts?.intensity ?? teamIntensity);
   const growth = growthRate(ts?.intensity ?? teamIntensity, fat, player.morale);
   const gains = ts?.gains ?? {};
+  const recommendation = recommendTrainingPlan(player, fat, risk, teamFocus);
 
   const technical = [
     { label: 'Passing', value: player.passing, gain: gains['passing'] ?? 0 },
@@ -837,12 +860,18 @@ function PlayerTrainingDetail({ player, ts, teamIntensity, onSetFocus, onSetInte
         </div>
         <div className="flex gap-2">
           <ActionBtn onClick={() => onTrain(player.id)} variant="green">Run Training Session</ActionBtn>
+          <ActionBtn onClick={() => onAutoPlan(player.id)} variant="yellow">Auto Select Plan</ActionBtn>
           <ActionBtn onClick={() => onRest(player.id)} variant={ts?.resting ? 'yellow' : 'blue'}>
             {ts?.resting ? 'Resume Training' : 'Rest Player'}
           </ActionBtn>
           <ActionBtn onClick={() => onRecover(player.id)} variant={ts?.recovering ? 'yellow' : 'blue'}>
             {ts?.recovering ? 'Stop Recovery' : 'Send to Recovery'}
           </ActionBtn>
+        </div>
+        <div className="text-[10px] text-[#98ca7a]" style={{ fontFamily: MONO }}>
+          Suggested: <strong className="text-[#efe56b]">{recommendation.focus}</strong> ·
+          <strong className="text-[#efe56b]"> {recommendation.intensity}</strong>
+          {recommendation.recovering ? <span className="text-[#ff4444]"> · recovery</span> : recommendation.resting ? <span className="text-[#00e5ff]"> · rest</span> : null}
         </div>
       </div>
     </div>
@@ -1303,10 +1332,8 @@ export default function TrainingGround({ activeClub, squadPlayers }: TrainingGro
         };
         const fatigue = playerFatigue(player, current);
         const risk = injuryRisk(fatigue, current.intensity);
-        const focus = fatigue >= 55 ? 'fitness' : pickSquadFocus(player.role, teamFocus);
-        const intensity: Intensity = fatigue >= 70 || risk >= 75 ? 'low' : fatigue >= 45 ? 'medium' : player.age <= 23 ? 'high' : 'medium';
-        const recovering = fatigue >= 80 || risk >= 85;
-        const resting = !recovering && fatigue >= 65;
+        const recommendation = recommendTrainingPlan(player, fatigue, risk, teamFocus);
+        const { focus, intensity, recovering, resting } = recommendation;
         if (recovering) recoverCount += 1;
         if (resting) restCount += 1;
         next.set(player.id, {
@@ -1321,6 +1348,23 @@ export default function TrainingGround({ activeClub, squadPlayers }: TrainingGro
       return next;
     });
   }, [addLog, squadPlayers, teamFocus, teamIntensity]);
+
+  const handleAutoPlanForPlayer = useCallback((id: string) => {
+    const player = squadPlayers.find((s) => s.id === id);
+    if (!player) return;
+    const current = getOrCreateTS(id);
+    const fatigue = playerFatigue(player, current);
+    const risk = injuryRisk(fatigue, current.intensity);
+    const recommendation = recommendTrainingPlan(player, fatigue, risk, teamFocus);
+    updateTS(id, (ts) => ({
+      ...ts,
+      focus: recommendation.focus,
+      intensity: recommendation.intensity,
+      resting: recommendation.resting,
+      recovering: recommendation.recovering,
+    }));
+    addLog(`${player.name}: auto plan set to ${recommendation.focus}/${recommendation.intensity}${recommendation.recovering ? ' + recovery' : recommendation.resting ? ' + rest' : ''}.`);
+  }, [addLog, getOrCreateTS, squadPlayers, teamFocus, updateTS]);
 
   // Schedule actions
   const handleScheduleChange = useCallback((day: string, type: DayType) => {
@@ -1423,10 +1467,11 @@ export default function TrainingGround({ activeClub, squadPlayers }: TrainingGro
       )}
       {tab === 'individual' && (
         <IndividualTab
-          squad={squadPlayers} trainingStates={trainingStates} teamIntensity={teamIntensity}
+          squad={squadPlayers} trainingStates={trainingStates} teamIntensity={teamIntensity} teamFocus={teamFocus}
           selectedPlayer={selectedPlayer} onSelect={setSelectedPlayer}
           onSetFocus={handleSetPlayerFocus} onSetIntensity={handleSetPlayerIntensity}
           onRest={handleRest} onRecover={handleRecover} onTrain={handleTrain}
+          onAutoPlan={handleAutoPlanForPlayer}
         />
       )}
       {tab === 'schedule' && (
