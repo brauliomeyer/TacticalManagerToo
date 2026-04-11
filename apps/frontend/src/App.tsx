@@ -935,79 +935,91 @@ function PagePanel({
   onPositionChange: (playerId: string, role: string) => void;
   onClubChange: (clubId: string) => void;
 }) {
+  // Pages that remount on each visit (state is either in localStorage or not important)
   if (page === 'game') {
     return <GameDashboard clubs={clubs} activeClub={activeClub} squadPlayers={squadPlayers} activeTactic={loadActiveTactic(activeClub?.id)} />;
   }
   if (page === 'manager') {
     return <ManagerPage activeClub={activeClub} clubs={clubs} onClubChange={onClubChange} />;
   }
-  if (page === 'tactics') {
-    const starters = squadPlayers
-      .filter((p) => squadStatuses[p.id] === 'STARTER')
-      .map((p) => ({ ...p, role: positionOverrides[p.id] ?? p.role }));
-    const bench = squadPlayers
-      .filter((p) => squadStatuses[p.id] === 'BENCH')
-      .map((p) => ({ ...p, role: positionOverrides[p.id] ?? p.role }));
-    return <TacticsPage starters={starters} bench={bench} clubId={activeClub?.id} />;
-  }
   if (page === 'match') return <MatchScreen />;
-  if (page === 'board') {
-    return <BoardRoom activeClub={activeClub} summary={summary} squadPlayers={squadPlayers} />;
-  }
-  if (page === 'mail') {
-    return <Mailbox activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} summary={summary} />;
-  }
-  if (page === 'cup') {
-    return <CupCenter activeClub={activeClub} />;
-  }
-  if (page === 'human') {
-    return <PlayerFixtures activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} />;
-  }
-  if (page === 'transfers') {
-    return <TransferMarket activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} />;
-  }
-  if (page === 'training') {
-    return <TrainingGround activeClub={activeClub} squadPlayers={squadPlayers} />;
-  }
-  if (page === 'manage') {
-    return <ClubManagement activeClub={activeClub} squadPlayers={squadPlayers} />;
-  }
-  if (page === 'squad') {
-    return (
-      <SquadPanel
-        activeClub={activeClub}
-        players={squadPlayers}
-        loading={squadLoading}
-        error={squadError}
-        search={squadSearch}
-        roleFilter={squadRoleFilter}
-        sortBy={squadSortBy}
-        statuses={squadStatuses}
-        positionOverrides={positionOverrides}
-        onSearchChange={onSquadSearchChange}
-        onRoleFilterChange={onSquadRoleFilterChange}
-        onSortChange={onSquadSortChange}
-        onStatusChange={onSquadStatusChange}
-        onPositionChange={onPositionChange}
-      />
-    );
-  }
 
+  // Derive starters/bench for tactics at this level so it's always fresh
+  const starters = squadPlayers
+    .filter((p) => squadStatuses[p.id] === 'STARTER')
+    .map((p) => ({ ...p, role: positionOverrides[p.id] ?? p.role }));
+  const bench = squadPlayers
+    .filter((p) => squadStatuses[p.id] === 'BENCH')
+    .map((p) => ({ ...p, role: positionOverrides[p.id] ?? p.role }));
+
+  // Helper: inline style to hide/show without unmounting
+  const show = (key: PageKey) => ({ display: page === key ? undefined : 'none' } as React.CSSProperties);
+
+  // Fallback for unknown page keys
   const desc = pageDescriptions[page as PageKey];
+  const isFallback = !['board','mail','cup','human','transfers','training','manage','squad','tactics'].includes(page);
+
   return (
-    <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
-      <h2 className="mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
-        {desc.title}
-      </h2>
-      <div className="retro-pitch mb-3 h-52 border-2 border-[#8ee486]" />
-      <p className="border border-[#98ca7a] bg-[#256d22] px-2 py-1 text-sm text-[#d5f8b6]">{desc.text}</p>
-      <p className="mt-3 border border-[#98ca7a] bg-[#1f641d] px-2 py-1 text-sm text-[#d5f8b6]">
-        Division: <strong>{activeClub.leagueName ?? activeClub.country ?? '1st Division'}</strong>
-      </p>
-      <p className="mt-3 border border-[#98ca7a] bg-[#1f641d] px-2 py-1 text-sm text-[#d5f8b6]">
-        Active club: <strong>{activeClub.name}</strong>
-      </p>
-    </section>
+    <>
+      {/* All state-heavy pages stay permanently mounted — only hidden via display:none when inactive */}
+      <div style={show('board')}>
+        <BoardRoom activeClub={activeClub} summary={summary} squadPlayers={squadPlayers} />
+      </div>
+      <div style={show('mail')}>
+        <Mailbox activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} summary={summary} />
+      </div>
+      <div style={show('cup')}>
+        <CupCenter activeClub={activeClub} />
+      </div>
+      <div style={show('human')}>
+        <PlayerFixtures activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} />
+      </div>
+      <div style={show('transfers')}>
+        <TransferMarket activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} />
+      </div>
+      <div style={show('training')}>
+        <TrainingGround activeClub={activeClub} squadPlayers={squadPlayers} />
+      </div>
+      <div style={show('manage')}>
+        <ClubManagement activeClub={activeClub} squadPlayers={squadPlayers} />
+      </div>
+      <div style={show('squad')}>
+        <SquadPanel
+          activeClub={activeClub}
+          players={squadPlayers}
+          loading={squadLoading}
+          error={squadError}
+          search={squadSearch}
+          roleFilter={squadRoleFilter}
+          sortBy={squadSortBy}
+          statuses={squadStatuses}
+          positionOverrides={positionOverrides}
+          onSearchChange={onSquadSearchChange}
+          onRoleFilterChange={onSquadRoleFilterChange}
+          onSortChange={onSquadSortChange}
+          onStatusChange={onSquadStatusChange}
+          onPositionChange={onPositionChange}
+        />
+      </div>
+      <div style={show('tactics')}>
+        <TacticsPage starters={starters} bench={bench} clubId={activeClub?.id} />
+      </div>
+      {isFallback && (
+        <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
+          <h2 className="mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
+            {desc?.title ?? page}
+          </h2>
+          <div className="retro-pitch mb-3 h-52 border-2 border-[#8ee486]" />
+          <p className="border border-[#98ca7a] bg-[#256d22] px-2 py-1 text-sm text-[#d5f8b6]">{desc?.text}</p>
+          <p className="mt-3 border border-[#98ca7a] bg-[#1f641d] px-2 py-1 text-sm text-[#d5f8b6]">
+            Division: <strong>{activeClub.leagueName ?? activeClub.country ?? '1st Division'}</strong>
+          </p>
+          <p className="mt-3 border border-[#98ca7a] bg-[#1f641d] px-2 py-1 text-sm text-[#d5f8b6]">
+            Active club: <strong>{activeClub.name}</strong>
+          </p>
+        </section>
+      )}
+    </>
   );
 }
 
