@@ -199,12 +199,47 @@ function getRegionForNationality(nationality: string): Exclude<RegionFilter, 'AL
   return NATIONALITY_REGION[nationality] ?? 'Europe';
 }
 
+function uniqueName(base: string, used: Set<string>, seed: number): string {
+  if (!used.has(base)) {
+    used.add(base);
+    return base;
+  }
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  for (let i = 0; i < alphabet.length; i++) {
+    const tagged = `${base} ${alphabet[(seed + i) % alphabet.length]}.`;
+    if (!used.has(tagged)) {
+      used.add(tagged);
+      return tagged;
+    }
+  }
+  let suffix = 2;
+  while (used.has(`${base} ${suffix}`)) {
+    suffix += 1;
+  }
+  const fallback = `${base} ${suffix}`;
+  used.add(fallback);
+  return fallback;
+}
+
+function dedupeByKey<T>(items: T[], getKey: (item: T) => string): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of items) {
+    const key = getKey(item);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
 /* ══════════════════════════════════════════════
    Data generators
    ══════════════════════════════════════════════ */
 
 function generateMarketPlayers(clubId: string, count: number, clubs: Club[]): MarketPlayer[] {
   const players: MarketPlayer[] = [];
+  const usedNames = new Set<string>();
   const baseSeed = hs(clubId + 'market');
   const knownClubs = clubs.filter((c) => c.id !== clubId);
 
@@ -227,9 +262,12 @@ function generateMarketPlayers(clubId: string, count: number, clubs: Club[]): Ma
     const baseVal = rating * rating * 800 + (pot - rating) * 50000;
     const ageFactor = age < 23 ? 1.4 : age < 28 ? 1.2 : age < 32 ? 0.8 : 0.4;
 
+    const baseName = `${FIRST_NAMES[fnIdx]} ${LAST_NAMES[lnIdx]}`;
+    const name = uniqueName(baseName, usedNames, seed + 60);
+
     players.push({
       id: `mp-${i}-${seed}`,
-      name: `${FIRST_NAMES[fnIdx]} ${LAST_NAMES[lnIdx]}`,
+      name,
       age,
       position: POSITIONS[posIdx],
       club: clubName,
@@ -258,6 +296,7 @@ function generateYouthPlayers(clubId: string): YouthPlayer[] {
   const seed = hs(clubId + 'youth');
   const count = 8 + Math.floor(sr(seed) * 6);
   const players: YouthPlayer[] = [];
+  const usedNames = new Set<string>();
 
   for (let i = 0; i < count; i++) {
     const pSeed = seed + i * 73;
@@ -266,9 +305,12 @@ function generateYouthPlayers(clubId: string): YouthPlayer[] {
     const posIdx = Math.floor(sr(pSeed + 2) * POSITIONS.length);
     const focIdx = Math.floor(sr(pSeed + 5) * TRAINING_FOCUSES.length);
 
+    const baseName = `${YOUTH_FIRST[fnIdx]} ${LAST_NAMES[lnIdx]}`;
+    const name = uniqueName(baseName, usedNames, pSeed + 21);
+
     players.push({
       id: `yp-${i}-${pSeed}`,
-      name: `${YOUTH_FIRST[fnIdx]} ${LAST_NAMES[lnIdx]}`,
+      name,
       age: 15 + Math.floor(sr(pSeed + 3) * 4),
       position: POSITIONS[posIdx],
       potential: Math.round(55 + sr(pSeed + 4) * 40),
@@ -1383,9 +1425,12 @@ export default function TransferMarket({ activeClub, clubs, squadPlayers }: Tran
 
   // Generate market players — exclude own club
   const marketPlayers = useMemo(() => {
-    return generateMarketPlayers(activeClub.id, 1200, clubs);
+    return dedupeByKey(generateMarketPlayers(activeClub.id, 1200, clubs), (p) => `${p.name}|${p.club}|${p.position}`);
   }, [activeClub.id, clubs]);
-  const youthPlayersBase = useMemo(() => generateYouthPlayers(activeClub.id), [activeClub.id]);
+  const youthPlayersBase = useMemo(
+    () => dedupeByKey(generateYouthPlayers(activeClub.id), (p) => `${p.name}|${p.position}|${p.age}`),
+    [activeClub.id]
+  );
 
   // State
   const [shortlist, setShortlist] = useState<MarketPlayer[]>([]);
@@ -1394,16 +1439,22 @@ export default function TransferMarket({ activeClub, clubs, squadPlayers }: Tran
     const seed = hs(activeClub.id + 'offers');
     const initial: TransferOffer[] = [];
     const incomingCount = 2 + Math.floor(sr(seed) * 3);
-    for (let i = 0; i < incomingCount; i++) {
-      const pSeed = seed + i * 47;
+    const usedPlayerIds = new Set<string>();
+    const maxAttempts = incomingCount * 8;
+
+    for (let attempt = 0; attempt < maxAttempts && initial.length < incomingCount; attempt++) {
+      const pSeed = seed + attempt * 47;
       if (squadPlayers.length === 0) break;
       const pIdx = Math.floor(sr(pSeed) * squadPlayers.length);
       const p = squadPlayers[pIdx];
+      if (usedPlayerIds.has(p.id)) continue;
       const rating = (p.pac + p.sho + p.pas + p.dri + p.def + p.phy) / 6;
       const val = Math.round(rating ** 2 * 800);
       const clubIdx = Math.floor(sr(pSeed + 1) * CLUB_NAMES.length);
+      usedPlayerIds.add(p.id);
+
       initial.push({
-        id: `offer-in-${i}`,
+        id: `offer-in-${initial.length}-${p.id}`,
         playerId: p.id,
         playerName: p.name,
         fromClub: CLUB_NAMES[clubIdx],

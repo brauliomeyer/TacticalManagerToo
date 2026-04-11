@@ -259,6 +259,20 @@ function generateCompEntries(
 
 const SINGLE_COMPS: Exclude<CompFilter, 'all'>[] = ['league', 'fa-cup', 'league-cup', 'champions-league', 'europa-league', 'conference-league'];
 
+function dedupeLeaderboardEntries(
+  entries: { playerName: string; clubName: string; value: number }[],
+): { playerName: string; clubName: string; value: number }[] {
+  const map = new Map<string, { playerName: string; clubName: string; value: number }>();
+  for (const entry of entries) {
+    const key = `${entry.playerName}|${entry.clubName}`;
+    const existing = map.get(key);
+    if (!existing || entry.value > existing.value) {
+      map.set(key, { ...entry });
+    }
+  }
+  return Array.from(map.values());
+}
+
 function generateLeaderboard(
   category: CategoryKey,
   comp: CompFilter,
@@ -285,6 +299,8 @@ function generateLeaderboard(
   } else {
     raw = generateCompEntries(category, comp, activeClub, clubs, squad);
   }
+
+  raw = dedupeLeaderboardEntries(raw);
 
   raw.sort((a, b) => b.value - a.value);
   return raw.slice(0, 20).map((e, idx) => ({
