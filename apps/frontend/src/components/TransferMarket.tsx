@@ -517,34 +517,74 @@ function SquadTab({ squad, windowOpen, onSell, onLoan, onList, onRenew, onNotFor
   onNotForSale: (p: SquadPlayer) => void;
   onSelect: (p: SquadPlayer) => void;
 }) {
+
+  // Sorting state
   const [sortBy, setSortBy] = useState<string>('name');
-  const [filter, setFilter] = useState('ALL');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  // Filter state
+  const [roleFilter, setRoleFilter] = useState('ALL');
+  const [nameFilter, setNameFilter] = useState('');
 
   const roles = Array.from(new Set(squad.map((p) => p.role)));
 
+  // Sorting logic
   const sorted = useMemo(() => {
     let list = [...squad];
-    if (filter !== 'ALL') list = list.filter((p) => p.role === filter);
+    // Filter by position
+    if (roleFilter !== 'ALL') list = list.filter((p) => p.role === roleFilter);
+    // Filter by name
+    if (nameFilter.trim() !== '') {
+      const q = nameFilter.trim().toLowerCase();
+      list = list.filter((p) => p.name.toLowerCase().includes(q));
+    }
+    // Sorting
+    const dir = sortDir === 'asc' ? 1 : -1;
     switch (sortBy) {
-      case 'name': list.sort((a, b) => a.name.localeCompare(b.name)); break;
-      case 'age': list.sort((a, b) => a.age - b.age); break;
-      case 'rating': list.sort((a, b) => {
-        const rB = (b.pac + b.sho + b.pas + b.dri + b.def + b.phy) / 6;
-        const rA = (a.pac + a.sho + a.pas + a.dri + a.def + a.phy) / 6;
-        return rB - rA;
-      }); break;
-      case 'potential': list.sort((a, b) => b.potential - a.potential); break;
-      case 'morale': list.sort((a, b) => b.morale - a.morale); break;
-      case 'value': list.sort((a, b) => {
-        const vB = ((b.pac + b.sho + b.pas + b.dri + b.def + b.phy) / 6) ** 2 * 800;
-        const vA = ((a.pac + a.sho + a.pas + a.dri + a.def + a.phy) / 6) ** 2 * 800;
-        return vB - vA;
-      }); break;
+      case 'name':
+        list.sort((a, b) => dir * a.name.localeCompare(b.name));
+        break;
+      case 'role':
+        list.sort((a, b) => dir * a.role.localeCompare(b.role));
+        break;
+      case 'age':
+        list.sort((a, b) => dir * (a.age - b.age));
+        break;
+      case 'rating': {
+        const getRating = (p: SquadPlayer) => (p.pac + p.sho + p.pas + p.dri + p.def + p.phy) / 6;
+        list.sort((a, b) => dir * (getRating(a) - getRating(b)));
+        break;
+      }
+      case 'potential':
+        list.sort((a, b) => dir * (a.potential - b.potential));
+        break;
+      case 'morale':
+        list.sort((a, b) => dir * (a.morale - b.morale));
+        break;
+      case 'value': {
+        const getValue = (p: SquadPlayer) => {
+          const rating = (p.pac + p.sho + p.pas + p.dri + p.def + p.phy) / 6;
+          return rating ** 2 * 800;
+        };
+        list.sort((a, b) => dir * (getValue(a) - getValue(b)));
+        break;
+      }
+      default:
+        break;
     }
     return list;
-  }, [squad, sortBy, filter]);
+  }, [squad, sortBy, sortDir, roleFilter, nameFilter]);
 
-  const thCls = 'py-1 px-1 text-left text-[9px] font-bold uppercase text-[#efe56b] cursor-pointer hover:text-white';
+  const thCls = 'py-1 px-1 text-left text-[9px] font-bold uppercase text-[#efe56b] cursor-pointer hover:text-white select-none';
+
+  // Helper for toggling sort
+  function handleSort(col: string) {
+    if (sortBy === col) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(col);
+      setSortDir('asc');
+    }
+  }
 
   return (
     <div>
@@ -553,26 +593,60 @@ function SquadTab({ squad, windowOpen, onSell, onLoan, onList, onRenew, onNotFor
           First Team Squad
         </h3>
         <div className="flex gap-1 ml-auto">
-          <Btn active={filter === 'ALL'} onClick={() => setFilter('ALL')}>All</Btn>
+          <Btn active={roleFilter === 'ALL'} onClick={() => setRoleFilter('ALL')}>All</Btn>
           {roles.map((r) => (
-            <Btn key={r} active={filter === r} onClick={() => setFilter(r)}>{r}</Btn>
+            <Btn key={r} active={roleFilter === r} onClick={() => setRoleFilter(r)}>{r}</Btn>
           ))}
         </div>
+      </div>
+      <div className="flex flex-wrap gap-2 mb-2">
+        <input
+          type="text"
+          className="border border-[#2a8a2b] bg-[#0d3f10] text-xs px-2 py-1 rounded text-[#efe56b] placeholder-[#6b9a5a]"
+          placeholder="Filter by name..."
+          value={nameFilter}
+          onChange={e => setNameFilter(e.target.value)}
+          style={{ minWidth: 120 }}
+        />
+        <select
+          className="border border-[#2a8a2b] bg-[#0d3f10] text-xs px-2 py-1 rounded text-[#efe56b]"
+          value={roleFilter}
+          onChange={e => setRoleFilter(e.target.value)}
+        >
+          <option value="ALL">All Positions</option>
+          {roles.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
       </div>
 
       <div className="border-2 border-[#2a8a2b] bg-[#0d3f10] overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b-2 border-[#2a8a2b]">
-              <th className={thCls} onClick={() => setSortBy('name')}>Player</th>
-              <th className={thCls}>Position</th>
-              <th className={thCls} onClick={() => setSortBy('age')}>Age</th>
-              <th className={thCls} onClick={() => setSortBy('rating')}>Rating</th>
-              <th className={thCls} onClick={() => setSortBy('potential')}>Potential</th>
+              <th className={thCls} onClick={() => handleSort('name')}>
+                Player {sortBy === 'name' && (sortDir === 'asc' ? '▲' : '▼')}
+              </th>
+              <th className={thCls} onClick={() => handleSort('role')}>
+                Position {sortBy === 'role' && (sortDir === 'asc' ? '▲' : '▼')}
+              </th>
+              <th className={thCls} onClick={() => handleSort('age')}>
+                Age {sortBy === 'age' && (sortDir === 'asc' ? '▲' : '▼')}
+              </th>
+              <th className={thCls} onClick={() => handleSort('rating')}>
+                Rating {sortBy === 'rating' && (sortDir === 'asc' ? '▲' : '▼')}
+              </th>
+              <th className={thCls} onClick={() => handleSort('potential')}>
+                Potential {sortBy === 'potential' && (sortDir === 'asc' ? '▲' : '▼')}
+              </th>
               <th className={thCls}>Contract</th>
               <th className={thCls}>Wage</th>
-              <th className={thCls} onClick={() => setSortBy('value')}>Value</th>
-              <th className={thCls} onClick={() => setSortBy('morale')}>Morale</th>
+              <th className={thCls} onClick={() => handleSort('value')}>
+                Value {sortBy === 'value' && (sortDir === 'asc' ? '▲' : '▼')}
+              </th>
+              <th className={thCls} onClick={() => handleSort('morale')}>
+                Morale {sortBy === 'morale' && (sortDir === 'asc' ? '▲' : '▼')}
+              </th>
               <th className={thCls}>Actions</th>
             </tr>
           </thead>
