@@ -24,14 +24,6 @@ type TransferOffer = {
 	type: "buy" | "loan";
 	status: "pending" | "accepted" | "rejected" | "counter";
 };
-type YouthPlayer = {
-	id: string;
-	name: string;
-	age: number;
-	position: string;
-	potential: number;
-	development: number;
-};
 
 type TabKey =
 	| "overview"
@@ -187,7 +179,38 @@ function EmptyState({ msg }: { msg: string }) {
 }
 
 // --- Main TransferPage Component ---
-const TransferMarket: React.FC = () => {
+interface Club {
+	id: string;
+	name: string;
+	country: string;
+	budget: number;
+	reputation: number;
+	leagueId?: string | null;
+	leagueName?: string | null;
+}
+
+interface SquadPlayer {
+	id: string;
+	name: string;
+	age: number;
+	role: string;
+	played?: number;
+	scored?: number;
+	morale?: number;
+	stamina?: number;
+	form?: number;
+	potential?: number;
+	wage?: number; // optioneel, want niet altijd aanwezig
+	// ...andere velden indien nodig
+}
+
+interface TransferMarketProps {
+	activeClub: Club;
+	clubs: Club[];
+	squadPlayers: SquadPlayer[];
+}
+
+const TransferMarket: React.FC<TransferMarketProps> = ({ activeClub, clubs, squadPlayers }) => {
 	// Mock state (vervang later door API calls)
 	const [tab, setTab] = useState<TabKey>("overview");
 	const [loading] = useState(false);
@@ -196,12 +219,17 @@ const TransferMarket: React.FC = () => {
 	// Budget en window mock
 	const transferBudget = 12500000;
 	const wageBudget = 450000;
-	const wageSpend = mockPlayers.reduce((sum, p) => sum + p.wage, 0);
+	// Voor nu: gebruik mockdata als fallback, maar gebruik props als ze aanwezig zijn
+	const wageSpend = (squadPlayers && squadPlayers.length > 0
+		? squadPlayers.reduce((sum, p) => sum + (typeof p.wage === 'number' ? p.wage : 0), 0)
+		: mockPlayers.reduce((sum, p) => sum + p.wage, 0));
 	const windowOpen = true;
 	const windowDays = 14;
-	const squadSize = mockPlayers.length;
-	const incoming = mockOffers.filter((o) => o.toClub === "My FC").length;
-	const outgoing = mockOffers.filter((o) => o.fromClub === "My FC").length;
+	const squadSize = squadPlayers && squadPlayers.length > 0 ? squadPlayers.length : mockPlayers.length;
+	// incoming/outgoing zou normaal uit echte offers komen, nu mock
+	const incoming = mockOffers.filter((o) => o.toClub === (activeClub?.name ?? "My FC")).length;
+	const outgoing = mockOffers.filter((o) => o.fromClub === (activeClub?.name ?? "My FC")).length;
+	void clubs; // onderdruk 'unused' warning
 
 	// --- Render ---
 	return (
