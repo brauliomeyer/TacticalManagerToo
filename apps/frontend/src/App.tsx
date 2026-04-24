@@ -1598,6 +1598,7 @@ export default function App() {
     } else {
       clearEngineGameState();
     }
+
     // 2. Restore active tactic
     if (data.activeTacticRaw) {
       try {
@@ -1605,6 +1606,7 @@ export default function App() {
         saveActiveTactic(data.activeClubId, at);
       } catch { /* corrupt */ }
     }
+
     // 3. Restore squad statuses to localStorage + state
     if (data.squadStatusesRaw) {
       try {
@@ -1612,7 +1614,10 @@ export default function App() {
         localStorage.setItem(SQUAD_STORAGE_KEY, JSON.stringify({ [data.activeClubId]: ss }));
         setSquadStatuses(ss);
       } catch { /* corrupt */ }
+    } else {
+      setSquadStatuses({});
     }
+
     // 4. Restore position overrides
     if (data.positionOverridesRaw) {
       try {
@@ -1620,12 +1625,18 @@ export default function App() {
         localStorage.setItem(POSITION_OVERRIDES_KEY, JSON.stringify({ [data.activeClubId]: po }));
         setPositionOverrides(po);
       } catch { /* corrupt */ }
+    } else {
+      setPositionOverrides({});
     }
+
     // 5. Restore manager summary
     if (data.summary) {
       saveManagerSummary(data.summary);
       setSummary(data.summary);
+    } else {
+      setSummary(null);
     }
+
     // 6. Restore match feed
     if (data.matchFeedRaw) {
       try {
@@ -1633,14 +1644,18 @@ export default function App() {
         saveStoredMatchFeed(feed);
         setEvents(feed);
       } catch { /* corrupt */ }
+    } else {
+      setEvents([]);
     }
+
     // 7. Restore active club → triggers squad reload
     setActiveClubId(data.activeClubId);
-    refreshSummaryFromGameState(data.activeClubId);
-    // 8. Force GameDashboard remount so it re-reads localStorage
+
+    // 8. Force GameDashboard remount so het alles opnieuw laadt
     setGameResetKey((k) => k + 1);
     setMailboxRefreshToken((v) => v + 1);
-    // 9. Close modal + go to game
+
+    // 9. Sluit modal en ga naar game
     setShowSaveLoad(false);
     setActivePage('game');
   }, []);
