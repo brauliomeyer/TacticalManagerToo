@@ -8,7 +8,7 @@ import BoardRoom from './components/BoardRoom';
 import Mailbox from './components/Mailbox';
 import CupCenter from './components/CupCenter';
 import PlayerFixtures from './components/PlayerFixtures';
-import TransferMarket from './components/TransferMarket';
+import TransfersPage from './transfers/TransfersPage';
 import TrainingGround from './components/TrainingGround';
 import ClubManagement from './components/ClubManagement';
 import ClubCrest from './components/ClubCrest';
@@ -1127,7 +1127,7 @@ function PagePanel({
         <PlayerFixtures activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} />
       </div>
       <div style={show('transfers')}>
-        <TransferMarket activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} />
+        <TransfersPage activeClub={activeClub} clubs={clubs} squadPlayers={squadPlayers} />
       </div>
       <div style={show('training')}>
         <TrainingGround activeClub={activeClub} squadPlayers={squadPlayers} />
