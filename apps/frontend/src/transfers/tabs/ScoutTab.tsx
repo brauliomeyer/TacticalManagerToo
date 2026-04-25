@@ -134,7 +134,7 @@ const ScoutTab: React.FC = () => {
           onSort={handleSort}
           showActions
           onBid={handleBid}
-          onShortlist={addToShortlist}
+          onShortlist={(player) => addToShortlist(player.id)}
           emptyMessage="Use the scout search above to find players."
         />
       )}

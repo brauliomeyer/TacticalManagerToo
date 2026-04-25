@@ -66,7 +66,7 @@ const ShortlistTab: React.FC = () => {
           onSort={handleSort}
           showActions
           onBid={handleBid}
-          onShortlist={removeFromShortlist}
+          onShortlist={(player) => removeFromShortlist(player.id)}
           emptyMessage="No players on your shortlist."
         />
       )}

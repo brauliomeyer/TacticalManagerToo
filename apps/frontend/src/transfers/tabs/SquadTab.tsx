@@ -95,8 +95,8 @@ const SquadTab: React.FC = () => {
         sortDir={sortDir}
         onSort={handleSort}
         showActions
-        onList={listPlayer}
-        onUnlist={unlistPlayer}
+        onList={(player) => listPlayer(player.id)}
+        onUnlist={(player) => unlistPlayer(player.id)}
         emptyMessage="No players in your squad."
       />
 

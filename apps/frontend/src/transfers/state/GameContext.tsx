@@ -107,8 +107,8 @@ export const TransferProvider: React.FC<TransferProviderProps> = ({ children, ac
     initializedRef.current = true;
     dispatch({ type: 'SET_ACTIVE_CLUB', clubId: activeClub.id });
 
-    // Only initialize if we don't already have data
-    if (Object.keys(state.clubs).length > 0) return;
+    // Only initialize if we don't already have data for this club
+    if (Object.keys(state.clubs).length > 0 && state.players[state.activeClubId]) return;
 
     // Convert fallback clubs to our Club type
     const clubs: Club[] = fallbackClubs.map((c) => ({
@@ -170,7 +170,7 @@ export const TransferProvider: React.FC<TransferProviderProps> = ({ children, ac
       const toClub = state.clubs[state.activeClubId];
       if (!player || !toClub) return 'Club or player not found';
 
-      const result = makeBid(player, player.clubId ?? '', toClub, amount, wage);
+      const result = makeBid(player, state.activeClubId, toClub, amount, wage);
       if (result.success) {
         dispatch({ type: 'ADD_OFFER', offer: result.offer });
         return null;
@@ -194,23 +194,21 @@ export const TransferProvider: React.FC<TransferProviderProps> = ({ children, ac
 
       dispatch({ type: 'UPDATE_OFFER', offer: updatedOffer });
 
-      const transfer: Transfer = {
-        id: `transfer-${Date.now()}`,
-        playerId: player.id,
-        playerName: player.name,
-        fromClubId: fromClub.id,
-        fromClubName: fromClub.name,
-        toClubId: toClub.id,
-        toClubName: toClub.name,
-        fee: offer.amount,
-        wage: offer.wage,
-        status: 'completed',
-        date: Date.now(),
-      };
-
       dispatch({
         type: 'COMPLETE_TRANSFER',
-        transfer,
+        transfer: {
+          id: `transfer-${Date.now()}`,
+          playerId: player.id,
+          playerName: player.name,
+          fromClubId: fromClub.id,
+          fromClubName: fromClub.name,
+          toClubId: toClub.id,
+          toClubName: toClub.name,
+          fee: offer.amount,
+          wage: offer.wage,
+          status: 'completed',
+          date: Date.now(),
+        },
         player: execution.player,
         fromClub: { ...fromClub, budget: execution.updatedFromBudget, wageSpent: execution.updatedFromWageSpent },
         toClub: { ...toClub, budget: execution.updatedToBudget, wageSpent: execution.updatedToWageSpent },
@@ -306,15 +304,19 @@ export const TransferProvider: React.FC<TransferProviderProps> = ({ children, ac
       dispatch({ type: 'SET_SCOUT_QUERY', query });
       dispatch({ type: 'SET_SCOUT_LOADING', loading: true });
 
+      // Capture current players/clubs to avoid stale closure
+      const currentPlayers = Object.values(state.players);
+      const currentClubs = state.clubs;
+
       // Simulate scout delay
       setTimeout(() => {
         const lower = query.toLowerCase();
-        const results = Object.values(state.players).filter(
+        const results = currentPlayers.filter(
           (p) =>
             p.name.toLowerCase().includes(lower) ||
             p.position.toLowerCase().includes(lower) ||
             p.nationality.toLowerCase().includes(lower) ||
-            (p.clubId && state.clubs[p.clubId]?.name.toLowerCase().includes(lower)),
+            (p.clubId && currentClubs[p.clubId]?.name.toLowerCase().includes(lower)),
         );
         dispatch({ type: 'SET_SCOUT_RESULTS', playerIds: results.map((p) => p.id) });
         dispatch({ type: 'SET_SCOUT_LOADING', loading: false });

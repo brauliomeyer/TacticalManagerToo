@@ -66,7 +66,7 @@ export function makeBid(
     amount: bidAmount,
     wage: bidWage,
     status: 'pending',
-    type: 'incoming',
+    type: 'outgoing',
     createdAt: Date.now(),
   };
 

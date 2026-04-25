@@ -104,7 +104,7 @@ const TransferListTab: React.FC = () => {
         onSort={handleSort}
         showActions
         onBid={handleBid}
-        onShortlist={addToShortlist}
+        onShortlist={(player) => addToShortlist(player.id)}
         emptyMessage="No players available on the transfer market."
       />
 

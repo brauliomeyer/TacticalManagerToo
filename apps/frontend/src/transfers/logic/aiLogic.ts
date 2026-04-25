@@ -99,7 +99,7 @@ export function randomClubBids(
     const offer: Offer = {
       id: `ai-offer-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 5)}`,
       playerId: player.id,
-      fromClubId: player.clubId,
+      fromClubId: player.clubId ?? '',
       toClubId: buyer.id,
       amount: bidAmount,
       wage: bidWage,
