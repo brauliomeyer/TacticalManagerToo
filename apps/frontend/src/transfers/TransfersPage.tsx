@@ -18,7 +18,7 @@ import type { Club } from '../App';
 interface TransfersPageProps {
   activeClub: Club;
   clubs: Club[];
-  squadPlayers: any[];
+  squadPlayers: unknown[];
 }
 
 const TransfersContent: React.FC = () => {

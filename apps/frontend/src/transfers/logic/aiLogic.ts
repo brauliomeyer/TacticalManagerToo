@@ -3,8 +3,6 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 import type { Player, Club, Offer } from '../state/gameReducer';
-import { calculatePlayerValue } from './playerLogic';
-
 // ────────────────────────────────────────────
 // HELPERS
 // ────────────────────────────────────────────
@@ -36,7 +34,6 @@ export function valueFluctuation(
 
   for (const player of players) {
     const seed = week * 1000 + player.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-    const ovr = calculateOvr(player);
 
     // Random fluctuation: -15% to +15%
     const change = (seededRandom(seed) - 0.5) * 0.3;
@@ -123,7 +120,6 @@ export function aiRespondToBid(
   bidAmount: number,
   seed: number,
 ): 'accept' | 'reject' | 'counter' {
-  const ovr = calculateOvr(player);
   const playerValue = player.value;
 
   // Calculate bid ratio

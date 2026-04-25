@@ -168,8 +168,9 @@ function generateCompEntries(
   squad: SquadPlayer[],
 ): { playerName: string; clubName: string; value: number }[] {
   // Load all played fixtures and stats from game state
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let state: any = null;
-  try { state = loadGameState(); } catch {}
+  try { state = loadGameState(); } catch { /* noop */ }
   const realStats: Record<string, { [player: string]: { [cat: string]: number } }> = {};
   if (state && state.fixtures) {
     for (const fixId in state.fixtures) {
@@ -260,10 +261,6 @@ function generateCompEntries(
       entries.push({ playerName: p.name, clubName: activeClub.name, value });
     }
   }
-
-  const otherClubs = clubs.length > 1
-    ? clubs.filter((c) => c.id !== activeClub.id).map((c) => c.name)
-    : CLUB_NAMES.filter((c) => c !== activeClub.name);
 
   // Voor AI-clubs: als er echte stats zijn, gebruik die, anders fallback op random
   for (const club of clubs) {

@@ -12,7 +12,7 @@ import {
   pruneSyncQueue,
 } from '../db';
 
-const API_BASE = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:4000';
+const API_BASE = (import.meta as unknown as { env: Record<string, string | undefined> }).env?.VITE_API_URL ?? 'http://localhost:4000';
 /** Whether a backend API is available (false on GitHub Pages where VITE_API_URL is empty / not set). */
 const HAS_BACKEND = API_BASE.length > 0;
 

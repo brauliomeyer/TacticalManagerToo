@@ -3,7 +3,7 @@
    Offline-first local storage for Tactical Manager Too.
    ═══════════════════════════════════════════════════════════════════ */
 
-import Dexie, { type Table } from 'dexie';
+import { Dexie, type Table } from 'dexie';
 import type { GameSave } from '@tmt/shared';
 
 // ────────────────────────────────────────────

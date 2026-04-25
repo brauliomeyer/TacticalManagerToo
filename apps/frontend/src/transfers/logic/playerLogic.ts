@@ -140,7 +140,7 @@ export function generateYouthPlayerName(seed: number): string {
  * Build a full squad for a club using realSquads data if available,
  * otherwise fall back to generated players.
  */
-export function buildClubSquad(club: Club, clubIndex: number): Player[] {
+export function buildClubSquad(club: Club): Player[] {
   const seed = hashString(club.id + club.name);
   const realSquad = realSquads[club.name];
   const reputation = club.reputation || 50;

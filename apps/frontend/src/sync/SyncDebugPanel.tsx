@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-import { onSyncStatus, triggerSync, type SyncStatusCallback } from './syncEngine';
+import { onSyncStatus, triggerSync } from './syncEngine';
 
 // ────────────────────────────────────────────
 // COMPONENT
