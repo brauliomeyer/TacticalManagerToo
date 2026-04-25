@@ -13,6 +13,8 @@ import {
 } from '../db';
 
 const API_BASE = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:4000';
+/** Whether a backend API is available (false on GitHub Pages where VITE_API_URL is empty / not set). */
+const HAS_BACKEND = API_BASE.length > 0;
 
 // ────────────────────────────────────────────
 // 1. CONFIGURATION
@@ -77,6 +79,9 @@ function getBackoffDelay(retries: number): number {
  * Sends each item to the backend, then marks it done or failed.
  */
 export async function processQueue(): Promise<void> {
+  // No backend available (e.g. GitHub Pages) — skip syncing entirely
+  if (!HAS_BACKEND) return;
+
   if (isProcessing || !isOnline) return;
   isProcessing = true;
   notifyStatus();
@@ -165,6 +170,12 @@ function handleOffline() {
 
 /** Start the sync engine: periodic polling + event listeners. */
 export function startSyncEngine(): void {
+  // No backend available (e.g. GitHub Pages) — no syncing needed
+  if (!HAS_BACKEND) {
+    console.log('[Sync] No backend available — sync engine not started.');
+    return;
+  }
+
   // Process queue immediately on start
   processQueue();
 

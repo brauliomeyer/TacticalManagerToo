@@ -11,16 +11,17 @@ const prisma = new PrismaClient();
 const app = express();
 const httpServer = createServer(app);
 
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173';
+const CLIENT_ORIGIN_RAW = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173';
+const CLIENT_ORIGINS: string[] = CLIENT_ORIGIN_RAW.split(',').map((s) => s.trim());
 const PORT = Number(process.env.PORT ?? 4000);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: CLIENT_ORIGIN
+    origin: CLIENT_ORIGINS
   }
 });
 
-app.use(cors({ origin: CLIENT_ORIGIN, optionsSuccessStatus: 200 }));
+app.use(cors({ origin: CLIENT_ORIGINS, optionsSuccessStatus: 200 }));
 app.use(express.json());
 
 app.get('/health', (_req, res) => {

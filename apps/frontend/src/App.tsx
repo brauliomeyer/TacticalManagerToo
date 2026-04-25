@@ -270,7 +270,9 @@ function savePositionOverrides(clubId: string, overrides: Record<string, string>
   }
 }
 
-const socket = io(API_BASE, { autoConnect: false });
+/** Whether a backend API is available (false on GitHub Pages or when VITE_API_URL is empty). */
+const HAS_BACKEND = API_BASE.length > 0;
+const socket = HAS_BACKEND ? io(API_BASE, { autoConnect: false, reconnection: false, reconnectionAttempts: 0 }) : null;
 
 const sideMenu: { key: PageKey; label: string }[] = [
   { key: 'game', label: 'Game' },
@@ -1678,38 +1680,52 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    axios
-      .get<Club[]>(`${API_BASE}/clubs`)
-      .then((res) => {
-        const nextClubs = normalizeClubs(res.data);
-        setClubs(nextClubs.length > 0 ? nextClubs : [...fallbackClubs]);
-      })
-      .catch(() => {
-        setClubs([...fallbackClubs]);
-      });
-
-    axios
-      .get<ManagerSummary>(`${API_BASE}/manager/summary`)
-      .then((res) => {
-        setSummary((prev) => {
-          const next = pickMostAdvancedSummary(prev, res.data);
-          saveManagerSummary(next);
-          return next;
+    // Always try to load clubs from API, fall back to fallbackClubs on error
+    if (API_BASE) {
+      axios
+        .get<Club[]>(`${API_BASE}/clubs`)
+        .then((res) => {
+          const nextClubs = normalizeClubs(res.data);
+          setClubs(nextClubs.length > 0 ? nextClubs : [...fallbackClubs]);
+        })
+        .catch(() => {
+          setClubs([...fallbackClubs]);
         });
-      })
-      .catch(() => { /* use localStorage fallback loaded in useState initializer */ });
 
-    socket.connect();
-    socket.on('match:update', (payload: { events: MatchEvent[] }) => {
-      setEvents(payload.events);
-      saveStoredMatchFeed(payload.events);
-    });
+      axios
+        .get<ManagerSummary>(`${API_BASE}/manager/summary`)
+        .then((res) => {
+          setSummary((prev) => {
+            const next = pickMostAdvancedSummary(prev, res.data);
+            saveManagerSummary(next);
+            return next;
+          });
+        })
+        .catch(() => { /* use localStorage fallback loaded in useState initializer */ });
+    } else {
+      // No API_BASE (e.g., GitHub Pages) - use fallback data
+      setClubs([...fallbackClubs]);
+    }
+
+    if (socket) {
+      try {
+        socket.connect();
+        socket.on('match:update', (payload: { events: MatchEvent[] }) => {
+          setEvents(payload.events);
+          saveStoredMatchFeed(payload.events);
+        });
+      } catch (e) {
+        console.warn('[App] Socket.IO connection failed (expected on GitHub Pages):', e);
+      }
+    }
 
     // Start the offline-first sync engine
     startSyncEngine();
 
     return () => {
-      socket.disconnect();
+      if (socket) {
+        try { socket.disconnect(); } catch { /* ignore */ }
+      }
       stopSyncEngine();
     };
   }, []);
