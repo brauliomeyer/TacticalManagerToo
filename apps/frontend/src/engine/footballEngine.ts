@@ -922,12 +922,21 @@ function advanceCupRound(
 
 const GAME_STATE_KEY = 'tmt-game-state';
 
+/**
+ * Save game state to localStorage (synchronous, for backward compatibility
+ * with existing code that hasn't been migrated to Dexie yet).
+ * New code should use the Dexie-based saveGameStateLocally from db.ts.
+ */
 export function saveGameState(state: GameState): void {
   try {
     localStorage.setItem(GAME_STATE_KEY, JSON.stringify(state));
   } catch { /* storage full or unavailable */ }
 }
 
+/**
+ * Load game state from localStorage (synchronous, for backward compatibility).
+ * New code should use the Dexie-based loadGameStateLocally from db.ts.
+ */
 export function loadGameState(): GameState | null {
   try {
     const raw = localStorage.getItem(GAME_STATE_KEY);
@@ -955,6 +964,10 @@ export function loadGameState(): GameState | null {
   }
 }
 
+/**
+ * Clear game state from localStorage (synchronous, for backward compatibility).
+ * New code should use the Dexie-based clearGameStateLocally from db.ts.
+ */
 export function clearGameState(): void {
   localStorage.removeItem(GAME_STATE_KEY);
 }

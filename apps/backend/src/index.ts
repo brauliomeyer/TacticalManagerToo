@@ -147,6 +147,150 @@ app.get('/manager/summary', async (_req, res) => {
   res.json(summary);
 });
 
+// ────────────────────────────────────────────
+// OFFLINE-FIRST: Game Save API endpoints
+// ────────────────────────────────────────────
+
+/**
+ * POST /game/init
+ * Initialize a new game save for a club.
+ * Body: { clubId: string, data: unknown }
+ */
+app.post('/game/init', async (req, res) => {
+  const { clubId, data } = req.body as { clubId: string; data: unknown };
+
+  if (!clubId) {
+    res.status(400).json({ error: 'clubId is required' });
+    return;
+  }
+
+  try {
+    const existing = await prisma.gameSave.findUnique({ where: { clubId } });
+    if (existing) {
+      res.status(409).json({ error: 'Game already exists for this club', gameSave: existing });
+      return;
+    }
+
+    const gameSave = await prisma.gameSave.create({
+      data: {
+        clubId,
+        version: 1,
+        data: JSON.stringify(data ?? {}),
+      },
+    });
+
+    res.status(201).json({
+      clubId: gameSave.clubId,
+      version: gameSave.version,
+      updatedAt: gameSave.updatedAt.toISOString(),
+      data: JSON.parse(gameSave.data),
+    });
+  } catch (err) {
+    console.error('[game/init] Error:', err);
+    res.status(500).json({ error: 'Failed to initialize game' });
+  }
+});
+
+/**
+ * GET /game/load/:clubId
+ * Load the latest game save for a club.
+ */
+app.get('/game/load/:clubId', async (req, res) => {
+  const clubId = String(req.params.clubId);
+
+  try {
+    const gameSave = await prisma.gameSave.findUnique({ where: { clubId } });
+
+    if (!gameSave) {
+      res.status(404).json({ error: 'No game save found for this club' });
+      return;
+    }
+
+    res.json({
+      clubId: gameSave.clubId,
+      version: gameSave.version,
+      updatedAt: gameSave.updatedAt.toISOString(),
+      data: JSON.parse(gameSave.data),
+    });
+  } catch (err) {
+    console.error('[game/load] Error:', err);
+    res.status(500).json({ error: 'Failed to load game' });
+  }
+});
+
+/**
+ * POST /game/save
+ * Save a game snapshot. Uses Last Write Wins (version-based).
+ * Body: { clubId: string, version: number, data: unknown }
+ * Returns 409 if the incoming version is <= the stored version.
+ */
+app.post('/game/save', async (req, res) => {
+  const { clubId, version, data } = req.body as { clubId: string; version: number; data: unknown };
+
+  if (!clubId || version === undefined) {
+    res.status(400).json({ error: 'clubId and version are required' });
+    return;
+  }
+
+  try {
+    const existing = await prisma.gameSave.findUnique({ where: { clubId } });
+
+    if (existing && version <= existing.version) {
+      res.status(409).json({
+        error: 'Version conflict — incoming version is stale',
+        storedVersion: existing.version,
+        incomingVersion: version,
+      });
+      return;
+    }
+
+    const gameSave = await prisma.gameSave.upsert({
+      where: { clubId },
+      create: {
+        clubId,
+        version,
+        data: JSON.stringify(data ?? {}),
+      },
+      update: {
+        version,
+        data: JSON.stringify(data ?? {}),
+      },
+    });
+
+    res.json({
+      clubId: gameSave.clubId,
+      version: gameSave.version,
+      updatedAt: gameSave.updatedAt.toISOString(),
+      data: JSON.parse(gameSave.data),
+    });
+  } catch (err) {
+    console.error('[game/save] Error:', err);
+    res.status(500).json({ error: 'Failed to save game' });
+  }
+});
+
+/**
+ * DELETE /game/clear/:clubId
+ * Delete the game save for a club.
+ */
+app.delete('/game/clear/:clubId', async (req, res) => {
+  const clubId = String(req.params.clubId);
+
+  try {
+    const existing = await prisma.gameSave.findUnique({ where: { clubId } });
+    if (!existing) {
+      res.status(404).json({ error: 'No game save found for this club' });
+      return;
+    }
+
+    await prisma.gameSave.delete({ where: { clubId } });
+    res.json({ message: 'Game save cleared', clubId });
+  } catch (err) {
+    console.error('[game/clear] Error:', err);
+    res.status(500).json({ error: 'Failed to clear game' });
+  }
+});
+
 app.post('/matches/simulate', async (req, res) => {
   const homeClubId = String(req.body.homeClubId);
   const awayClubId = String(req.body.awayClubId);

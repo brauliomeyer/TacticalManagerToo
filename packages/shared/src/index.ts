@@ -38,3 +38,15 @@ export interface ManagerSummary {
   totalLosses: number;
   totalDraws: number;
 }
+
+// ────────────────────────────────────────────
+// OFFLINE-FIRST: GameSave contract
+// ────────────────────────────────────────────
+
+/** Snapshot-based GameSave — the single API contract between frontend and backend. */
+export interface GameSave {
+  clubId: string;
+  version: number;
+  updatedAt: string; // ISO 8601
+  data: unknown;     // Full GameState snapshot
+}

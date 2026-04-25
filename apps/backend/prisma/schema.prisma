@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 enum PlayerRole {
@@ -191,4 +192,19 @@ model TableStanding {
   @@unique([leagueId, clubId])
   @@index([leagueId, position])
   @@index([clubId])
+}
+
+// ────────────────────────────────────────────
+// OFFLINE-FIRST: GameSave snapshot model
+// ────────────────────────────────────────────
+
+model GameSave {
+  id        String   @id @default(uuid())
+  clubId    String   @unique
+  version   Int      @default(1)
+  updatedAt DateTime @updatedAt
+  data      String   // JSON-serialized GameState snapshot
+
+  @@index([clubId])
+  @@index([clubId, version])
 }

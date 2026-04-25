@@ -9,9 +9,6 @@ import {
   type Standing,
   type TacticConfig,
   initializeGame,
-  loadGameState,
-  saveGameState,
-  clearGameState,
   getWeekFixtures,
   isPlayerFixture,
   simulateAIFixtures,
@@ -30,6 +27,8 @@ import {
 } from '../engine/footballEngine';
 import type { FullTactic, OffensiveRun } from '../engine/tacticsSystem';
 import { TACTIC_PRESETS, createTacticFromPreset } from '../engine/tacticsSystem';
+import { useGameState } from '../hooks/useGameState';
+
 
 /* ── Prop types (matching App.tsx definitions) ── */
 interface Club {
@@ -1393,22 +1392,37 @@ function EndOfSeasonView({
    ══════════════════════════════════════════════ */
 
 export default function GameDashboard({ clubs, activeClub, squadPlayers, activeTactic, onMatchResult, onMatchEvents, onWeekAdvance }: GameDashboardProps) {
-  // ── Game State ──
-  const [gameState, setGameState] = useState<GameState | null>(() => {
-    const saved = loadGameState();
-    if (saved && saved.activeClubId === activeClub.id && saved.initialized) return saved;
-    return null;
-  });
+  // ── Dexie-based Game State (offline-first) ──
+  const {
+    gameState: dexieGameState,
+    saveGameState: dexieSaveGameState,
+    clearGameState: dexieClearGameState,
+    isLoading: dexieIsLoading,
+  } = useGameState(activeClub.id);
 
+  // ── Local state for UI phase transitions ──
+  const [gameState, setGameState] = useState<GameState | null>(null);
   const [interactiveMatch, setInteractiveMatch] = useState<InteractiveMatchState | null>(null);
   const [simulatedResultIds, setSimulatedResultIds] = useState<string[]>([]);
 
-  // Initialize game if needed
+  // Sync Dexie game state into local state (initial load + updates)
   useEffect(() => {
-    if (gameState && gameState.activeClubId === activeClub.id) return;
+    if (dexieGameState) {
+      setGameState(dexieGameState);
+    }
+  }, [dexieGameState]);
+
+  // Initialize game if no saved state exists
+  useEffect(() => {
+    if (dexieIsLoading) return;
+    if (gameState && gameState.activeClubId === activeClub.id && gameState.initialized) return;
+    // No saved state found — create a new game
     const newState = initializeGame(clubs, activeClub.id);
     setGameState(newState);
-  }, [activeClub.id, clubs, gameState]);
+    // Persist to IndexedDB immediately
+    dexieSaveGameState(newState);
+  }, [activeClub.id, clubs, dexieGameState, dexieIsLoading, gameState, dexieSaveGameState]);
+
 
   // ── Player names for event descriptions ──
   const playerNames = useMemo(() => {
@@ -1591,7 +1605,7 @@ export default function GameDashboard({ clubs, activeClub, squadPlayers, activeT
 
     state.phase = 'showing_results';
     setGameState(state);
-    saveGameState(state);
+    dexieSaveGameState(state);
 
     // Notify parent so summary + feed update
     const isHome = gameState.activeClubId === interactiveMatch.homeId;
@@ -1599,7 +1613,7 @@ export default function GameDashboard({ clubs, activeClub, squadPlayers, activeT
     onMatchEvents?.([]);
 
     setInteractiveMatch(null);
-  }, [interactiveMatch, gameState]);
+  }, [interactiveMatch, gameState, dexieSaveGameState]);
 
   const handleContinue = useCallback(() => {
     if (!gameState) return;
@@ -1607,30 +1621,31 @@ export default function GameDashboard({ clubs, activeClub, squadPlayers, activeT
     let state = processCupRounds(gameState);
     // Advance week
     state = advanceWeek(state);
-    saveGameState(state);
+    dexieSaveGameState(state);
     setGameState(state);
     setSimulatedResultIds([]);
     onWeekAdvance?.();
-  }, [gameState, onWeekAdvance]);
+  }, [gameState, onWeekAdvance, dexieSaveGameState]);
 
   const handleResetSeason = useCallback(() => {
-    clearGameState();
+    dexieClearGameState();
     const newState = initializeGame(clubs, activeClub.id);
     setGameState(newState);
     setInteractiveMatch(null);
     setSimulatedResultIds([]);
-  }, [clubs, activeClub.id]);
+  }, [clubs, activeClub.id, dexieClearGameState]);
 
   const handleNewSeason = useCallback(() => {
     // Reinitialize for a new season
-    clearGameState();
+    dexieClearGameState();
     const newState = initializeGame(clubs, activeClub.id);
     newState.season = (gameState?.season ?? 1) + 1;
-    saveGameState(newState);
+    dexieSaveGameState(newState);
     setGameState(newState);
     setInteractiveMatch(null);
     setSimulatedResultIds([]);
-  }, [clubs, activeClub.id, gameState?.season]);
+  }, [clubs, activeClub.id, gameState?.season, dexieClearGameState, dexieSaveGameState]);
+
 
   // ── Render ──
   if (!gameState) {

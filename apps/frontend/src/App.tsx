@@ -15,10 +15,13 @@ import ClubCrest from './components/ClubCrest';
 import ManagerPage from './components/ManagerPage';
 import GameDashboard from './components/GameDashboard';
 import ReadabilitySettings from './components/ReadabilitySettings';
+import { SyncDebugPanel } from './sync/SyncDebugPanel';
+import { startSyncEngine, stopSyncEngine } from './sync/syncEngine';
 import { loadActiveTactic, saveActiveTactic, type FullTactic } from './engine/tacticsSystem';
 import { loadGameState, saveGameState, clearGameState as clearEngineGameState, type MatchEvent } from './engine/footballEngine';
 import { realSquads } from './realSquads';
 import { fallbackClubs } from './fallbackClubs';
+
 import {
   synthesizeEventData,
   calculateDerivedAttributes,
@@ -1702,10 +1705,15 @@ export default function App() {
       saveStoredMatchFeed(payload.events);
     });
 
+    // Start the offline-first sync engine
+    startSyncEngine();
+
     return () => {
       socket.disconnect();
+      stopSyncEngine();
     };
   }, []);
+
 
   useEffect(() => {
     if (clubs.length === 0) {
@@ -2243,6 +2251,9 @@ export default function App() {
             onNewGame={handleNewGame}
           />
         )}
+
+        {/* Sync Debug Panel — floating overlay */}
+        <SyncDebugPanel />
 
         {showStandings ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">

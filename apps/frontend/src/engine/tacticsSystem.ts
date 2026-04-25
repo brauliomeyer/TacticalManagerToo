@@ -928,6 +928,10 @@ export function evaluateAutoSubs(
 
 const TACTIC_STORAGE_KEY = 'tmt-active-tactic';
 
+/**
+ * Save active tactic to localStorage (synchronous, for backward compatibility).
+ * New code should use the Dexie-based persistence from db.ts.
+ */
 export function saveActiveTactic(clubId: string, tactic: FullTactic): void {
   try {
     const raw = localStorage.getItem(TACTIC_STORAGE_KEY);
@@ -937,6 +941,10 @@ export function saveActiveTactic(clubId: string, tactic: FullTactic): void {
   } catch { /* storage unavailable */ }
 }
 
+/**
+ * Load active tactic from localStorage (synchronous, for backward compatibility).
+ * New code should use the Dexie-based persistence from db.ts.
+ */
 export function loadActiveTactic(clubId: string): FullTactic | null {
   try {
     const raw = localStorage.getItem(TACTIC_STORAGE_KEY);
