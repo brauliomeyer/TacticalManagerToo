@@ -22,3 +22,5 @@ apps/backend/prisma/dev.db
 # IDE
 .vscode/
 .DS_Store
+#memory dump file
+memory-bank/
