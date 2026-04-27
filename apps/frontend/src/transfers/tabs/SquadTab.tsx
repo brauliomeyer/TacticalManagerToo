@@ -45,13 +45,6 @@ const SquadTab: React.FC = () => {
     }
   };
 
-  const handleBid = (player: Player) => {
-    setBidModal(player);
-    setBidAmount(Math.round(player.value * 0.8));
-    setBidWage(player.wage);
-    setBidError(null);
-  };
-
   const submitBid = () => {
     if (!bidModal) return;
     const error = placeBid(bidModal.id, bidAmount, bidWage);

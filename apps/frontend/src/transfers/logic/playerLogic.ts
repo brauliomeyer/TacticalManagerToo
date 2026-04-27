@@ -202,7 +202,6 @@ export function generateYouthPlayers(clubId: string, count: number, seed: number
     const mental = 20 + Math.floor(seededRandom(playerSeed + 30) * 30);
     const physical = 25 + Math.floor(seededRandom(playerSeed + 40) * 25);
 
-    const ovr = Math.round((technical + mental + physical) / 3);
     const potential = clamp(65 + Math.floor(seededRandom(playerSeed + 50) * 30), 65, 99);
 
     players.push({

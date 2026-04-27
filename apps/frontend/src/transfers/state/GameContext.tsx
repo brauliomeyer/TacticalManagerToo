@@ -15,9 +15,9 @@ import {
   type Transfer,
   type TabKey,
 } from './gameReducer';
-import { buildClubSquad, generateYouthPlayers, promoteYouthPlayer, calculatePlayerValue, calculateOvr } from '../logic/playerLogic';
+import { buildClubSquad, generateYouthPlayers, promoteYouthPlayer } from '../logic/playerLogic';
 import { makeBid, acceptOffer, rejectOffer, negotiateOffer } from '../logic/transferLogic';
-import { valueFluctuation, randomClubBids, aiRespondToBid, generateCounterOffer, flagTransferListPlayers } from '../logic/aiLogic';
+import { valueFluctuation, randomClubBids, flagTransferListPlayers } from '../logic/aiLogic';
 import { fallbackClubs } from '../../fallbackClubs';
 
 // ────────────────────────────────────────────

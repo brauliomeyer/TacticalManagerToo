@@ -140,14 +140,6 @@ const PLAYER_POOL = [
   'Lineker', 'Gascoigne', 'Platt', 'Adams', 'Seaman', 'Campbell', 'Owen', 'Fowler',
 ];
 
-const CLUB_NAMES = [
-  'Man United', 'Arsenal', 'Chelsea', 'Liverpool', 'Man City', 'Tottenham', 'Newcastle',
-  'West Ham', 'Aston Villa', 'Everton', 'Leeds United', 'Sheffield W', 'Nott Forest',
-  'Blackburn R', 'QPR', 'Crystal Palace', 'Brighton', 'Wolves', 'Leicester', 'Southampton',
-  'Fulham', 'Brentford', 'Bournemouth', 'Burnley', 'Sheffield Utd', 'Sunderland',
-  'Middlesbrough', 'Norwich', 'Derby County', 'Stoke City', 'Coventry', 'Ipswich Town',
-];
-
 /* ══════════════════════════════════════════════
    Generate leaderboard data — per competition
    ══════════════════════════════════════════════ */
@@ -181,9 +173,9 @@ function validateValue(value: number, category: CategoryKey, maxReasonable: numb
 }
 
 const MAX_REASONABLE: Record<CategoryKey, number> = {
-  motm: 38,        // max ~1 per matchweek
+  motm: 38,
   penalties: 15,
-  shooters: 60,    // max goals in a season
+  shooters: 60,
   cupGoals: 20,
   superSubs: 15,
   hatTricks: 10,
@@ -197,15 +189,12 @@ const MAX_REASONABLE: Record<CategoryKey, number> = {
 
 /* ──────────────────────────────────────────────
    Compute a single player's value for a category
-   Uses playerId as the seed base so results are
-   consistent across competitions for the same player.
    ────────────────────────────────────────────── */
 function computePlayerValue(
   p: SquadPlayer,
   category: CategoryKey,
   mult: number,
 ): number {
-  // Base seed on playerId + category ONLY (no comp) for consistency
   const baseSeed = hs(p.id + category);
   let value = 0;
 
@@ -255,16 +244,10 @@ function computePlayerValue(
   return validateValue(value, category, MAX_REASONABLE[category]);
 }
 
-/* ──────────────────────────────────────────────
-   Generate a deterministic AI player ID from club + index
-   ────────────────────────────────────────────── */
 function makeAiPlayerId(clubId: string, index: number): string {
   return `ai_${clubId}_${index}`;
 }
 
-/* ──────────────────────────────────────────────
-   Generate leaderboard entries for a single competition
-   ────────────────────────────────────────────── */
 function generateCompEntries(
   category: CategoryKey,
   comp: Exclude<CompFilter, 'all'>,
@@ -272,12 +255,10 @@ function generateCompEntries(
   clubs: Club[],
   squad: SquadPlayer[],
 ): RawEntry[] {
-  // Load all played fixtures and stats from game state
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let state: any = null;
   try { state = loadGameState(); } catch { /* noop */ }
 
-  // Build a map of clubId -> player name -> stats from real fixtures
   const realStats: Record<string, { [player: string]: { [cat: string]: number } }> = {};
   if (state && state.fixtures) {
     for (const fixId in state.fixtures) {
@@ -290,13 +271,10 @@ function generateCompEntries(
       const homeName = homeClub?.name;
       const awayName = awayClub?.name;
 
-      // Distribute stats across actual squad players instead of a single "GK"
       if (homeName && homeClub) {
         if (!realStats[homeName]) realStats[homeName] = {};
-        // Use the home club's squad from state if available, otherwise fallback
         const homeSquad = state.squads?.[fix.homeId] ?? [];
         if (homeSquad.length > 0) {
-          // Distribute goals to random players
           const scorerIdx = Math.floor(sr(hs(fixId + 'home')) * homeSquad.length);
           const scorer = homeSquad[scorerIdx];
           const pName = scorer.name ?? scorer.playerName ?? 'Unknown';
@@ -305,12 +283,10 @@ function generateCompEntries(
           realStats[homeName][pName]["shooters"] = (realStats[homeName][pName]["shooters"] || 0) + fix.homeGoals;
           realStats[homeName][pName]["motm"] = (realStats[homeName][pName]["motm"] || 0) + (fix.stats.shotsOnTarget[0] > fix.stats.shotsOnTarget[1] ? 1 : 0);
         } else {
-          // Fallback: distribute across all squad players evenly
           for (const p of squad) {
             if (!realStats[homeName][p.name]) realStats[homeName][p.name] = {};
             realStats[homeName][p.name]["appearances"] = (realStats[homeName][p.name]["appearances"] || 0) + 1;
           }
-          // Give goals to a random squad player
           if (squad.length > 0) {
             const scorerIdx = Math.floor(sr(hs(fixId + 'home')) * squad.length);
             const scorer = squad[scorerIdx];
@@ -349,16 +325,13 @@ function generateCompEntries(
   const m = cfg.mult;
   const entries: RawEntry[] = [];
 
-  // ── Active club players ──
   for (let i = 0; i < squad.length; i++) {
     const p = squad[i];
     let value = 0;
 
-    // Check real stats first
     if (realStats[activeClub.name]?.[p.name]?.[category] != null) {
       value = realStats[activeClub.name][p.name][category];
     } else {
-      // Use consistent per-player seed (no comp in seed)
       value = computePlayerValue(p, category, m);
     }
 
@@ -367,13 +340,11 @@ function generateCompEntries(
     }
   }
 
-  // ── AI clubs ──
   for (const club of clubs) {
     if (club.id === activeClub.id) continue;
     const clubName = club.name;
 
     if (realStats[clubName]) {
-      // Use real stats if available
       for (const playerName in realStats[clubName]) {
         const value = realStats[clubName][playerName][category] || 0;
         if (value > 0) {
@@ -381,13 +352,10 @@ function generateCompEntries(
         }
       }
     } else {
-      // Fallback: generate deterministic AI players
-      // Use a set to avoid duplicate names within the same club
       const usedNames = new Set<string>();
       for (let i = 0; i < 2; i++) {
         const pSeed = hs(club.id + category) + i * 97 + 500;
         let name = PLAYER_POOL[Math.floor(sr(pSeed) * PLAYER_POOL.length)];
-        // Ensure unique name within this club
         let attempt = 0;
         while (usedNames.has(name) && attempt < 10) {
           name = PLAYER_POOL[Math.floor(sr(pSeed + attempt + 1) * PLAYER_POOL.length)];
@@ -429,9 +397,6 @@ function generateCompEntries(
 
 const SINGLE_COMPS: Exclude<CompFilter, 'all'>[] = ['league', 'fa-cup', 'league-cup', 'champions-league', 'europa-league', 'conference-league'];
 
-/* ──────────────────────────────────────────────
-   Deduplicate using playerId as the unique key
-   ────────────────────────────────────────────── */
 function dedupeLeaderboardEntries(entries: RawEntry[]): RawEntry[] {
   const map = new Map<string, RawEntry>();
   for (const entry of entries) {
@@ -444,9 +409,6 @@ function dedupeLeaderboardEntries(entries: RawEntry[]): RawEntry[] {
   return Array.from(map.values());
 }
 
-/* ──────────────────────────────────────────────
-   Generate the final ranked leaderboard
-   ────────────────────────────────────────────── */
 function generateLeaderboard(
   category: CategoryKey,
   comp: CompFilter,
@@ -457,8 +419,6 @@ function generateLeaderboard(
   let raw: RawEntry[];
 
   if (comp === 'all') {
-    // For 'all' competitions, use the per-player base value (no comp multiplier)
-    // This avoids summing inconsistent seeded-random values across competitions
     const merged = new Map<string, RawEntry>();
     for (const c of SINGLE_COMPS) {
       for (const entry of generateCompEntries(category, c, activeClub, clubs, squad)) {
@@ -526,15 +486,12 @@ function LeaderboardTable({ category, entries, clubName }: {
 }) {
   return (
     <div className="border-2 border-[#2a8a2b] bg-[#0d3f10]">
-      {/* Title */}
       <h3
         className="border-b-2 border-[#2a8a2b] bg-[#0a2e0d] px-4 py-3 text-lg font-black uppercase text-[#00e5ff]"
         style={{ fontFamily: '"Press Start 2P", "Courier New", monospace' }}
       >
         {category.title}
       </h3>
-
-      {/* Table */}
       <div className="p-2">
         <table className="w-full">
           <thead>
@@ -588,7 +545,6 @@ function ClubSummaryBar({ club, squad, allData }: {
   squad: SquadPlayer[];
   allData: Map<CategoryKey, LeaderboardEntry[]>;
 }) {
-  // Count how many club players appear in each leaderboard
   const clubInTop = CATEGORIES.map((cat) => {
     const data = allData.get(cat.key) ?? [];
     return { title: cat.shortTitle, count: data.filter((e) => e.clubName === club.name).length };
@@ -623,7 +579,6 @@ export default function PlayerFixtures({ activeClub, clubs, squadPlayers }: Play
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>('shooters');
   const [selectedComp, setSelectedComp] = useState<CompFilter>('all');
 
-  // Generate all leaderboards once (memoized per club + competition)
   const allData = useMemo(() => {
     const map = new Map<CategoryKey, LeaderboardEntry[]>();
     for (const cat of CATEGORIES) {
@@ -637,12 +592,10 @@ export default function PlayerFixtures({ activeClub, clubs, squadPlayers }: Play
 
   return (
     <section className="border-4 border-[#6f4ca1] bg-[#16a51c] p-3">
-      {/* Title */}
       <h2 className="mb-3 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
-        Player Fixtures &amp; Records
+        Player Fixtures & Records
       </h2>
 
-      {/* Competition filter tabs */}
       <div className="mb-3 flex flex-wrap gap-1 border-2 border-[#2a8a2b] bg-[#0d3f10] p-2">
         {COMPETITIONS.map((comp) => (
           <button
@@ -664,12 +617,10 @@ export default function PlayerFixtures({ activeClub, clubs, squadPlayers }: Play
         </span>
       </div>
 
-      {/* Club summary */}
       <div className="mb-3">
         <ClubSummaryBar club={activeClub} squad={squadPlayers} allData={allData} />
       </div>
 
-      {/* Quick overview: all categories compact */}
       <div className="flex items-center mb-3">
         <h2 className="flex-1 border border-[#ceb8e1] bg-[#d5b5ec] p-2 text-center text-sm font-bold uppercase text-[#2e1f4a]">
           All Categories — Top 3
@@ -719,12 +670,8 @@ export default function PlayerFixtures({ activeClub, clubs, squadPlayers }: Play
         })}
       </div>
 
-      {/* Layout: menu + leaderboard */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[240px_1fr]">
-        {/* Category menu */}
         <CategoryMenu categories={CATEGORIES} selected={selectedCategory} onSelect={setSelectedCategory} />
-
-        {/* Leaderboard */}
         <LeaderboardTable category={selectedCat} entries={entries} clubName={activeClub.name} />
       </div>
     </section>

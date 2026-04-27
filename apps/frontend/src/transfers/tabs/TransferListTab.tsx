@@ -8,7 +8,7 @@ import PlayerTable from '../components/PlayerTable';
 import type { Player } from '../state/gameReducer';
 
 const TransferListTab: React.FC = () => {
-  const { getAllPlayers, getClub, addToShortlist, placeBid, state } = useTransfer();
+  const { getClub, addToShortlist, placeBid, state } = useTransfer();
   const [search, setSearch] = useState('');
   const [positionFilter, setPositionFilter] = useState('');
   const [sortBy, setSortBy] = useState('value');

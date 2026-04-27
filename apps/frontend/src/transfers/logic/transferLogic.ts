@@ -88,20 +88,6 @@ export function acceptOffer(
 ): { execution: TransferExecution; updatedOffer: Offer } {
   const updatedOffer: Offer = { ...offer, status: 'accepted' };
 
-  const transfer: Transfer = {
-    id: `transfer-${Date.now()}`,
-    playerId: player.id,
-    playerName: player.name,
-    fromClubId: fromClub.id,
-    fromClubName: fromClub.name,
-    toClubId: toClub.id,
-    toClubName: toClub.name,
-    fee: offer.amount,
-    wage: offer.wage,
-    status: 'completed',
-    date: Date.now(),
-  };
-
   const execution: TransferExecution = {
     player: { ...player, clubId: toClub.id, wage: offer.wage, contractYears: 3, morale: 80 },
     fromClub,
