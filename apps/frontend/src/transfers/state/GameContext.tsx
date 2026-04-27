@@ -128,7 +128,7 @@ export const TransferProvider: React.FC<TransferProviderProps> = ({ children, ac
     // Build squads for all clubs
     const allPlayers: Player[] = [];
     for (let i = 0; i < clubs.length; i++) {
-      const squad = buildClubSquad(clubs[i], i);
+      const squad = buildClubSquad(clubs[i]);
       allPlayers.push(...squad);
     }
     dispatch({ type: 'SET_PLAYERS', players: allPlayers });
@@ -346,7 +346,7 @@ export const TransferProvider: React.FC<TransferProviderProps> = ({ children, ac
 
       const allPlayers: Player[] = [];
       for (let i = 0; i < clubs.length; i++) {
-        const squad = buildClubSquad(clubs[i], i);
+        const squad = buildClubSquad(clubs[i]);
         allPlayers.push(...squad);
       }
       dispatch({ type: 'SET_PLAYERS', players: allPlayers });
