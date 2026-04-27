@@ -44,6 +44,7 @@ interface PlayerFixturesProps {
 
 interface LeaderboardEntry {
   rank: number;
+  playerId: string;
   playerName: string;
   clubName: string;
   value: number;
@@ -160,124 +161,240 @@ const COMP_CONFIG: Record<Exclude<CompFilter, 'all'>, { mult: number; seedOff: n
   'conference-league': { mult: 0.2,  seedOff: 5000 },
 };
 
+/* ──────────────────────────────────────────────
+   Internal entry type (before ranking)
+   ────────────────────────────────────────────── */
+interface RawEntry {
+  playerId: string;
+  playerName: string;
+  clubName: string;
+  value: number;
+}
+
+/* ──────────────────────────────────────────────
+   Data validation: clamp outliers, remove NaN/negatives
+   ────────────────────────────────────────────── */
+function validateValue(value: number, category: CategoryKey, maxReasonable: number): number {
+  if (!Number.isFinite(value) || value < 0) return 0;
+  // Cap at a reasonable maximum per category to prevent unrealistic outliers
+  return Math.min(value, maxReasonable);
+}
+
+const MAX_REASONABLE: Record<CategoryKey, number> = {
+  motm: 38,        // max ~1 per matchweek
+  penalties: 15,
+  shooters: 60,    // max goals in a season
+  cupGoals: 20,
+  superSubs: 15,
+  hatTricks: 10,
+  redCards: 5,
+  yellowCards: 20,
+  capped: 200,
+  assists: 30,
+  cleanSheets: 38,
+  appearances: 60,
+};
+
+/* ──────────────────────────────────────────────
+   Compute a single player's value for a category
+   Uses playerId as the seed base so results are
+   consistent across competitions for the same player.
+   ────────────────────────────────────────────── */
+function computePlayerValue(
+  p: SquadPlayer,
+  category: CategoryKey,
+  mult: number,
+): number {
+  // Base seed on playerId + category ONLY (no comp) for consistency
+  const baseSeed = hs(p.id + category);
+  let value = 0;
+
+  switch (category) {
+    case 'motm':
+      value = Math.max(0, Math.round((p.influence * 0.3 + p.form * 0.2 + sr(baseSeed) * 4 - 1) * mult));
+      break;
+    case 'penalties':
+      value = p.role.includes('FORWARD') || p.role.includes('ATTACKING')
+        ? Math.round(sr(baseSeed) * 6 * mult)
+        : Math.round(sr(baseSeed) * 2 * mult);
+      break;
+    case 'shooters':
+      value = p.scored > 0 ? Math.round(p.scored * mult) : Math.round(p.shooting * 0.4 * sr(baseSeed + 1) * mult);
+      break;
+    case 'cupGoals':
+      value = Math.round((p.scored > 0 ? p.scored * 0.3 : p.shooting * 0.15) * sr(baseSeed + 2) * mult);
+      break;
+    case 'superSubs':
+      value = Math.round(sr(baseSeed) * 4 * (p.attitude > 12 ? 1.5 : 1) * mult);
+      break;
+    case 'hatTricks':
+      value = p.scored >= 8 ? Math.max(0, Math.round((sr(baseSeed) * 3 - 0.5) * mult)) : 0;
+      break;
+    case 'redCards':
+      value = Math.round(sr(baseSeed) * (p.tackling > 14 ? 3 : 1.5) * (p.attitude < 10 ? 1.5 : 0.8) * mult);
+      break;
+    case 'yellowCards':
+      value = Math.round(sr(baseSeed) * (p.tackling > 10 ? 8 : 4) * (p.attitude < 12 ? 1.3 : 0.7) * mult);
+      break;
+    case 'capped':
+      value = p.caps > 0 ? Math.round(p.caps * mult) : Math.round(sr(baseSeed) * 30 * (p.influence > 12 ? 1.5 : 0.5) * mult);
+      break;
+    case 'assists':
+      value = Math.round((p.passing * 0.35 * sr(baseSeed + 3) + p.played * 0.1) * mult);
+      break;
+    case 'cleanSheets':
+      value = p.role === 'GOALKEEPER' || p.role.includes('BACK')
+        ? Math.round((sr(baseSeed) * 12 + p.played * 0.2) * mult)
+        : 0;
+      break;
+    case 'appearances':
+      value = p.played > 0 ? Math.round(p.played * mult) : Math.round((8 + sr(baseSeed) * 30) * mult);
+      break;
+  }
+
+  return validateValue(value, category, MAX_REASONABLE[category]);
+}
+
+/* ──────────────────────────────────────────────
+   Generate a deterministic AI player ID from club + index
+   ────────────────────────────────────────────── */
+function makeAiPlayerId(clubId: string, index: number): string {
+  return `ai_${clubId}_${index}`;
+}
+
+/* ──────────────────────────────────────────────
+   Generate leaderboard entries for a single competition
+   ────────────────────────────────────────────── */
 function generateCompEntries(
   category: CategoryKey,
   comp: Exclude<CompFilter, 'all'>,
   activeClub: Club,
   clubs: Club[],
   squad: SquadPlayer[],
-): { playerName: string; clubName: string; value: number }[] {
+): RawEntry[] {
   // Load all played fixtures and stats from game state
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let state: any = null;
   try { state = loadGameState(); } catch { /* noop */ }
+
+  // Build a map of clubId -> player name -> stats from real fixtures
   const realStats: Record<string, { [player: string]: { [cat: string]: number } }> = {};
   if (state && state.fixtures) {
     for (const fixId in state.fixtures) {
       const fix = state.fixtures[fixId];
       if (!fix.played || !fix.stats) continue;
-      // Only include fixtures for the selected comp
       if (fix.compId !== comp) continue;
-      // Home/away clubs
-      const home = state.clubs[fix.homeId]?.name;
-      const away = state.clubs[fix.awayId]?.name;
-      // Simulate player stats: for demo, just use goals for shooters, appearances for appearances, etc.
-      // In real engine, would use fix.events or fix.stats.players
-      // Here, we just increment appearances for both clubs
-      if (home) {
-        if (!realStats[home]) realStats[home] = {};
-        realStats[home][`GK`] = realStats[home][`GK`] || {};
-        realStats[home][`GK`]["appearances"] = (realStats[home][`GK`]["appearances"] || 0) + 1;
-        realStats[home][`GK`]["motm"] = (realStats[home][`GK`]["motm"] || 0) + (fix.stats.shotsOnTarget[0] > fix.stats.shotsOnTarget[1] ? 1 : 0);
-        realStats[home][`GK`]["shooters"] = (realStats[home][`GK`]["shooters"] || 0) + fix.homeGoals;
+
+      const homeClub = state.clubs[fix.homeId];
+      const awayClub = state.clubs[fix.awayId];
+      const homeName = homeClub?.name;
+      const awayName = awayClub?.name;
+
+      // Distribute stats across actual squad players instead of a single "GK"
+      if (homeName && homeClub) {
+        if (!realStats[homeName]) realStats[homeName] = {};
+        // Use the home club's squad from state if available, otherwise fallback
+        const homeSquad = state.squads?.[fix.homeId] ?? [];
+        if (homeSquad.length > 0) {
+          // Distribute goals to random players
+          const scorerIdx = Math.floor(sr(hs(fixId + 'home')) * homeSquad.length);
+          const scorer = homeSquad[scorerIdx];
+          const pName = scorer.name ?? scorer.playerName ?? 'Unknown';
+          if (!realStats[homeName][pName]) realStats[homeName][pName] = {};
+          realStats[homeName][pName]["appearances"] = (realStats[homeName][pName]["appearances"] || 0) + 1;
+          realStats[homeName][pName]["shooters"] = (realStats[homeName][pName]["shooters"] || 0) + fix.homeGoals;
+          realStats[homeName][pName]["motm"] = (realStats[homeName][pName]["motm"] || 0) + (fix.stats.shotsOnTarget[0] > fix.stats.shotsOnTarget[1] ? 1 : 0);
+        } else {
+          // Fallback: distribute across all squad players evenly
+          for (const p of squad) {
+            if (!realStats[homeName][p.name]) realStats[homeName][p.name] = {};
+            realStats[homeName][p.name]["appearances"] = (realStats[homeName][p.name]["appearances"] || 0) + 1;
+          }
+          // Give goals to a random squad player
+          if (squad.length > 0) {
+            const scorerIdx = Math.floor(sr(hs(fixId + 'home')) * squad.length);
+            const scorer = squad[scorerIdx];
+            realStats[homeName][scorer.name]["shooters"] = (realStats[homeName][scorer.name]["shooters"] || 0) + fix.homeGoals;
+          }
+        }
       }
-      if (away) {
-        if (!realStats[away]) realStats[away] = {};
-        realStats[away][`GK`] = realStats[away][`GK`] || {};
-        realStats[away][`GK`]["appearances"] = (realStats[away][`GK`]["appearances"] || 0) + 1;
-        realStats[away][`GK`]["motm"] = (realStats[away][`GK`]["motm"] || 0) + (fix.stats.shotsOnTarget[1] > fix.stats.shotsOnTarget[0] ? 1 : 0);
-        realStats[away][`GK`]["shooters"] = (realStats[away][`GK`]["shooters"] || 0) + fix.awayGoals;
+
+      if (awayName && awayClub) {
+        if (!realStats[awayName]) realStats[awayName] = {};
+        const awaySquad = state.squads?.[fix.awayId] ?? [];
+        if (awaySquad.length > 0) {
+          const scorerIdx = Math.floor(sr(hs(fixId + 'away')) * awaySquad.length);
+          const scorer = awaySquad[scorerIdx];
+          const pName = scorer.name ?? scorer.playerName ?? 'Unknown';
+          if (!realStats[awayName][pName]) realStats[awayName][pName] = {};
+          realStats[awayName][pName]["appearances"] = (realStats[awayName][pName]["appearances"] || 0) + 1;
+          realStats[awayName][pName]["shooters"] = (realStats[awayName][pName]["shooters"] || 0) + fix.awayGoals;
+          realStats[awayName][pName]["motm"] = (realStats[awayName][pName]["motm"] || 0) + (fix.stats.shotsOnTarget[1] > fix.stats.shotsOnTarget[0] ? 1 : 0);
+        } else {
+          for (const p of squad) {
+            if (!realStats[awayName][p.name]) realStats[awayName][p.name] = {};
+            realStats[awayName][p.name]["appearances"] = (realStats[awayName][p.name]["appearances"] || 0) + 1;
+          }
+          if (squad.length > 0) {
+            const scorerIdx = Math.floor(sr(hs(fixId + 'away')) * squad.length);
+            const scorer = squad[scorerIdx];
+            realStats[awayName][scorer.name]["shooters"] = (realStats[awayName][scorer.name]["shooters"] || 0) + fix.awayGoals;
+          }
+        }
       }
     }
   }
-  const cfg = COMP_CONFIG[comp];
-  const seed = hs(activeClub.id + category + comp) + cfg.seedOff;
-  const entries: { playerName: string; clubName: string; value: number }[] = [];
-  const m = cfg.mult;
 
-  // Echte stats voor eigen club
+  const cfg = COMP_CONFIG[comp];
+  const m = cfg.mult;
+  const entries: RawEntry[] = [];
+
+  // ── Active club players ──
   for (let i = 0; i < squad.length; i++) {
     const p = squad[i];
     let value = 0;
-    if (realStats[activeClub.name] && realStats[activeClub.name][p.name] && realStats[activeClub.name][p.name][category]) {
+
+    // Check real stats first
+    if (realStats[activeClub.name]?.[p.name]?.[category] != null) {
       value = realStats[activeClub.name][p.name][category];
     } else {
-      // Fallback: oude logica
-      const pSeed = hs(p.id + category + comp) + seed;
-      switch (category) {
-        case 'motm':
-          value = Math.max(0, Math.round((p.influence * 0.3 + p.form * 0.2 + sr(pSeed) * 4 - 1) * m));
-          break;
-        case 'penalties':
-          value = p.role.includes('FORWARD') || p.role.includes('ATTACKING')
-            ? Math.round(sr(pSeed) * 6 * m)
-            : Math.round(sr(pSeed) * 2 * m);
-          break;
-        case 'shooters':
-          value = p.scored > 0 ? Math.round(p.scored * m) : Math.round(p.shooting * 0.4 * sr(pSeed + 1) * m);
-          break;
-        case 'cupGoals':
-          value = Math.round((p.scored > 0 ? p.scored * 0.3 : p.shooting * 0.15) * sr(pSeed + 2) * m);
-          break;
-        case 'superSubs':
-          value = Math.round(sr(pSeed) * 4 * (p.attitude > 12 ? 1.5 : 1) * m);
-          break;
-        case 'hatTricks':
-          value = p.scored >= 8 ? Math.max(0, Math.round((sr(pSeed) * 3 - 0.5) * m)) : 0;
-          break;
-        case 'redCards':
-          value = Math.round(sr(pSeed) * (p.tackling > 14 ? 3 : 1.5) * (p.attitude < 10 ? 1.5 : 0.8) * m);
-          break;
-        case 'yellowCards':
-          value = Math.round(sr(pSeed) * (p.tackling > 10 ? 8 : 4) * (p.attitude < 12 ? 1.3 : 0.7) * m);
-          break;
-        case 'capped':
-          value = p.caps > 0 ? Math.round(p.caps * m) : Math.round(sr(pSeed) * 30 * (p.influence > 12 ? 1.5 : 0.5) * m);
-          break;
-        case 'assists':
-          value = Math.round((p.passing * 0.35 * sr(pSeed + 3) + p.played * 0.1) * m);
-          break;
-        case 'cleanSheets':
-          value = p.role === 'GOALKEEPER' || p.role.includes('BACK')
-            ? Math.round((sr(pSeed) * 12 + p.played * 0.2) * m)
-            : 0;
-          break;
-        case 'appearances':
-          value = p.played > 0 ? Math.round(p.played * m) : Math.round((8 + sr(pSeed) * 30) * m);
-          break;
-      }
+      // Use consistent per-player seed (no comp in seed)
+      value = computePlayerValue(p, category, m);
     }
+
     if (value > 0) {
-      entries.push({ playerName: p.name, clubName: activeClub.name, value });
+      entries.push({ playerId: p.id, playerName: p.name, clubName: activeClub.name, value });
     }
   }
 
-  // Voor AI-clubs: als er echte stats zijn, gebruik die, anders fallback op random
+  // ── AI clubs ──
   for (const club of clubs) {
     if (club.id === activeClub.id) continue;
     const clubName = club.name;
+
     if (realStats[clubName]) {
-      for (const player in realStats[clubName]) {
-        const value = realStats[clubName][player][category] || 0;
+      // Use real stats if available
+      for (const playerName in realStats[clubName]) {
+        const value = realStats[clubName][playerName][category] || 0;
         if (value > 0) {
-          entries.push({ playerName: player, clubName, value });
+          entries.push({ playerId: `ai_${club.id}_${playerName}`, playerName, clubName, value });
         }
       }
     } else {
-      // Fallback: random AI
+      // Fallback: generate deterministic AI players
+      // Use a set to avoid duplicate names within the same club
+      const usedNames = new Set<string>();
       for (let i = 0; i < 2; i++) {
-        const pSeed = seed + i * 97 + 500 + hs(clubName);
-        const name = PLAYER_POOL[Math.floor(sr(pSeed) * PLAYER_POOL.length)];
+        const pSeed = hs(club.id + category) + i * 97 + 500;
+        let name = PLAYER_POOL[Math.floor(sr(pSeed) * PLAYER_POOL.length)];
+        // Ensure unique name within this club
+        let attempt = 0;
+        while (usedNames.has(name) && attempt < 10) {
+          name = PLAYER_POOL[Math.floor(sr(pSeed + attempt + 1) * PLAYER_POOL.length)];
+          attempt++;
+        }
+        usedNames.add(name);
+
         let value = 0;
         switch (category) {
           case 'motm': value = Math.round((1 + sr(pSeed + 2) * 8) * m); break;
@@ -293,8 +410,15 @@ function generateCompEntries(
           case 'cleanSheets': value = Math.round(sr(pSeed + 2) * 15 * m); break;
           case 'appearances': value = Math.round((10 + sr(pSeed + 2) * 35) * m); break;
         }
+        value = validateValue(value, category, MAX_REASONABLE[category]);
+
         if (value > 0) {
-          entries.push({ playerName: name, clubName, value });
+          entries.push({
+            playerId: makeAiPlayerId(club.id, i),
+            playerName: name,
+            clubName,
+            value,
+          });
         }
       }
     }
@@ -305,12 +429,13 @@ function generateCompEntries(
 
 const SINGLE_COMPS: Exclude<CompFilter, 'all'>[] = ['league', 'fa-cup', 'league-cup', 'champions-league', 'europa-league', 'conference-league'];
 
-function dedupeLeaderboardEntries(
-  entries: { playerName: string; clubName: string; value: number }[],
-): { playerName: string; clubName: string; value: number }[] {
-  const map = new Map<string, { playerName: string; clubName: string; value: number }>();
+/* ──────────────────────────────────────────────
+   Deduplicate using playerId as the unique key
+   ────────────────────────────────────────────── */
+function dedupeLeaderboardEntries(entries: RawEntry[]): RawEntry[] {
+  const map = new Map<string, RawEntry>();
   for (const entry of entries) {
-    const key = `${entry.playerName}|${entry.clubName}`;
+    const key = entry.playerId;
     const existing = map.get(key);
     if (!existing || entry.value > existing.value) {
       map.set(key, { ...entry });
@@ -319,6 +444,9 @@ function dedupeLeaderboardEntries(
   return Array.from(map.values());
 }
 
+/* ──────────────────────────────────────────────
+   Generate the final ranked leaderboard
+   ────────────────────────────────────────────── */
 function generateLeaderboard(
   category: CategoryKey,
   comp: CompFilter,
@@ -326,18 +454,19 @@ function generateLeaderboard(
   clubs: Club[],
   squad: SquadPlayer[],
 ): LeaderboardEntry[] {
-  let raw: { playerName: string; clubName: string; value: number }[];
+  let raw: RawEntry[];
 
   if (comp === 'all') {
-    const merged = new Map<string, { playerName: string; clubName: string; value: number }>();
+    // For 'all' competitions, use the per-player base value (no comp multiplier)
+    // This avoids summing inconsistent seeded-random values across competitions
+    const merged = new Map<string, RawEntry>();
     for (const c of SINGLE_COMPS) {
       for (const entry of generateCompEntries(category, c, activeClub, clubs, squad)) {
-        const key = `${entry.playerName}|${entry.clubName}`;
-        const existing = merged.get(key);
+        const existing = merged.get(entry.playerId);
         if (existing) {
           existing.value += entry.value;
         } else {
-          merged.set(key, { ...entry });
+          merged.set(entry.playerId, { ...entry });
         }
       }
     }
@@ -351,6 +480,7 @@ function generateLeaderboard(
   raw.sort((a, b) => b.value - a.value);
   return raw.slice(0, 20).map((e, idx) => ({
     rank: idx + 1,
+    playerId: e.playerId,
     playerName: e.playerName,
     clubName: e.clubName,
     value: e.value,
