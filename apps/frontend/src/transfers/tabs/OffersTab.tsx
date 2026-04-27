@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { useTransfer } from '../state/GameContext';
-import type { Offer, Player } from '../state/gameReducer';
+import type { Offer } from '../state/gameReducer';
 
 const OffersTab: React.FC = () => {
   const { getOffers, getPlayer, getClub, handleAcceptOffer, handleRejectOffer, handleCounterOffer, state } = useTransfer();

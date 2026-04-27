@@ -2,7 +2,7 @@
    ShortlistTab.tsx — Saved players for scouting
    ═══════════════════════════════════════════════════════════════════ */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useTransfer } from '../state/GameContext';
 import PlayerTable from '../components/PlayerTable';
 import type { Player } from '../state/gameReducer';
